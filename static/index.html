@@ -36,6 +36,11 @@
         <span class="nav-item-icon">👥</span>
         <span>Clients</span>
       </button>
+      <button class="nav-item" data-view="view-leads" onclick="switchView('view-leads')">
+        <span class="nav-item-icon">🎯</span>
+        <span>Case Leads & Inquiries</span>
+        <span class="nav-badge" id="badge-leads-count" style="background:#fef3c7; color:#b45309;">0</span>
+      </button>
       <button class="nav-item" data-view="view-calendar" onclick="switchView('view-calendar')">
         <span class="nav-item-icon">📅</span>
         <span>Calendar</span>
@@ -43,6 +48,11 @@
       <button class="nav-item" data-view="view-whatsapp" onclick="switchView('view-whatsapp')">
         <span class="nav-item-icon">📲</span>
         <span>WhatsApp Dockets</span>
+      </button>
+      <button class="nav-item" data-view="view-ai-agent" onclick="toggleJarvisDrawer()">
+        <span class="nav-item-icon">🤖</span>
+        <span>JARVIS AI Assistant</span>
+        <span class="nav-badge" style="background:var(--primary); color:#fff;">AI</span>
       </button>
 
       <div class="nav-section-label">MANAGEMENT</div>
@@ -79,11 +89,19 @@
     <!-- Top Header Bar -->
     <header class="top-header">
       <div class="header-title-block">
-        <h2 id="header-advocate-greeting">Good Morning, Advocate R. Anbaiya</h2>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <h2 id="header-advocate-greeting">Good Morning, Advocate R. Anbaiya</h2>
+          <span style="display: inline-flex; align-items: center; gap: 4px; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 2px 8px; border-radius: 12px; font-size: 0.68rem; font-weight: 700; color: #065f46;" id="live-sync-indicator">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: #10b981;"></span> Live Auto-Sync Active
+          </span>
+        </div>
         <p>Karur District Court Complex &bull; Daily Court Hearing Board</p>
       </div>
 
       <div class="header-actions">
+        <button class="btn-ui btn-ui-secondary" onclick="toggleJarvisDrawer()" style="border-color: #38bdf8; color: #0369a1; background: #f0f9ff; font-weight: 800;">
+          🤖 Ask JARVIS AI
+        </button>
         <div class="pill-info">
           <span>⚡ API Balance:</span>
           <strong id="credits-balance-label" style="color: var(--primary);">176.0</strong>
@@ -100,6 +118,7 @@
         </a>
       </div>
     </header>
+
 
     <main class="content-area">
 
@@ -250,6 +269,40 @@
         </div>
       </section>
 
+
+      <!-- ======================================================================
+           VIEW 3.5: CASE LEADS & INQUIRIES
+           ====================================================================== -->
+      <section id="view-leads" class="view-section" style="display: none;">
+        <div class="main-card">
+          <div class="main-card-header">
+            <div>
+              <h3 class="main-card-title">🎯 Prospective Client Inquiries & Case Leads</h3>
+              <p class="main-card-sub">Track new inquiries before filing Vakalatnama in court</p>
+            </div>
+            <button class="btn-ui btn-ui-primary" onclick="openNewLeadModal()">➕ Add New Inquiry</button>
+          </div>
+
+          <div style="overflow-x: auto;">
+            <table class="hearing-table">
+              <thead>
+                <tr>
+                  <th>Client Name</th>
+                  <th>WhatsApp Phone</th>
+                  <th>Matter Type</th>
+                  <th>Expected Court</th>
+                  <th>Pipeline Status</th>
+                  <th>Notes</th>
+                  <th style="text-align: right;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="leads-tbody">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
 
       <!-- ======================================================================
            VIEW 4: CALENDAR
@@ -469,6 +522,44 @@
     </div>
   </div>
 
-  <script src="/static/app.js?v=9.0"></script>
+  <!-- ==========================================================================
+       5. JARVIS AGENTIC LEGAL AI SLIDE-OUT DRAWER
+       ========================================================================== -->
+  <div id="jarvis-ai-drawer" style="position: fixed; right: -420px; top: 0; width: 400px; height: 100vh; background: #ffffff; border-left: 2px solid var(--border-color); box-shadow: -10px 0 25px rgba(0,0,0,0.15); z-index: 120; display: flex; flex-direction: column; transition: right 0.25s ease-in-out;">
+    <div style="padding: 14px 16px; background: #0f172a; color: #ffffff; display: flex; justify-content: space-between; align-items: center;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 1.2rem;">🤖</span>
+        <div>
+          <h4 style="font-size: 0.9rem; font-weight: 800;">JARVIS Legal AI Assistant</h4>
+          <span style="font-size: 0.68rem; color: #38bdf8;">Autonomous Chamber Co-Pilot</span>
+        </div>
+      </div>
+      <button onclick="toggleJarvisDrawer()" style="background: transparent; border: none; color: #ffffff; font-size: 1.1rem; cursor: pointer;">✕</button>
+    </div>
+
+    <!-- Quick Action Chips -->
+    <div style="padding: 10px 14px; background: #f8fafc; border-bottom: 1px solid var(--border-color); display: flex; gap: 6px; overflow-x: auto; white-space: nowrap;">
+      <button onclick="sendAiPrompt('Show urgent priority cases today')" style="padding: 4px 8px; font-size: 0.7rem; border: 1px solid var(--border-color); border-radius: 12px; background: #fff; cursor: pointer;">🚨 Urgent Cases</button>
+      <button onclick="sendAiPrompt('List Bank of Baroda suits')" style="padding: 4px 8px; font-size: 0.7rem; border: 1px solid var(--border-color); border-radius: 12px; background: #fff; cursor: pointer;">🏦 Bank Cases</button>
+      <button onclick="sendAiPrompt('Which court room should I visit first?')" style="padding: 4px 8px; font-size: 0.7rem; border: 1px solid var(--border-color); border-radius: 12px; background: #fff; cursor: pointer;">🏛️ Court Strategy</button>
+      <button onclick="sendAiPrompt('Show all client inquiries')" style="padding: 4px 8px; font-size: 0.7rem; border: 1px solid var(--border-color); border-radius: 12px; background: #fff; cursor: pointer;">👥 Leads</button>
+    </div>
+
+    <!-- Chat History Stream -->
+    <div id="ai-chat-history" style="flex: 1; padding: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; font-size: 0.82rem;">
+      <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: var(--radius-sm); padding: 10px 12px; color: #0369a1;">
+        <strong>⚡ JARVIS AI Online:</strong> Ready to assist, Advocate R. Anbaiya! I have live access to your 14 court hearings, client WhatsApp contacts, and cases vault.
+      </div>
+    </div>
+
+    <!-- Input Bar -->
+    <div style="padding: 12px; border-top: 1px solid var(--border-color); background: #ffffff; display: flex; gap: 6px;">
+      <input type="text" id="ai-prompt-input" class="form-input-ui" placeholder="Ask JARVIS (e.g. Show urgent cases today)..." onkeypress="if(event.key==='Enter') sendAiMessage()">
+      <button onclick="sendAiMessage()" class="btn-ui btn-ui-primary" style="padding: 6px 12px;">➤</button>
+    </div>
+  </div>
+
+  <script src="/static/app.js?v=10.0"></script>
 </body>
 </html>
+

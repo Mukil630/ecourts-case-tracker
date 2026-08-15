@@ -1,18 +1,20 @@
 /**
- * R. ANBAIYA & ASSOCIATES • Advocates & Legal Consultants
- * eCourts Automation & Case Management Platform
- * Streamlined Client Intake & Private Vault Controller
+ * R. ANBAIYA & ASSOCIATES • Legal Practice Management Platform
+ * Live Real-Time Auto-Sync Engine & JARVIS Agentic Legal AI Co-Pilot
  */
 
 // Global State
 let allCases = [];
+let allLeads = [];
 let causeListData = null;
 let currentAdvocateSettings = {};
 let selectedCourtFilter = "ALL";
 let currentCalendarDate = new Date();
+let lastSyncTimestamp = 0;
+let isJarvisOpen = false;
 
 // =========================================================================
-// 1. GLOBAL NAVIGATION & VIEW SWITCHER (Always Available)
+// 1. GLOBAL NAVIGATION & VIEW SWITCHER
 // =========================================================================
 window.switchView = function(viewId) {
   try {
@@ -37,13 +39,11 @@ window.switchView = function(viewId) {
       }
     });
 
-    if (viewId === "view-hearings") renderFullHearingsView();
     if (viewId === "view-cases") renderAllCasesTable(allCases);
     if (viewId === "view-clients") renderClientsTable(allCases);
+    if (viewId === "view-leads") loadLeads();
     if (viewId === "view-whatsapp") renderWhatsAppDockets(allCases);
     if (viewId === "view-calendar") renderCalendar(currentCalendarDate);
-    if (viewId === "view-reports") updateReportsView();
-    if (viewId === "view-alerts") loadAlertsAudit();
     if (viewId === "view-dashboard") {
       const picker = document.getElementById("dashboard-date-picker");
       loadDailyCauseList(picker ? picker.value : "2026-08-14");
@@ -54,13 +54,16 @@ window.switchView = function(viewId) {
 };
 
 // =========================================================================
-// 2. CLIENT INTAKE MODAL CONTROLLERS
+// 2. CLIENT INTAKE & ADVOCATE SEARCH MODALS
 // =========================================================================
 window.openCaseIntakeModal = function() {
   const modal = document.getElementById("case-intake-modal");
-  if (modal) {
-    modal.style.display = "flex";
-  }
+  if (modal) modal.style.display = "flex";
+};
+
+window.openAdvocateSearchModal = function() {
+  const modal = document.getElementById("advocate-search-modal");
+  if (modal) modal.style.display = "flex";
 };
 
 window.autoFillSampleClient = function() {
@@ -85,16 +88,6 @@ window.autoFillSampleClient = function() {
   if (notesInput) notesInput.value = "Complainant evidence cross examination";
 };
 
-// =========================================================================
-// 2.5 ADVOCATE NAME eCOURTS SEARCH CONTROLLERS
-// =========================================================================
-window.openAdvocateSearchModal = function() {
-  const modal = document.getElementById("advocate-search-modal");
-  if (modal) {
-    modal.style.display = "flex";
-  }
-};
-
 window.performAdvocateSearch = async function() {
   const nameInput = document.getElementById("adv-search-name");
   const distSelect = document.getElementById("adv-search-district");
@@ -104,7 +97,7 @@ window.performAdvocateSearch = async function() {
   const district = distSelect ? distSelect.value : "Karur";
 
   if (!container) return;
-  container.innerHTML = `<p style="text-align: center; color: var(--primary); padding: 20px 0;">⚡ Searching eCourts database for cases registered under <strong>${escapeHtml(advocateName)}</strong> in <strong>${escapeHtml(district)}</strong>...</p>`;
+  container.innerHTML = `<p style="text-align: center; color: var(--primary); padding: 16px 0;">⚡ Searching eCourts for <strong>${escapeHtml(advocateName)}</strong> in <strong>${escapeHtml(district)}</strong>...</p>`;
 
   try {
     const res = await fetch(`/api/search-advocate-cases?name=${encodeURIComponent(advocateName)}&district=${encodeURIComponent(district)}`);
@@ -114,34 +107,26 @@ window.performAdvocateSearch = async function() {
     if (cases.length === 0) {
       container.innerHTML = `
         <div style="text-align: center; padding: 20px; color: var(--text-muted);">
-          <div style="font-size: 1.8rem; margin-bottom: 6px;">📂</div>
           <strong>No cases found under "${escapeHtml(advocateName)}"</strong>
-          <p style="font-size: 0.76rem; margin-top: 4px;">Make sure the advocate name matches the Vakalatnama filed in court.</p>
         </div>
       `;
       return;
     }
 
     container.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--border-color);">
-        <div>
-          <strong style="font-size:0.92rem; color:var(--text-main);">Found ${cases.length} Confirmed Matter${cases.length > 1 ? 's' : ''}</strong>
-          <div style="font-size:0.75rem; color:var(--text-muted);">Registered under ${escapeHtml(advocateName)} (${escapeHtml(district)})</div>
-        </div>
-        <button class="btn-ui btn-ui-wa" onclick="alert('✅ All ${cases.length} matters are synchronized with your Private Chamber Vault!')" style="font-size:0.75rem; padding:6px 12px;">
-          ✓ Verified in Chamber
-        </button>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <strong style="font-size:0.88rem; color:var(--text-main);">Found ${cases.length} Confirmed Matter${cases.length > 1 ? 's' : ''}</strong>
+        <span style="font-size:0.72rem; color:var(--success); font-weight:700;">✓ Synced in Vault</span>
       </div>
 
-      <div style="max-height: 280px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
-        <table class="hearing-table" style="font-size: 0.78rem; width: 100%;">
+      <div style="max-height: 250px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+        <table class="hearing-table" style="font-size: 0.78rem;">
           <thead>
             <tr>
               <th style="width: 45px; text-align: center;">Item</th>
               <th>Case Number / Title</th>
               <th>Court & Room</th>
               <th>Stage</th>
-              <th>Date</th>
             </tr>
           </thead>
           <tbody>
@@ -150,14 +135,10 @@ window.performAdvocateSearch = async function() {
                 <td style="font-weight: 800; color: var(--primary); text-align: center;">${escapeHtml(c.item_number || '-')}</td>
                 <td>
                   <strong>${escapeHtml(c.case_number_formatted || c.cnr_number)}</strong><br>
-                  <span style="font-size: 0.72rem; color: var(--text-muted);">${escapeHtml(c.case_title)}</span>
+                  <span style="font-size: 0.7rem; color: var(--text-muted);">${escapeHtml(c.case_title)}</span>
                 </td>
-                <td>
-                  <strong>${escapeHtml(c.court_name || 'Karur Court')}</strong><br>
-                  <span style="font-size: 0.7rem; color: var(--text-muted);">${escapeHtml(c.court_room || '-')}</span>
-                </td>
-                <td><span class="badge badge-evidence" style="font-size: 0.68rem;">${escapeHtml(c.case_stage || 'Evidence')}</span></td>
-                <td><strong style="color: var(--primary);">${escapeHtml(c.next_hearing_date || '14-Aug-2026')}</strong></td>
+                <td>${escapeHtml(c.court_name || 'Karur Court')} (${escapeHtml(c.court_room || '-')})</td>
+                <td><span class="badge badge-evidence" style="font-size:0.68rem;">${escapeHtml(c.case_stage || 'Evidence')}</span></td>
               </tr>
             `).join("")}
           </tbody>
@@ -165,67 +146,133 @@ window.performAdvocateSearch = async function() {
       </div>
     `;
   } catch (err) {
-    container.innerHTML = `<p style="color: var(--danger); text-align: center; padding: 20px;">Search failed: ${escapeHtml(err.message)}</p>`;
+    container.innerHTML = `<p style="color: var(--danger); text-align: center;">Search failed: ${escapeHtml(err.message)}</p>`;
   }
 };
 
+// =========================================================================
+// 3. JARVIS AGENTIC LEGAL AI CO-PILOT
+// =========================================================================
+window.toggleJarvisDrawer = function() {
+  const drawer = document.getElementById("jarvis-ai-drawer");
+  if (!drawer) return;
+  isJarvisOpen = !isJarvisOpen;
+  drawer.style.right = isJarvisOpen ? "0px" : "-420px";
+  if (isJarvisOpen) {
+    loadAiBriefing();
+  }
+};
 
-// =========================================================================
-// 3. CASE ACTION CONTROLLERS (Sync, Delete, WhatsApp)
-// =========================================================================
-window.syncSingleCase = async function(cnr) {
+window.sendAiPrompt = function(promptText) {
+  const input = document.getElementById("ai-prompt-input");
+  if (input) {
+    input.value = promptText;
+    window.sendAiMessage();
+  }
+};
+
+window.sendAiMessage = async function() {
+  const input = document.getElementById("ai-prompt-input");
+  const history = document.getElementById("ai-chat-history");
+  if (!input || !history) return;
+
+  const text = input.value.trim();
+  if (!text) return;
+
+  // Append user message
+  history.innerHTML += `
+    <div style="background: #e2e8f0; border-radius: var(--radius-sm); padding: 8px 12px; align-self: flex-end; max-width: 85%; font-size: 0.8rem;">
+      <strong>You:</strong> ${escapeHtml(text)}
+    </div>
+  `;
+  input.value = "";
+  history.scrollTop = history.scrollHeight;
+
+  // Add Thinking indicator
+  const thinkingId = "thinking-" + Date.now();
+  history.innerHTML += `
+    <div id="${thinkingId}" style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: var(--radius-sm); padding: 8px 12px; color: var(--primary); font-size: 0.78rem;">
+      🤖 <em>JARVIS is analyzing cases database...</em>
+    </div>
+  `;
+  history.scrollTop = history.scrollHeight;
+
   try {
-    const res = await fetch("/api/check-case", {
+    const res = await fetch("/api/ai-assistant", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ cnr: cnr, force_live: true })
+      body: JSON.stringify({ prompt: text })
     });
     const data = await res.json();
-    alert(`✅ eCourts Sync Complete for ${cnr}!\nNext Hearing: ${data.case_data.next_hearing_date || 'N/A'}\nStage: ${data.case_data.case_stage || 'N/A'}`);
-    loadTrackedCases();
-  } catch (e) {
-    alert("Sync failed: " + e.message);
-  }
-};
+    const thinkElem = document.getElementById(thinkingId);
+    if (thinkElem) thinkElem.remove();
 
-window.deleteSingleCase = async function(cnr) {
-  if (!confirm(`Are you sure you want to remove case ${cnr} from tracking?`)) return;
-  try {
-    const res = await fetch(`/api/cases/${encodeURIComponent(cnr)}`, { method: "DELETE" });
-    const data = await res.json();
-    alert(data.message || "Case removed.");
-    loadTrackedCases();
-  } catch (e) {
-    alert("Delete failed: " + e.message);
-  }
-};
+    const formattedReply = (data.reply || "Ready to assist.")
+      .replace(/\n/g, "<br>")
+      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*(.*?)\*/g, "<em>$1</em>");
 
-window.selectCalendarDate = function(dateStr) {
-  const heading = document.getElementById("calendar-selected-day-heading");
-  const list = document.getElementById("calendar-selected-day-list");
-  if (!heading || !list) return;
-
-  heading.innerText = `Scheduled Hearings for ${dateStr}`;
-  const matched = allCases.filter(c => c.next_hearing_date === dateStr);
-
-  if (matched.length === 0) {
-    list.innerHTML = `<p style="color: var(--text-muted); font-size: 0.8rem; padding: 8px 0;">No hearings scheduled on ${dateStr}.</p>`;
-    return;
-  }
-
-  list.innerHTML = matched.map(c => `
-    <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-      <div>
-        <strong>${escapeHtml(c.case_title)}</strong> (${escapeHtml(c.client_name || 'Client')})<br>
-        <span style="font-size: 0.74rem; color: var(--text-muted);">${escapeHtml(c.court_name || '')} &bull; Item #${escapeHtml(c.item_number || '-')} &bull; ${escapeHtml(c.case_stage || 'Hearing')}</span>
+    history.innerHTML += `
+      <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 0.8rem; line-height: 1.4;">
+        ${formattedReply}
       </div>
-      <a href="${getWhatsAppUrl(c)}" target="_blank" class="btn-ui btn-ui-wa" style="padding: 3px 8px; font-size: 0.72rem;">💬 WhatsApp</a>
-    </div>
-  `).join("");
+    `;
+    history.scrollTop = history.scrollHeight;
+  } catch (e) {
+    const thinkElem = document.getElementById(thinkingId);
+    if (thinkElem) thinkElem.innerHTML = `<span style="color:var(--danger);">Error: ${escapeHtml(e.message)}</span>`;
+  }
 };
+
+async function loadAiBriefing() {
+  try {
+    const res = await fetch("/api/ai-briefing?date=2026-08-14");
+    const data = await res.json();
+    const history = document.getElementById("ai-chat-history");
+    if (!history) return;
+
+    if (data.briefing_text && !history.innerHTML.includes("Morning Legal Briefing")) {
+      const formatted = data.briefing_text
+        .replace(/\n/g, "<br>")
+        .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+
+      history.innerHTML += `
+        <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: var(--radius-sm); padding: 10px 12px; color: #065f46; font-size: 0.78rem;">
+          ${formatted}
+        </div>
+      `;
+      history.scrollTop = history.scrollHeight;
+    }
+  } catch (e) {}
+}
 
 // =========================================================================
-// 4. CORE DATA LOADERS & RENDERERS
+// 4. REAL-TIME ZERO-REFRESH LIVE SYNC LOOP
+// =========================================================================
+function startLiveSyncLoop() {
+  setInterval(async () => {
+    try {
+      const res = await fetch("/api/live-status");
+      const status = await res.json();
+
+      const liveIndicator = document.getElementById("live-sync-indicator");
+      if (liveIndicator) {
+        liveIndicator.innerHTML = `<span style="width:6px; height:6px; border-radius:50%; background:#10b981;"></span> Live Auto-Sync Active (${status.last_updated})`;
+      }
+
+      // If case count changed or date updated, sync smoothly in background
+      if (lastSyncTimestamp !== 0 && (status.total_cases !== allCases.length)) {
+        await loadTrackedCases();
+        const picker = document.getElementById("dashboard-date-picker");
+        await loadDailyCauseList(picker ? picker.value : "2026-08-14");
+      }
+      lastSyncTimestamp = status.timestamp;
+    } catch (e) {}
+  }, 8000);
+}
+
+// =========================================================================
+// 5. DATA LOADERS & RENDERERS
 // =========================================================================
 async function loadDailyCauseList(targetDate = "2026-08-14") {
   const container = document.getElementById("hearing-board-list-container");
@@ -248,7 +295,7 @@ async function loadDailyCauseList(targetDate = "2026-08-14") {
     if (kpiTodayHearings) kpiTodayHearings.innerText = count;
     if (badgeTodayHearings) badgeTodayHearings.innerText = count;
     if (kpiTodayHearingsSub) {
-      kpiTodayHearingsSub.innerText = count > 0 ? `Across ${courtsCount} Court${courtsCount > 1 ? 's' : ''}` : "No hearings today";
+      kpiTodayHearingsSub.innerText = count > 0 ? `Across ${courtsCount} Courts in Karur` : "No hearings today";
     }
 
     renderHearingBoard(data, selectedCourtFilter);
@@ -409,16 +456,6 @@ function renderHearingBoard(data, filterCourt = "ALL") {
   `).join("");
 }
 
-
-
-function renderFullHearingsView() {
-  const container = document.getElementById("full-hearings-container");
-  const board = document.getElementById("hearing-board-list-container");
-  if (container && board) {
-    container.innerHTML = board.innerHTML;
-  }
-}
-
 async function loadTrackedCases() {
   try {
     const res = await fetch("/api/cases");
@@ -441,83 +478,12 @@ async function loadTrackedCases() {
     const futureCasesCount = allCases.filter(c => c.next_hearing_date && c.next_hearing_date >= todayStr).length;
     if (kpiUpcoming7d) kpiUpcoming7d.innerText = futureCasesCount;
 
-    renderUpcomingHearingsWidget(allCases);
-    renderAlertsWidget(allCases);
     renderAllCasesTable(allCases);
     renderClientsTable(allCases);
     renderWhatsAppDockets(allCases);
-    updateReportsView();
   } catch (e) {
     console.error("loadTrackedCases error:", e);
   }
-}
-
-function renderUpcomingHearingsWidget(cases) {
-  const container = document.getElementById("upcoming-hearings-widget-list");
-  if (!container) return;
-
-  const todayStr = "2026-08-14";
-  const futureCases = (cases || []).filter(c => c.next_hearing_date && c.next_hearing_date > todayStr);
-  futureCases.sort((a, b) => (a.next_hearing_date || "").localeCompare(b.next_hearing_date || ""));
-
-  if (futureCases.length === 0) {
-    container.innerHTML = `
-      <div style="padding: 16px; text-align: center; color: var(--text-muted); font-size: 0.78rem;">
-        No upcoming hearings scheduled. Enroll new clients using <strong>+ Case Intake</strong>.
-      </div>
-    `;
-    return;
-  }
-
-  container.innerHTML = futureCases.slice(0, 4).map(c => {
-    const parts = (c.next_hearing_date || "").split("-");
-    const day = parts[2] || "15";
-    const monthNum = parseInt(parts[1] || "8", 10);
-    const monthNamesShort = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
-    const month = monthNamesShort[monthNum - 1] || "AUG";
-
-    return `
-      <div class="upcoming-item">
-        <div class="upcoming-date-box">
-          <span class="upcoming-date-day">${day}</span>
-          <span class="upcoming-date-month">${month}</span>
-        </div>
-        <div class="upcoming-details">
-          <div class="upcoming-title">${escapeHtml(c.case_title)}</div>
-          <div class="upcoming-meta">${escapeHtml(c.case_number_formatted || c.cnr_number)} &bull; ${escapeHtml(c.case_stage || 'Hearing')}</div>
-          <div class="upcoming-court">${escapeHtml(c.court_name || '')} &bull; ${escapeHtml(c.court_room || '-')}</div>
-        </div>
-      </div>
-    `;
-  }).join("");
-}
-
-function renderAlertsWidget(cases) {
-  const container = document.getElementById("alerts-widget-list");
-  if (!container) return;
-
-  fetch("/api/history")
-    .then(res => res.json())
-    .then(logs => {
-      const badgeAlerts = document.getElementById("badge-alerts-count");
-      if (badgeAlerts) badgeAlerts.innerText = (logs && logs.length) || 0;
-
-      if (!logs || logs.length === 0) {
-        container.innerHTML = `<div style="padding: 14px; text-align: center; color: var(--text-muted); font-size: 0.78rem;">✓ No active judicial alerts.</div>`;
-        return;
-      }
-
-      container.innerHTML = logs.slice(0, 3).map(l => `
-        <div class="alert-card-item alert-orange" style="margin-bottom: 8px; padding: 8px 10px;">
-          <div class="alert-icon" style="font-size: 1rem;">⚠️</div>
-          <div style="flex: 1;">
-            <strong style="font-size: 0.78rem; color: #92400e;">${escapeHtml(l.details || 'Hearing Date Updated')}</strong>
-            <div style="font-size: 0.7rem; color: #b45309;">CNR: ${escapeHtml(l.cnr_number)} &bull; New Date: ${escapeHtml(l.new_hearing_date)}</div>
-          </div>
-        </div>
-      `).join("");
-    })
-    .catch(() => {});
 }
 
 function renderAllCasesTable(cases) {
@@ -529,8 +495,7 @@ function renderAllCasesTable(cases) {
       <tr>
         <td colspan="8" style="padding: 32px; text-align: center; color: var(--text-muted);">
           <div style="font-size: 1.8rem; margin-bottom: 6px;">📁</div>
-          <strong style="color: var(--text-main);">No Cases in Portfolio</strong>
-          <p style="font-size: 0.78rem; margin-top: 4px;">Click <strong>"+ Case Intake"</strong> in the sidebar to add your first client.</p>
+          <strong>No Cases in Portfolio</strong>
         </td>
       </tr>
     `;
@@ -544,20 +509,20 @@ function renderAllCasesTable(cases) {
         <div style="font-size: 0.7rem; color: var(--text-muted);">${escapeHtml(c.litigant_role || 'Litigant')}</div>
       </td>
       <td>
-        <div class="case-title-bold">${escapeHtml(c.case_title)}</div>
-        <div style="font-size:0.72rem; color:var(--text-muted);">${escapeHtml(c.parties || '')}</div>
+        <div class="case-title-text">${escapeHtml(c.case_title)}</div>
+        <div style="font-size:0.7rem; color:var(--text-muted);">${escapeHtml(c.parties || '')}</div>
       </td>
-      <td><span class="case-no-pill">${escapeHtml(c.case_number_formatted || '-')}</span></td>
+      <td><strong>${escapeHtml(c.case_number_formatted || '-')}</strong></td>
       <td><code style="font-family: var(--font-mono); font-size:0.75rem; color:var(--primary);">${escapeHtml(c.cnr_number)}</code></td>
       <td>${escapeHtml(c.court_name || 'District Court')}</td>
       <td><strong style="color:var(--primary);">${escapeHtml(c.next_hearing_date || 'Awaiting Date')}</strong></td>
-      <td><span class="badge ${c.case_status === 'DISPOSED' ? 'badge-disposed' : 'badge-pending'}">${escapeHtml(c.case_status || 'PENDING')}</span></td>
-      <td>
-        <div style="display:flex; gap:6px;">
-          <a href="${getWhatsAppUrl(c)}" target="_blank" class="btn-ui btn-ui-wa" style="padding:3px 6px; font-size:0.7rem;" title="Send WhatsApp">💬</a>
+      <td><span class="badge ${c.case_status === 'DISPOSED' ? 'badge-disposed' : 'badge-evidence'}">${escapeHtml(c.case_status || 'PENDING')}</span></td>
+      <td style="text-align: right;">
+        <div style="display:flex; gap:4px; justify-content:flex-end;">
+          <a href="${getWhatsAppUrl(c)}" target="_blank" class="btn-ui btn-ui-wa" style="padding:3px 6px; font-size:0.7rem;">💬</a>
           <button onclick="syncSingleCase('${escapeHtml(c.cnr_number)}')" class="btn-ui btn-ui-secondary" style="padding:3px 6px; font-size:0.7rem;" title="Check Live eCourts">🔄</button>
           <a href="/api/export-case/${encodeURIComponent(c.cnr_number)}" target="_blank" class="btn-ui btn-ui-secondary" style="padding:3px 6px; font-size:0.7rem;" title="Print Case Sheet">🖨️</a>
-          <button onclick="deleteSingleCase('${escapeHtml(c.cnr_number)}')" class="btn-ui btn-ui-danger" style="padding:3px 6px; font-size:0.7rem;" title="Delete Case">🗑️</button>
+          <button onclick="deleteSingleCase('${escapeHtml(c.cnr_number)}')" class="btn-ui btn-ui-danger" style="padding:3px 6px; font-size:0.7rem;">🗑️</button>
         </div>
       </td>
     </tr>
@@ -585,19 +550,6 @@ function renderClientsTable(cases) {
   });
 
   const clientList = Object.values(clientMap);
-  if (clientList.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="7" style="padding: 32px; text-align: center; color: var(--text-muted);">
-          <div style="font-size: 1.8rem; margin-bottom: 6px;">👥</div>
-          <strong style="color: var(--text-main);">No Clients Registered Yet</strong>
-          <p style="font-size: 0.78rem; margin-top: 4px;">Use <strong>"+ Case Intake"</strong> to enroll your clients.</p>
-        </td>
-      </tr>
-    `;
-    return;
-  }
-
   tbody.innerHTML = clientList.map(cl => `
     <tr>
       <td><strong>${escapeHtml(cl.name)}</strong></td>
@@ -605,52 +557,75 @@ function renderClientsTable(cases) {
       <td><span class="badge badge-evidence">${escapeHtml(cl.role)}</span></td>
       <td><strong>${cl.count} Active Matter${cl.count > 1 ? 's' : ''}</strong></td>
       <td><strong style="color:var(--primary);">${escapeHtml(cl.nextDate)}</strong></td>
-      <td><span style="color:var(--success); font-weight:700; font-size:0.76rem;">✓ WhatsApp Active</span></td>
-      <td>
+      <td><span style="color:var(--success); font-weight:700; font-size:0.76rem;">✓ Active</span></td>
+      <td style="text-align: right;">
         <a href="${getWhatsAppUrl(cl.caseObj)}" target="_blank" class="btn-ui btn-ui-wa" style="padding:4px 10px; font-size:0.72rem;">
-          💬 Send Notice
+          📲 Send Notice
         </a>
       </td>
     </tr>
   `).join("");
 }
 
+async function loadLeads() {
+  try {
+    const res = await fetch("/api/leads");
+    const data = await res.json();
+    allLeads = data || [];
+
+    const badgeLeads = document.getElementById("badge-leads-count");
+    if (badgeLeads) badgeLeads.innerText = allLeads.length;
+
+    const tbody = document.getElementById("leads-tbody");
+    if (!tbody) return;
+
+    if (allLeads.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" style="padding: 24px; text-align: center; color: var(--text-muted);">
+            No prospective inquiries in pipeline. Click <strong>"+ Add New Inquiry"</strong>.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = allLeads.map(l => `
+      <tr>
+        <td><strong>${escapeHtml(l.client_name)}</strong></td>
+        <td><code>${escapeHtml(l.client_phone)}</code></td>
+        <td><span class="badge badge-evidence">${escapeHtml(l.matter_type)}</span></td>
+        <td>${escapeHtml(l.expected_court)}</td>
+        <td><span class="badge badge-steps">${escapeHtml(l.status)}</span></td>
+        <td><span style="font-size:0.72rem; color:var(--text-muted);">${escapeHtml(l.notes || '-')}</span></td>
+        <td style="text-align: right;">
+          <a href="https://wa.me/${(l.client_phone || '').replace(/[^0-9]/g, '')}?text=Hello%20${encodeURIComponent(l.client_name)}%2C%20Advocate%20R.%20Anbaiya%20Office%20Notice" target="_blank" class="btn-ui btn-ui-wa" style="padding:3px 8px; font-size:0.7rem;">
+            💬 WhatsApp
+          </a>
+        </td>
+      </tr>
+    `).join("");
+  } catch (e) {}
+}
+
 function renderWhatsAppDockets(cases) {
   const container = document.getElementById("whatsapp-dockets-list");
   if (!container) return;
 
-  const bannerTitle = document.getElementById("wa-banner-title");
-  const bannerDesc = document.getElementById("wa-banner-desc");
-
   if (!cases || cases.length === 0) {
-    if (bannerTitle) bannerTitle.innerText = "No WhatsApp Notices Pending";
-    if (bannerDesc) bannerDesc.innerText = "When client cases are enrolled, individual WhatsApp dispatch cards will appear here.";
-
-    container.innerHTML = `
-      <div style="text-align: center; padding: 36px 20px; color: var(--text-muted); background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
-        <div style="font-size: 2rem; margin-bottom: 6px;">📲</div>
-        <strong style="color: var(--text-main); font-size: 0.95rem;">No Notices Ready to Dispatch</strong>
-        <p style="font-size: 0.78rem; margin-top: 4px;">Enroll client cases with hearing dates using <strong>"+ Case Intake"</strong>.</p>
-      </div>
-    `;
+    container.innerHTML = `<p style="text-align: center; color: var(--text-muted); padding: 20px;">No notices ready.</p>`;
     return;
   }
 
-  if (bannerTitle) bannerTitle.innerText = `Today's Docket: ${cases.length} Client Notice${cases.length > 1 ? 's' : ''} Ready`;
-  if (bannerDesc) bannerDesc.innerText = "Review and dispatch pre-formatted hearing notices directly to your clients on WhatsApp.";
-
   container.innerHTML = cases.map(c => `
-    <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px 18px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap;">
+    <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
       <div>
-        <div style="font-weight: 800; font-size: 0.92rem; color: var(--text-main);">${escapeHtml(c.client_name || 'Client')} (${escapeHtml(c.client_phone || '-')})</div>
-        <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">
+        <div style="font-weight: 800; font-size: 0.88rem; color: var(--text-main);">${escapeHtml(c.client_name || 'Client')} (${escapeHtml(c.client_phone || '-')})</div>
+        <div style="font-size: 0.76rem; color: var(--text-secondary); margin-top: 2px;">
           Case: <strong>${escapeHtml(c.case_title)}</strong> &bull; Item: <strong>#${escapeHtml(c.item_number || '-')}</strong> (${escapeHtml(c.court_room || '-')}) &bull; Stage: <strong>${escapeHtml(c.case_stage || 'Evidence')}</strong>
         </div>
-        <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 2px;">
-          🏛️ ${escapeHtml(c.court_name || '')} &bull; Next Hearing: <strong style="color: var(--primary);">${escapeHtml(c.next_hearing_date || 'Awaiting Schedule')}</strong>
-        </div>
       </div>
-      <a href="${getWhatsAppUrl(c)}" target="_blank" class="btn-ui btn-ui-wa" style="flex-shrink: 0;">
+      <a href="${getWhatsAppUrl(c)}" target="_blank" class="btn-ui btn-ui-wa">
         📲 Send WhatsApp
       </a>
     </div>
@@ -674,17 +649,17 @@ function renderCalendar(dateObj) {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
   let html = `
-    <div style="font-weight: 700; color: var(--text-muted); font-size: 0.74rem; padding: 6px;">SUN</div>
-    <div style="font-weight: 700; color: var(--text-muted); font-size: 0.74rem; padding: 6px;">MON</div>
-    <div style="font-weight: 700; color: var(--text-muted); font-size: 0.74rem; padding: 6px;">TUE</div>
-    <div style="font-weight: 700; color: var(--text-muted); font-size: 0.74rem; padding: 6px;">WED</div>
-    <div style="font-weight: 700; color: var(--text-muted); font-size: 0.74rem; padding: 6px;">THU</div>
-    <div style="font-weight: 700; color: var(--text-muted); font-size: 0.74rem; padding: 6px;">FRI</div>
-    <div style="font-weight: 700; color: var(--text-muted); font-size: 0.74rem; padding: 6px;">SAT</div>
+    <div style="font-weight: 700; color: var(--text-muted); font-size: 0.72rem; padding: 4px;">SUN</div>
+    <div style="font-weight: 700; color: var(--text-muted); font-size: 0.72rem; padding: 4px;">MON</div>
+    <div style="font-weight: 700; color: var(--text-muted); font-size: 0.72rem; padding: 4px;">TUE</div>
+    <div style="font-weight: 700; color: var(--text-muted); font-size: 0.72rem; padding: 4px;">WED</div>
+    <div style="font-weight: 700; color: var(--text-muted); font-size: 0.72rem; padding: 4px;">THU</div>
+    <div style="font-weight: 700; color: var(--text-muted); font-size: 0.72rem; padding: 4px;">FRI</div>
+    <div style="font-weight: 700; color: var(--text-muted); font-size: 0.72rem; padding: 4px;">SAT</div>
   `;
 
   for (let i = 0; i < firstDay; i++) {
-    html += `<div style="padding: 12px; background: #fafafa; border: 1px solid #f1f5f9; border-radius: var(--radius-sm);"></div>`;
+    html += `<div style="padding: 10px; background: #fafafa; border: 1px solid #f1f5f9; border-radius: var(--radius-sm);"></div>`;
   }
 
   for (let day = 1; day <= daysInMonth; day++) {
@@ -696,9 +671,9 @@ function renderCalendar(dateObj) {
     const hasHearings = matchedCases.length > 0;
 
     html += `
-      <div onclick="selectCalendarDate('${fullDateStr}')" style="padding: 10px 6px; cursor: pointer; background: ${hasHearings ? 'var(--primary-light)' : '#ffffff'}; border: 1px solid ${hasHearings ? 'var(--primary)' : 'var(--border-color)'}; border-radius: var(--radius-sm); transition: var(--transition);" title="View hearings on ${fullDateStr}">
-        <div style="font-weight: 800; font-size: 0.85rem; color: ${hasHearings ? 'var(--primary)' : 'var(--text-main)'};">${day}</div>
-        ${hasHearings ? `<div style="background: var(--primary); color: #fff; font-size: 0.65rem; padding: 1px 4px; border-radius: 3px; margin-top: 4px; font-weight: 700;">${matchedCases.length} Case${matchedCases.length > 1 ? 's' : ''}</div>` : ''}
+      <div onclick="selectCalendarDate('${fullDateStr}')" style="padding: 8px 4px; cursor: pointer; background: ${hasHearings ? 'var(--primary-light)' : '#ffffff'}; border: 1px solid ${hasHearings ? 'var(--primary)' : 'var(--border-color)'}; border-radius: var(--radius-sm);" title="View hearings on ${fullDateStr}">
+        <div style="font-weight: 800; font-size: 0.82rem; color: ${hasHearings ? 'var(--primary)' : 'var(--text-main)'};">${day}</div>
+        ${hasHearings ? `<div style="background: var(--primary); color: #fff; font-size: 0.62rem; padding: 1px 3px; border-radius: 3px; margin-top: 2px; font-weight: 700;">${matchedCases.length} Cases</div>` : ''}
       </div>
     `;
   }
@@ -706,49 +681,29 @@ function renderCalendar(dateObj) {
   container.innerHTML = html;
 }
 
-async function loadAlertsAudit() {
-  const container = document.getElementById("alerts-audit-list");
-  if (!container) return;
+window.selectCalendarDate = function(dateStr) {
+  const heading = document.getElementById("calendar-selected-day-heading");
+  const list = document.getElementById("calendar-selected-day-list");
+  if (!heading || !list) return;
 
-  try {
-    const res = await fetch("/api/history");
-    const logs = await res.json();
+  heading.innerText = `Scheduled Hearings for ${dateStr}`;
+  const matched = allCases.filter(c => c.next_hearing_date === dateStr);
 
-    if (!logs || logs.length === 0) {
-      container.innerHTML = `
-        <div style="text-align: center; padding: 32px 20px; color: var(--text-muted);">
-          <div style="font-size: 2rem; margin-bottom: 6px;">🔔</div>
-          <strong style="color: var(--text-main);">Audit Trail Clean</strong>
-          <p style="font-size: 0.78rem; margin-top: 4px;">When court date changes occur, automatic audit entries will be recorded here.</p>
-        </div>
-      `;
-      return;
-    }
+  if (matched.length === 0) {
+    list.innerHTML = `<p style="color: var(--text-muted); font-size: 0.78rem; padding: 8px 0;">No hearings scheduled on ${dateStr}.</p>`;
+    return;
+  }
 
-    container.innerHTML = logs.map(l => `
-      <div class="alert-card-item alert-orange" style="margin-bottom: 10px;">
-        <div class="alert-icon">📅</div>
-        <div style="flex: 1;">
-          <strong>Hearing Date Shift Detected</strong> &bull; CNR: <code>${escapeHtml(l.cnr_number)}</code><br>
-          Previous Date: <span style="text-decoration: line-through;">${escapeHtml(l.previous_hearing_date || 'None')}</span> ➡️ New Date: <strong>${escapeHtml(l.new_hearing_date)}</strong><br>
-          <span style="font-size: 0.7rem; color: #92400e;">Logged at: ${escapeHtml(l.detected_at)}</span>
-        </div>
+  list.innerHTML = matched.map(c => `
+    <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 8px 12px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <strong>${escapeHtml(c.case_title)}</strong> (${escapeHtml(c.client_name || 'Client')})<br>
+        <span style="font-size: 0.72rem; color: var(--text-muted);">${escapeHtml(c.court_name || '')} &bull; Item #${escapeHtml(c.item_number || '-')} &bull; ${escapeHtml(c.case_stage || 'Hearing')}</span>
       </div>
-    `).join("");
-  } catch (e) {}
-}
-
-function updateReportsView() {
-  const repActive = document.getElementById("rep-active-matters");
-  const repTotal = document.getElementById("rep-total-hearings");
-  const repDisposed = document.getElementById("rep-disposed-cases");
-  const repCredits = document.getElementById("rep-credits-remaining");
-
-  if (repActive) repActive.innerText = allCases.filter(c => c.case_status !== 'DISPOSED').length;
-  if (repTotal) repTotal.innerText = allCases.filter(c => c.next_hearing_date).length;
-  if (repDisposed) repDisposed.innerText = allCases.filter(c => c.case_status === 'DISPOSED').length;
-  if (repCredits) repCredits.innerText = "176.0";
-}
+      <a href="${getWhatsAppUrl(c)}" target="_blank" class="btn-ui btn-ui-wa" style="padding: 3px 8px; font-size: 0.7rem;">💬 WhatsApp</a>
+    </div>
+  `).join("");
+};
 
 async function loadAdvocateSettings() {
   try {
@@ -758,17 +713,6 @@ async function loadAdvocateSettings() {
     
     const firm = data.firm_name || "R. ANBAIYA & ASSOCIATES";
     const lawyer = data.lawyer_name || "Advocate R. Anbaiya";
-    const phone = data.lawyer_phone || "+919842112233";
-
-    const cfgFirmName = document.getElementById("cfg-firm-name");
-    const cfgLawyerName = document.getElementById("cfg-lawyer-name");
-    const cfgLawyerPhone = document.getElementById("cfg-lawyer-phone");
-    const cfgFooter = document.getElementById("cfg-footer");
-
-    if (cfgFirmName) cfgFirmName.value = firm;
-    if (cfgLawyerName) cfgLawyerName.value = lawyer;
-    if (cfgLawyerPhone) cfgLawyerPhone.value = phone;
-    if (cfgFooter) cfgFooter.value = data.default_whatsapp_footer || "Sent on behalf of R. Anbaiya & Associates, Advocates & Legal Consultants, Karur";
 
     const sidebarBrandTitle = document.getElementById("sidebar-brand-title");
     if (sidebarBrandTitle) sidebarBrandTitle.innerText = firm;
@@ -777,17 +721,10 @@ async function loadAdvocateSettings() {
     if (sidebarAdvocateName) sidebarAdvocateName.innerText = lawyer;
 
     const headerGreeting = document.getElementById("header-advocate-greeting");
-    if (headerGreeting) headerGreeting.innerText = `Good Evening, ${lawyer}`;
-
-    const avatarInitials = document.getElementById("sidebar-avatar-initials");
-    if (avatarInitials) {
-      const initials = lawyer.split(" ").map(w => w[0]).filter(Boolean).slice(-2).join("").toUpperCase();
-      avatarInitials.innerText = initials || "RA";
-    }
+    if (headerGreeting) headerGreeting.innerText = `Good Morning, ${lawyer}`;
   } catch (e) {}
 }
 
-// Helpers
 function getBadgeClass(stage) {
   if (!stage) return "badge-evidence";
   const s = stage.toLowerCase();
@@ -835,7 +772,7 @@ function escapeHtml(str) {
 }
 
 // =========================================================================
-// 5. APPLICATION STARTUP & FORM SUBMISSION
+// 6. APPLICATION STARTUP & FORM LISTENERS
 // =========================================================================
 document.addEventListener("DOMContentLoaded", () => {
   // Search listeners
@@ -850,18 +787,6 @@ document.addEventListener("DOMContentLoaded", () => {
         (c.case_number_formatted || "").toLowerCase().includes(q)
       );
       renderAllCasesTable(filtered);
-    });
-  }
-
-  const clientSearchInput = document.getElementById("client-search-input");
-  if (clientSearchInput) {
-    clientSearchInput.addEventListener("input", () => {
-      const q = clientSearchInput.value.trim().toLowerCase();
-      const filtered = allCases.filter(c => 
-        (c.client_name || "").toLowerCase().includes(q) ||
-        (c.client_phone || "").toLowerCase().includes(q)
-      );
-      renderClientsTable(filtered);
     });
   }
 
@@ -889,7 +814,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Fast Direct Intake Form Handler
-  const intakeForm = document.getElementById("direct-intake-form") || document.getElementById("wizard-form");
+  const intakeForm = document.getElementById("direct-intake-form");
   if (intakeForm) {
     intakeForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -910,7 +835,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const notesInput = document.getElementById("wiz-notes");
 
       try {
-        const res = await fetch("/api/check-case", {
+        await fetch("/api/check-case", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -929,21 +854,13 @@ document.addEventListener("DOMContentLoaded", () => {
           })
         });
 
-        const data = await res.json();
         const modal = document.getElementById("case-intake-modal");
         if (modal) modal.style.display = "none";
         
         alert(`✅ Client "${nameInput ? nameInput.value : 'Client'}" successfully added to tracking!`);
-        
-        // Reset form
         intakeForm.reset();
-        if (dateInput) dateInput.value = "2026-08-14";
-        if (stageInput) stageInput.value = "Evidence";
-        if (roomInput) roomInput.value = "Room 1";
-        if (itemInput) itemInput.value = "1";
-
         await loadTrackedCases();
-        await loadDailyCauseList(dateInput ? dateInput.value : "2026-08-14");
+        await loadDailyCauseList("2026-08-14");
         window.switchView("view-cases");
       } catch (err) {
         alert("Failed to add client: " + err.message);
@@ -956,38 +873,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  const firmSettingsForm = document.getElementById("firm-settings-form");
-  if (firmSettingsForm) {
-    firmSettingsForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const cfgFirmName = document.getElementById("cfg-firm-name");
-      const cfgLawyerName = document.getElementById("cfg-lawyer-name");
-      const cfgLawyerPhone = document.getElementById("cfg-lawyer-phone");
-      const cfgFooter = document.getElementById("cfg-footer");
-
-      try {
-        await fetch("/api/advocate-settings", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            firm_name: cfgFirmName ? cfgFirmName.value.trim() : "",
-            lawyer_name: cfgLawyerName ? cfgLawyerName.value.trim() : "",
-            lawyer_phone: cfgLawyerPhone ? cfgLawyerPhone.value.trim() : "",
-            default_whatsapp_footer: cfgFooter ? cfgFooter.value.trim() : ""
-          })
-        });
-        alert("✅ Advocate & Firm Settings saved successfully!");
-        loadAdvocateSettings();
-      } catch (err) {
-        alert("Failed to save settings: " + err.message);
-      }
-    });
-  }
-
-  // Initial Data Loads
+  // Initial Loads & Start Live Sync Loop
   loadAdvocateSettings();
   loadDailyCauseList("2026-08-14");
   loadTrackedCases();
-  loadAlertsAudit();
+  loadLeads();
   renderCalendar(currentCalendarDate);
+  startLiveSyncLoop();
 });

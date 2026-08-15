@@ -464,6 +464,51 @@ def search_advocate_cases_endpoint():
     results = search_cases_by_advocate(advocate_name, district=district)
     return jsonify(results)
 
+@app.route("/api/ai-briefing")
+def ai_briefing_endpoint():
+    """Returns AI-generated executive morning briefing for Advocate."""
+    from ai_agent import get_ai_daily_briefing
+    date_str = request.args.get("date", "2026-08-14")
+    return jsonify(get_ai_daily_briefing(date_str))
+
+@app.route("/api/ai-assistant", methods=["POST"])
+def ai_assistant_endpoint():
+    """Interactive JARVIS Agentic Legal Assistant query handler."""
+    data = request.get_json() or {}
+    prompt = data.get("prompt", "")
+    from ai_agent import query_agentic_ai
+    return jsonify(query_agentic_ai(prompt))
+
+@app.route("/api/leads", methods=["GET", "POST"])
+def leads_endpoint():
+    """Retrieves or adds prospective client inquiries."""
+    from db import get_all_leads, add_lead, update_lead_status
+    if request.method == "POST":
+        data = request.get_json() or {}
+        client_name = data.get("client_name", "New Lead")
+        client_phone = data.get("client_phone", "")
+        matter_type = data.get("matter_type", "Civil Dispute")
+        expected_court = data.get("expected_court", "Principal Sub Court, Karur")
+        notes = data.get("notes", "")
+        lead_id = add_lead(client_name, client_phone, matter_type, expected_court, notes)
+        return jsonify({"success": True, "lead_id": lead_id, "message": "Lead registered successfully"})
+    else:
+        return jsonify(get_all_leads())
+
+@app.route("/api/live-status")
+def live_status_endpoint():
+    """Lightweight endpoint for zero-refresh real-time live sync polling."""
+    from db import get_all_cases, get_daily_cause_list
+    all_c = get_all_cases()
+    today_data = get_daily_cause_list("2026-08-14")
+    return jsonify({
+        "timestamp": int(time.time()),
+        "total_cases": len(all_c),
+        "today_hearings": today_data.get("total_hearings", 0),
+        "last_updated": time.strftime("%H:%M:%S")
+    })
+
+
 
 
 

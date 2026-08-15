@@ -131,12 +131,58 @@ def init_db():
             WHERE id = 1
         """)
 
-
+    # 5. Case Leads & Inquiries Table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS leads (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_name TEXT NOT NULL,
+            client_phone TEXT NOT NULL,
+            matter_type TEXT DEFAULT 'Civil Dispute',
+            expected_court TEXT DEFAULT 'Principal Sub Court, Karur',
+            status TEXT DEFAULT 'NEW',
+            notes TEXT DEFAULT '',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
 
     conn.commit()
     conn.close()
 
+def get_all_leads() -> List[Dict[str, Any]]:
+    """Returns all prospective client inquiries."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM leads ORDER BY id DESC")
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+def add_lead(client_name: str, client_phone: str, matter_type: str = "Civil Dispute",
+             expected_court: str = "Principal Sub Court, Karur", notes: str = "") -> int:
+    """Inserts a new client inquiry lead."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO leads (client_name, client_phone, matter_type, expected_court, status, notes)
+        VALUES (?, ?, ?, ?, 'NEW', ?)
+    """, (client_name, client_phone, matter_type, expected_court, notes))
+    lead_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return lead_id
+
+def update_lead_status(lead_id: int, status: str) -> bool:
+    """Updates status of a lead."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("UPDATE leads SET status = ? WHERE id = ?", (status, lead_id))
+    conn.commit()
+    conn.close()
+    return True
+
 # Cache methods to save credits
+
 def get_cached_case(cnr_number: str, max_age_seconds: int = 7200) -> Optional[Dict[str, Any]]:
     """Retrieves cached response from SQLite if younger than max_age_seconds (default 2 hours)."""
     conn = sqlite3.connect(DB_PATH)
