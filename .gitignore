@@ -1,6 +1,10 @@
 .env
 *.db
-*.png
 __pycache__/
 .vscode/
 .idea/
+captcha*.png
+page_view*.png
+cnr_home*.png
+solved_result*.png
+!assets/*.png

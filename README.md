@@ -4,6 +4,10 @@ An intelligent, autonomous system built for advocates and legal practices to tra
 
 ---
 
+![eCourts Case Tracker Dashboard Preview](assets/dashboard_preview.png)
+
+---
+
 ## 🌟 Key Features
 
 - **🔍 Dual Engine Architecture:**
