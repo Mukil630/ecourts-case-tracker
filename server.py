@@ -655,7 +655,7 @@ def dispatch_alert():
 
 @app.route("/api/export-case/<cnr>")
 def export_case(cnr):
-    """Renders a printable law firm case summary brief with Uncle's firm branding."""
+    """Renders an ultra-detailed, prestigious legal case dossier brief for Advocate R. Anbaiya & Associates."""
     case = get_case_by_cnr(cnr.upper())
     if not case:
         return "<h3>Case not found in database. Please track it first.</h3>", 404
@@ -667,86 +667,134 @@ def export_case(cnr):
     <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <title>Case Summary Brief - {{ case.cnr_number }}</title>
+        <title>Case Dossier Brief - {{ case.case_number_formatted or case.cnr_number }} - {{ settings.firm_name }}</title>
         <style>
-            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #1e293b; background: #fff; line-height: 1.6; }
-            .header { border-bottom: 3px solid #0f172a; padding-bottom: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; }
-            .firm-name { font-size: 24px; font-weight: 800; color: #0f172a; }
-            .firm-subtitle { font-size: 14px; color: #64748b; font-weight: 600; }
-            .badge { background: #0284c7; color: white; padding: 4px 12px; border-radius: 6px; font-size: 14px; font-weight: 600; }
-            .section { margin-bottom: 20px; }
-            .section-title { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; font-weight: 700; margin-bottom: 6px; }
-            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-            .card { background: #f8fafc; border: 1px solid #e2e8f0; padding: 14px; border-radius: 8px; }
-            .highlight-card { background: #eff6ff; border: 1px solid #bfdbfe; }
-            .hearing-date { font-size: 24px; font-weight: 800; color: #0369a1; }
-            .footer { margin-top: 40px; border-top: 1px solid #cbd5e1; padding-top: 15px; font-size: 12px; color: #94a3b8; text-align: center; }
-            @media print { .no-print { display: none; } body { padding: 0; } }
+            @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            body { font-family: 'Plus Jakarta Sans', sans-serif; padding: 30px 40px; color: #0f172a; background: #fff; line-height: 1.5; }
+            
+            .header { border-bottom: 2.5px solid #0f172a; padding-bottom: 14px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start; }
+            .firm-name { font-size: 22px; font-weight: 800; color: #0f172a; letter-spacing: -0.3px; }
+            .firm-subtitle { font-size: 12px; color: #475569; font-weight: 600; margin-top: 2px; }
+            
+            .badge { background: #0f172a; color: white; padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+            .badge-stage { background: #0284c7; color: #fff; padding: 3px 10px; border-radius: 4px; font-size: 12px; font-weight: 700; }
+            
+            .section { margin-bottom: 16px; }
+            .section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #64748b; font-weight: 800; margin-bottom: 6px; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; }
+            
+            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+            .card { background: #f8fafc; border: 1.5px solid #e2e8f0; padding: 14px; border-radius: 6px; }
+            .highlight-card { background: #f0f9ff; border: 1.5px solid #bae6fd; }
+            
+            .hearing-date { font-size: 22px; font-weight: 800; color: #0284c7; margin-top: 2px; }
+            .item-badge { display: inline-flex; align-items: center; justify-content: center; background: #0284c7; color: #fff; font-weight: 800; font-size: 15px; width: 36px; height: 36px; border-radius: 6px; }
+            
+            .footer { margin-top: 30px; border-top: 1.5px solid #cbd5e1; padding-top: 12px; font-size: 11px; color: #64748b; display: flex; justify-content: space-between; }
+            
+            .no-print { background: #f8fafc; border: 1px solid #cbd5e1; padding: 10px 16px; border-radius: 6px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+            @media print {
+                .no-print { display: none !important; }
+                body { padding: 10mm; font-size: 11pt; }
+                @page { margin: 10mm; size: A4 portrait; }
+            }
         </style>
     </head>
     <body>
-        <div class="no-print" style="margin-bottom: 20px; display: flex; justify-content: space-between;">
-            <button onclick="window.print()" style="padding: 10px 20px; background: #0284c7; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">🖨️ Print / Save as PDF</button>
-            <span style="color: #64748b; font-size: 13px;">Official Legal Case Hearing Record</span>
+        <div class="no-print">
+            <div>
+                <strong>🖨️ Advocate Case Brief Dossier</strong>
+                <span style="font-size: 12px; color: #64748b; margin-left: 8px;">Case: {{ case.case_number_formatted or case.cnr_number }}</span>
+            </div>
+            <button onclick="window.print()" style="padding: 8px 16px; background: #0284c7; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 12px;">🖨️ Print / Save as PDF</button>
         </div>
 
+        <!-- Law Chamber Header -->
         <div class="header">
             <div>
-                <div class="firm-name">⚖️ {{ settings.firm_name or 'Law Chambers & Associates' }}</div>
-                <div class="firm-subtitle">{{ settings.lawyer_name or 'Senior Advocate' }} &bull; Office Contact: {{ settings.lawyer_phone or '+919876543210' }}</div>
+                <div class="firm-name">⚖️ {{ settings.firm_name or 'R. ANBAIYA & ASSOCIATES' }}</div>
+                <div class="firm-subtitle">{{ settings.lawyer_name or 'Advocate R. Anbaiya' }} &bull; Advocates & Legal Consultants &bull; Karur Bar Association</div>
+                <div style="font-size: 11px; color: #64748b; margin-top: 2px;">Office Helpline: {{ settings.lawyer_phone or '+919842112233' }}</div>
             </div>
-            <span class="badge">{{ case.case_status }}</span>
+            <div style="text-align: right;">
+                <span class="badge">{{ case.case_status or 'PENDING' }}</span>
+                <div style="font-size: 11px; color: #64748b; margin-top: 4px;">Record Key: {{ case.id }}</div>
+            </div>
         </div>
 
-        <div class="section">
-            <div class="section-title">Case Title & CNR</div>
-            <div style="font-size: 18px; font-weight: 700;">{{ case.case_title }}</div>
-            <div style="font-family: monospace; font-size: 15px; color: #0284c7; margin-top: 2px;">CNR: {{ case.cnr_number }}</div>
+        <!-- 1. Case Identity Header -->
+        <div class="card section" style="background: #ffffff; border: 1.5px solid #0f172a;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div style="font-size: 18px; font-weight: 800; color: #0f172a;">{{ case.case_title }}</div>
+                    <div style="font-size: 13px; font-weight: 700; color: #0284c7; margin-top: 2px;">
+                        Case No: {{ case.case_number_formatted or '-' }} &bull; 
+                        <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #475569;">CNR: {{ case.cnr_number }}</span>
+                    </div>
+                </div>
+                <div style="text-align: center;">
+                    <div class="item-badge">#{{ case.item_number or '-' }}</div>
+                    <div style="font-size: 10px; font-weight: 700; color: #64748b; margin-top: 2px;">DAILY ITEM</div>
+                </div>
+            </div>
         </div>
 
+        <!-- 2. Hearing Schedule & Stage -->
         <div class="grid section">
             <div class="card highlight-card">
-                <div class="section-title">Next Scheduled Hearing Date</div>
-                <div class="hearing-date">{{ case.next_hearing_date or 'Awaiting Schedule / Disposed' }}</div>
+                <div class="section-title">📅 NEXT SCHEDULED HEARING</div>
+                <div class="hearing-date">{{ case.next_hearing_date or 'Awaiting Schedule' }}</div>
+                <div style="margin-top: 6px;">
+                    <span class="badge-stage">{{ case.case_stage or 'Evidence' }}</span>
+                </div>
             </div>
             <div class="card">
-                <div class="section-title">Last Hearing Date</div>
-                <div style="font-size: 18px; font-weight: 600; color: #334155; margin-top: 4px;">{{ case.last_hearing_date or 'N/A' }}</div>
+                <div class="section-title">🏛️ COURT ROOM & PRESIDING JUDGE</div>
+                <div style="font-size: 15px; font-weight: 800; color: #0f172a;">{{ case.court_name }}</div>
+                <div style="font-size: 13px; font-weight: 700; color: #0284c7; margin-top: 2px;">Court Room: {{ case.court_room or '-' }}</div>
+                <div style="font-size: 12px; color: #475569; margin-top: 2px;">Presiding: <strong>{{ case.judge_name or '-' }}</strong></div>
             </div>
         </div>
 
+        <!-- 3. Client & Litigant Representation -->
         <div class="grid section">
             <div class="card">
-                <div class="section-title">Court & Jurisdiction</div>
-                <div style="font-weight: 600;">{{ case.court_name }}</div>
+                <div class="section-title">👤 CLIENT INFORMATION</div>
+                <div style="font-size: 15px; font-weight: 800; color: #0f172a;">{{ case.client_name or 'Client' }}</div>
+                <div style="font-size: 12px; color: #475569; margin-top: 2px;">Role: <strong>{{ case.litigant_role or 'Petitioner / Complainant' }}</strong></div>
+                <div style="font-size: 12px; color: #0284c7; margin-top: 2px; font-weight: 700;">WhatsApp: {{ case.client_phone or '-' }}</div>
             </div>
             <div class="card">
-                <div class="section-title">Client Information</div>
-                <div style="font-weight: 600;">{{ case.client_name or 'N/A' }}</div>
-                <div style="color: #64748b; font-size: 13px;">Phone: {{ case.client_phone or 'N/A' }}</div>
+                <div class="section-title">⚖️ PARTIES & ADVOCATES</div>
+                <div style="font-size: 12px; color: #334155; margin-bottom: 4px;"><strong>Parties:</strong> {{ case.parties or case.case_title }}</div>
+                <div style="font-size: 12px; color: #334155;"><strong>Advocate:</strong> {{ case.advocates or settings.lawyer_name or 'Advocate R. Anbaiya' }}</div>
             </div>
         </div>
 
-        <div class="card section">
-            <div class="section-title">Parties & Advocates</div>
-            <div style="margin-bottom: 6px;"><strong>Parties:</strong> {{ case.parties or 'N/A' }}</div>
-            <div><strong>Advocates:</strong> {{ case.advocates or 'N/A' }}</div>
-        </div>
-
+        <!-- 4. Advocate Confidential Strategy Notes -->
         {% if case.notes %}
-        <div class="card section" style="background: #fffbeb; border-color: #fef3c7;">
-            <div class="section-title" style="color: #b45309;">Advocate Confidential Notes</div>
-            <div>{{ case.notes }}</div>
+        <div class="card section" style="background: #fffbeb; border: 1.5px solid #fef3c7;">
+            <div class="section-title" style="color: #b45309;">📝 ADVOCATE CONFIDENTIAL STRATEGY NOTES</div>
+            <div style="font-size: 13px; font-weight: 700; color: #92400e;">{{ case.notes }}</div>
         </div>
         {% endif %}
 
+        <!-- 5. Footer & Chamber Signature -->
         <div class="footer">
-            {{ settings.default_whatsapp_footer }} &bull; Generated on: {{ case.last_checked_at }}
+            <div>
+                <div>{{ settings.default_whatsapp_footer }}</div>
+                <div style="font-size: 10px; color: #94a3b8; margin-top: 2px;">Last Verified on eCourts: {{ case.last_checked_at }}</div>
+            </div>
+            <div style="text-align: right;">
+                <div style="height: 30px;"></div>
+                <div style="border-top: 1px solid #0f172a; font-weight: 800; font-size: 11px;">Advocate Signature & Seal</div>
+            </div>
         </div>
     </body>
     </html>
     """
     return render_template_string(html_template, case=case, settings=settings)
+
 
 if __name__ == "__main__":
     port = 5000
