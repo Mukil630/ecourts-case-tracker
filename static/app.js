@@ -1,7 +1,7 @@
 /**
  * R. ANBAIYA & ASSOCIATES • Advocates & Legal Consultants
  * eCourts Automation & Case Management Platform
- * Global Resilient Frontend Controller
+ * Streamlined Client Intake & Private Vault Controller
  */
 
 // Global State
@@ -54,108 +54,35 @@ window.switchView = function(viewId) {
 };
 
 // =========================================================================
-// 2. CASE INTAKE WIZARD CONTROLLERS
+// 2. CLIENT INTAKE MODAL CONTROLLERS
 // =========================================================================
 window.openCaseIntakeModal = function() {
   const modal = document.getElementById("case-intake-modal");
   if (modal) {
     modal.style.display = "flex";
-    window.goToStep(1);
-  }
-};
-
-window.goToStep = function(stepNum) {
-  const step1 = document.getElementById("wizard-step-1");
-  const step2 = document.getElementById("wizard-step-2");
-  const step3 = document.getElementById("wizard-step-3");
-  const ind1 = document.getElementById("step-ind-1");
-  const ind2 = document.getElementById("step-ind-2");
-  const ind3 = document.getElementById("step-ind-3");
-
-  const nameInput = document.getElementById("wiz-client-name");
-  const phoneInput = document.getElementById("wiz-client-phone");
-  const cnrInput = document.getElementById("wiz-cnr");
-
-  if (!step1 || !step2 || !step3) return;
-
-  [step1, step2, step3].forEach(s => s.style.display = "none");
-  if (ind1) ind1.classList.remove("active");
-  if (ind2) ind2.classList.remove("active");
-  if (ind3) ind3.classList.remove("active");
-
-  if (stepNum === 1) {
-    step1.style.display = "block";
-    if (ind1) ind1.classList.add("active");
-  } else if (stepNum === 2) {
-    if (nameInput && !nameInput.value.trim()) {
-      alert("Please enter the Client Full Name.");
-      step1.style.display = "block";
-      if (ind1) ind1.classList.add("active");
-      return;
-    }
-    step2.style.display = "block";
-    if (ind2) ind2.classList.add("active");
-  } else if (stepNum === 3) {
-    if (cnrInput && !cnrInput.value.trim()) {
-      alert("Please enter the 16-Digit CNR Number.");
-      step2.style.display = "block";
-      if (ind2) ind2.classList.add("active");
-      return;
-    }
-    step3.style.display = "block";
-    if (ind3) ind3.classList.add("active");
-
-    const preview = document.getElementById("intake-verification-preview");
-    const roleSelect = document.getElementById("wiz-litigant-role");
-    const stageInput = document.getElementById("wiz-stage");
-    const roomInput = document.getElementById("wiz-room");
-
-    if (preview) {
-      preview.innerHTML = `
-        <div style="font-size: 0.85rem;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <strong style="color:var(--text-main); font-size:0.95rem;">${escapeHtml(nameInput ? nameInput.value : 'Client')} vs Opposing Party</strong>
-            <span class="badge badge-evidence">✓ Verified Record</span>
-          </div>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
-            <div><strong>CNR:</strong> <code style="font-family:var(--font-mono); color:var(--primary);">${escapeHtml(cnrInput ? cnrInput.value.toUpperCase() : '')}</code></div>
-            <div><strong>Court:</strong> District Court, Karur</div>
-            <div><strong>Stage:</strong> ${escapeHtml(stageInput && stageInput.value ? stageInput.value : 'Evidence')}</div>
-            <div><strong>Court Room:</strong> ${escapeHtml(roomInput && roomInput.value ? roomInput.value : 'Room 1')}</div>
-          </div>
-          <div style="background:#ecfdf5; border:1px solid #a7f3d0; padding:8px 12px; border-radius:4px; font-size:0.78rem; color:#065f46;">
-            Client: <strong>${escapeHtml(nameInput ? nameInput.value : '')}</strong> enrolled as <strong>${escapeHtml(roleSelect ? roleSelect.value : 'Petitioner')}</strong>.
-          </div>
-        </div>
-      `;
-    }
   }
 };
 
 window.autoFillSampleClient = function() {
   const nameInput = document.getElementById("wiz-client-name");
-  const roleSelect = document.getElementById("wiz-litigant-role");
-  const phoneInput = document.getElementById("wiz-client-phone");
-  const emailInput = document.getElementById("wiz-client-email");
-  const cnrInput = document.getElementById("wiz-cnr");
   const caseNoInput = document.getElementById("wiz-case-no");
+  const phoneInput = document.getElementById("wiz-client-phone");
+  const courtSelect = document.getElementById("wiz-court-name");
+  const dateInput = document.getElementById("wiz-hearing-date");
   const stageInput = document.getElementById("wiz-stage");
   const roomInput = document.getElementById("wiz-room");
   const itemInput = document.getElementById("wiz-item");
   const notesInput = document.getElementById("wiz-notes");
 
-  if (nameInput) nameInput.value = "Shobika Impex Private LTD";
-  if (roleSelect) roleSelect.value = "Financial Institution / Bank";
-  if (phoneInput) phoneInput.value = "+919843011223";
-  if (emailInput) emailInput.value = "accounts@shobikaimpex.com";
-  if (cnrInput) cnrInput.value = "TNKR060000692024";
-  if (caseNoInput) caseNoInput.value = "COS/69/2024";
+  if (nameInput) nameInput.value = "M. Palanisamy";
+  if (caseNoInput) caseNoInput.value = "STC/1035/2023";
+  if (phoneInput) phoneInput.value = "9443322110";
+  if (courtSelect) courtSelect.value = "Chief Judicial Magistrate Court, Karur";
+  if (dateInput) dateInput.value = "2026-08-14";
   if (stageInput) stageInput.value = "Evidence";
-  if (roomInput) roomInput.value = "Room 3";
-  if (itemInput) itemInput.value = "1";
-  if (notesInput) notesInput.value = "Commercial dispute trial & evidence documents marking";
-
-  window.goToStep(2);
+  if (roomInput) roomInput.value = "Room 8";
+  if (itemInput) itemInput.value = "4";
+  if (notesInput) notesInput.value = "Complainant evidence cross examination";
 };
 
 // =========================================================================
@@ -284,7 +211,7 @@ function renderHearingBoard(data, filterCourt = "ALL") {
       <div style="padding: 36px 20px; text-align: center; color: var(--text-muted);">
         <div style="font-size: 2rem; margin-bottom: 8px;">📋</div>
         <strong style="font-size: 0.95rem; color: var(--text-main);">No Hearings Scheduled for This Date</strong>
-        <p style="font-size: 0.78rem; margin-top: 4px;">You can add client cases using <strong>"+ Case Intake"</strong> in the sidebar.</p>
+        <p style="font-size: 0.78rem; margin-top: 4px;">Click <strong>"+ Case Intake"</strong> in the sidebar to add your first client.</p>
       </div>
     `;
     return;
@@ -377,10 +304,9 @@ async function loadTrackedCases() {
     if (badgeTotalCases) badgeTotalCases.innerText = allCases.length;
     if (kpiDisposedCases) kpiDisposedCases.innerText = disposedCount;
 
-    const todayStr = new Date().toISOString().split("T")[0];
-    const future7d = new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0];
-    const upcoming7dCount = allCases.filter(c => c.next_hearing_date && c.next_hearing_date >= todayStr && c.next_hearing_date <= future7d).length;
-    if (kpiUpcoming7d) kpiUpcoming7d.innerText = upcoming7dCount;
+    const todayStr = "2026-08-14";
+    const futureCasesCount = allCases.filter(c => c.next_hearing_date && c.next_hearing_date >= todayStr).length;
+    if (kpiUpcoming7d) kpiUpcoming7d.innerText = futureCasesCount;
 
     renderUpcomingHearingsWidget(allCases);
     renderAlertsWidget(allCases);
@@ -399,12 +325,12 @@ function renderUpcomingHearingsWidget(cases) {
 
   const todayStr = "2026-08-14";
   const futureCases = (cases || []).filter(c => c.next_hearing_date && c.next_hearing_date > todayStr);
-  futureCases.sort((a, b) => a.next_hearing_date.localeCompare(b.next_hearing_date));
+  futureCases.sort((a, b) => (a.next_hearing_date || "").localeCompare(b.next_hearing_date || ""));
 
   if (futureCases.length === 0) {
     container.innerHTML = `
       <div style="padding: 16px; text-align: center; color: var(--text-muted); font-size: 0.78rem;">
-        No upcoming hearings scheduled. Enroll new matters using <strong>+ Case Intake</strong>.
+        No upcoming hearings scheduled. Enroll new clients using <strong>+ Case Intake</strong>.
       </div>
     `;
     return;
@@ -471,7 +397,7 @@ function renderAllCasesTable(cases) {
         <td colspan="8" style="padding: 32px; text-align: center; color: var(--text-muted);">
           <div style="font-size: 1.8rem; margin-bottom: 6px;">📁</div>
           <strong style="color: var(--text-main);">No Cases in Portfolio</strong>
-          <p style="font-size: 0.78rem; margin-top: 4px;">Click <strong>"+ Case Intake"</strong> to enroll client cases.</p>
+          <p style="font-size: 0.78rem; margin-top: 4px;">Click <strong>"+ Case Intake"</strong> in the sidebar to add your first client.</p>
         </td>
       </tr>
     `;
@@ -776,10 +702,10 @@ function escapeHtml(str) {
 }
 
 // =========================================================================
-// 5. APPLICATION STARTUP & EVENT WIRING
+// 5. APPLICATION STARTUP & FORM SUBMISSION
 // =========================================================================
 document.addEventListener("DOMContentLoaded", () => {
-  // Bind search listeners
+  // Search listeners
   const allCasesSearch = document.getElementById("all-cases-search");
   if (allCasesSearch) {
     allCasesSearch.addEventListener("input", () => {
@@ -829,68 +755,69 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  const btnCloseModal = document.getElementById("btn-close-intake-modal");
-  if (btnCloseModal) {
-    btnCloseModal.addEventListener("click", () => {
-      const modal = document.getElementById("case-intake-modal");
-      if (modal) modal.style.display = "none";
-    });
-  }
-
-  const wizardForm = document.getElementById("wizard-form");
-  if (wizardForm) {
-    wizardForm.addEventListener("submit", async (e) => {
+  // Fast Direct Intake Form Handler
+  const intakeForm = document.getElementById("direct-intake-form") || document.getElementById("wizard-form");
+  if (intakeForm) {
+    intakeForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const btnSubmit = document.getElementById("btn-confirm-intake");
       if (btnSubmit) {
         btnSubmit.disabled = true;
-        btnSubmit.innerText = "⏳ Enrolling Case...";
+        btnSubmit.innerText = "⏳ Adding Client...";
       }
 
       const nameInput = document.getElementById("wiz-client-name");
-      const roleSelect = document.getElementById("wiz-litigant-role");
-      const phoneInput = document.getElementById("wiz-client-phone");
-      const emailInput = document.getElementById("wiz-client-email");
-      const cnrInput = document.getElementById("wiz-cnr");
       const caseNoInput = document.getElementById("wiz-case-no");
+      const phoneInput = document.getElementById("wiz-client-phone");
+      const courtSelect = document.getElementById("wiz-court-name");
+      const dateInput = document.getElementById("wiz-hearing-date");
       const stageInput = document.getElementById("wiz-stage");
       const roomInput = document.getElementById("wiz-room");
       const itemInput = document.getElementById("wiz-item");
       const notesInput = document.getElementById("wiz-notes");
 
       try {
-        await fetch("/api/check-case", {
+        const res = await fetch("/api/check-case", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            cnr: cnrInput ? cnrInput.value.trim().toUpperCase() : "",
             client_name: nameInput ? nameInput.value.trim() : "",
-            client_phone: phoneInput ? phoneInput.value.trim() : "",
-            client_email: emailInput ? emailInput.value.trim() : "",
-            litigant_role: roleSelect ? roleSelect.value : "Petitioner / Complainant",
+            case_number: caseNoInput ? caseNoInput.value.trim() : "",
             case_number_formatted: caseNoInput ? caseNoInput.value.trim() : "",
+            cnr: caseNoInput ? caseNoInput.value.trim().toUpperCase() : "",
+            client_phone: phoneInput ? phoneInput.value.trim() : "",
+            court_name: courtSelect ? courtSelect.value : "Principal Sub Court, Karur",
+            next_hearing_date: dateInput ? dateInput.value : "2026-08-14",
             case_stage: stageInput ? stageInput.value.trim() : "Evidence",
             court_room: roomInput ? roomInput.value.trim() : "Room 1",
             item_number: itemInput ? itemInput.value.trim() : "1",
             notes: notesInput ? notesInput.value.trim() : "",
-            next_hearing_date: dashboardDatePicker ? dashboardDatePicker.value : "2026-08-14",
             force_live: false
           })
         });
 
+        const data = await res.json();
         const modal = document.getElementById("case-intake-modal");
         if (modal) modal.style.display = "none";
-        alert("✅ Case successfully enrolled and added to your Private Chamber Tracking!");
         
+        alert(`✅ Client "${nameInput ? nameInput.value : 'Client'}" successfully added to tracking!`);
+        
+        // Reset form
+        intakeForm.reset();
+        if (dateInput) dateInput.value = "2026-08-14";
+        if (stageInput) stageInput.value = "Evidence";
+        if (roomInput) roomInput.value = "Room 1";
+        if (itemInput) itemInput.value = "1";
+
         await loadTrackedCases();
-        await loadDailyCauseList(dashboardDatePicker ? dashboardDatePicker.value : "2026-08-14");
+        await loadDailyCauseList(dateInput ? dateInput.value : "2026-08-14");
         window.switchView("view-cases");
       } catch (err) {
-        alert("Failed to enroll case: " + err.message);
+        alert("Failed to add client: " + err.message);
       } finally {
         if (btnSubmit) {
           btnSubmit.disabled = false;
-          btnSubmit.innerText = "✓ Confirm & Track Case";
+          btnSubmit.innerText = "➕ Add & Track Client";
         }
       }
     });

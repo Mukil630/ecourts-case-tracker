@@ -492,115 +492,83 @@
   <!-- ==========================================================================
        3. 3-STEP CASE INTAKE & VERIFICATION MODAL
        ========================================================================== -->
+  <!-- ==========================================================================
+       3. DIRECT CLIENT & CASE INTAKE MODAL
+       ========================================================================== -->
   <div id="case-intake-modal" class="modal-overlay" style="display: none;">
-    <div class="modal-card">
+    <div class="modal-card" style="max-width: 520px;">
       <div class="modal-header">
-        <h3 style="font-size: 1.05rem; font-weight: 800;">👤 New Client & Case Intake</h3>
-        <button id="btn-close-intake-modal" class="btn-ui btn-ui-secondary" style="padding: 4px 8px;">✕</button>
+        <h3 style="font-size: 1.05rem; font-weight: 800;">➕ Add New Client & Case</h3>
+        <button id="btn-close-intake-modal" class="btn-ui btn-ui-secondary" style="padding: 4px 8px;" onclick="document.getElementById('case-intake-modal').style.display='none'">✕</button>
       </div>
 
       <div class="modal-body">
-        <!-- 3-Step Wizard Indicator -->
-        <div class="wizard-steps">
-          <div class="step-indicator active" id="step-ind-1">
-            <span class="step-number">1</span>
-            <span>Client Details</span>
+        <form id="direct-intake-form">
+          <div class="form-group-ui">
+            <label class="form-label-ui">Client Full Name *</label>
+            <input type="text" id="wiz-client-name" class="form-input-ui" placeholder="e.g. M. Senthil Kumar" required>
           </div>
-          <div class="step-indicator" id="step-ind-2">
-            <span class="step-number">2</span>
-            <span>Case Details</span>
-          </div>
-          <div class="step-indicator" id="step-ind-3">
-            <span class="step-number">3</span>
-            <span>Verification</span>
-          </div>
-        </div>
 
-        <form id="wizard-form">
-          <!-- STEP 1: CLIENT DETAILS -->
-          <div id="wizard-step-1">
-            <div class="form-group-ui">
-              <label class="form-label-ui">Client Full Name *</label>
-              <input type="text" id="wiz-client-name" class="form-input-ui" placeholder="e.g. M Palanisamy" required>
+          <div class="form-row-ui">
+            <div class="form-group-ui" style="flex: 1;">
+              <label class="form-label-ui">Case / CNR Number *</label>
+              <input type="text" id="wiz-case-no" class="form-input-ui" placeholder="e.g. OS/102/2024" required>
             </div>
-            <div class="form-row-ui">
-              <div class="form-group-ui" style="flex: 1;">
-                <label class="form-label-ui">Client Role *</label>
-                <select id="wiz-litigant-role" class="form-input-ui">
-                  <option value="Petitioner / Complainant">Petitioner / Complainant</option>
-                  <option value="Respondent / Defendant">Respondent / Defendant</option>
-                  <option value="Accused / Defense">Accused / Defense</option>
-                  <option value="Financial Institution / Bank">Financial Institution / Bank</option>
-                </select>
-              </div>
-              <div class="form-group-ui" style="flex: 1;">
-                <label class="form-label-ui">WhatsApp Contact Number *</label>
-                <input type="text" id="wiz-client-phone" class="form-input-ui" placeholder="+919443322110" required>
-              </div>
-            </div>
-            <div class="form-group-ui">
-              <label class="form-label-ui">Email Address (Optional)</label>
-              <input type="email" id="wiz-client-email" class="form-input-ui" placeholder="client@domain.com">
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px;">
-              <button type="button" class="btn-ui btn-ui-secondary" onclick="autoFillSampleClient()" style="font-size:0.75rem;">⚡ Sample Karur Client</button>
-              <button type="button" class="btn-ui btn-ui-primary" onclick="goToStep(2)">Next: Case Details →</button>
+            <div class="form-group-ui" style="flex: 1;">
+              <label class="form-label-ui">WhatsApp Phone Number *</label>
+              <input type="text" id="wiz-client-phone" class="form-input-ui" placeholder="e.g. 9842112233" required>
             </div>
           </div>
 
-
-          <!-- STEP 2: CASE DETAILS -->
-          <div id="wizard-step-2" style="display: none;">
-            <div class="form-group-ui">
-              <label class="form-label-ui">16-Digit CNR Number *</label>
-              <input type="text" id="wiz-cnr" class="form-input-ui" placeholder="e.g. TNKR010010352023" style="font-family: var(--font-mono);" required maxlength="16">
+          <div class="form-row-ui">
+            <div class="form-group-ui" style="flex: 1.2;">
+              <label class="form-label-ui">Court Complex</label>
+              <select id="wiz-court-name" class="form-input-ui">
+                <option value="Principal Sub Court, Karur">Principal Sub Court, Karur</option>
+                <option value="Principal District Court, Karur">Principal District Court, Karur</option>
+                <option value="Principal District Munsif Court, Karur">Principal District Munsif Court, Karur</option>
+                <option value="Chief Judicial Magistrate Court, Karur">Chief Judicial Magistrate Court, Karur</option>
+                <option value="Fast Track Court at Magisterial Level, Karur">Fast Track Court, Karur</option>
+                <option value="Mahila Court, Karur">Mahila Court, Karur</option>
+              </select>
             </div>
-            <div class="form-row-ui">
-              <div class="form-group-ui" style="flex: 1;">
-                <label class="form-label-ui">Case Number</label>
-                <input type="text" id="wiz-case-no" class="form-input-ui" placeholder="e.g. STC/1035/2023">
-              </div>
-              <div class="form-group-ui" style="flex: 1;">
-                <label class="form-label-ui">Case Stage</label>
-                <input type="text" id="wiz-stage" class="form-input-ui" placeholder="e.g. Evidence / Trial">
-              </div>
-            </div>
-            <div class="form-row-ui">
-              <div class="form-group-ui" style="flex: 1;">
-                <label class="form-label-ui">Court Room</label>
-                <input type="text" id="wiz-room" class="form-input-ui" placeholder="e.g. Room 8">
-              </div>
-              <div class="form-group-ui" style="flex: 1;">
-                <label class="form-label-ui">Item Number</label>
-                <input type="text" id="wiz-item" class="form-input-ui" placeholder="e.g. 4">
-              </div>
-            </div>
-            <div class="form-group-ui">
-              <label class="form-label-ui">Advocate Notes / Purpose</label>
-              <input type="text" id="wiz-notes" class="form-input-ui" placeholder="e.g. Complainant evidence cross examination">
-            </div>
-            <div style="display:flex; justify-content:space-between; margin-top:16px;">
-              <button type="button" class="btn-ui btn-ui-secondary" onclick="goToStep(1)">← Back</button>
-              <button type="button" class="btn-ui btn-ui-primary" onclick="goToStep(3)">Verify Case on eCourts →</button>
+            <div class="form-group-ui" style="flex: 0.8;">
+              <label class="form-label-ui">Next Hearing Date</label>
+              <input type="date" id="wiz-hearing-date" class="form-input-ui" value="2026-08-14">
             </div>
           </div>
 
-          <!-- STEP 3: VERIFICATION & CONFIRMATION -->
-          <div id="wizard-step-3" style="display: none;">
-            <div id="intake-verification-preview" style="background:#f8fafc; border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:16px; margin-bottom:16px;">
-              <p style="text-align:center; color:var(--text-muted);">Verifying CNR on eCourts...</p>
+          <div class="form-row-ui">
+            <div class="form-group-ui" style="flex: 1;">
+              <label class="form-label-ui">Hearing Stage / Purpose</label>
+              <input type="text" id="wiz-stage" class="form-input-ui" placeholder="e.g. Evidence / Arguments" value="Evidence">
             </div>
-            <div style="display:flex; justify-content:space-between; margin-top:16px;">
-              <button type="button" class="btn-ui btn-ui-secondary" onclick="goToStep(2)">← Back</button>
-              <button type="submit" id="btn-confirm-intake" class="btn-ui btn-ui-primary">✓ Confirm & Track Case</button>
+            <div class="form-group-ui" style="flex: 0.5;">
+              <label class="form-label-ui">Court Room</label>
+              <input type="text" id="wiz-room" class="form-input-ui" placeholder="Room 1" value="Room 1">
             </div>
+            <div class="form-group-ui" style="flex: 0.5;">
+              <label class="form-label-ui">Item No</label>
+              <input type="text" id="wiz-item" class="form-input-ui" placeholder="1" value="1">
+            </div>
+          </div>
+
+          <div class="form-group-ui">
+            <label class="form-label-ui">Advocate Notes (Optional)</label>
+            <input type="text" id="wiz-notes" class="form-input-ui" placeholder="e.g. Cross examination of plaintiff">
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px;">
+            <button type="button" class="btn-ui btn-ui-secondary" onclick="autoFillSampleClient()" style="font-size:0.75rem;">⚡ Fill Sample</button>
+            <button type="submit" id="btn-confirm-intake" class="btn-ui btn-ui-primary" style="padding: 10px 22px; font-weight: 800;">
+              ➕ Add & Track Client
+            </button>
           </div>
         </form>
       </div>
     </div>
   </div>
 
-  <script src="/static/app.js?v=5.0"></script>
-
+  <script src="/static/app.js?v=6.0"></script>
 </body>
 </html>

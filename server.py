@@ -253,102 +253,121 @@ def export_cause_list_print():
 @app.route("/api/check-case", methods=["POST"])
 def check_case():
     """
-    Fetches case from eCourts API (with smart credit-saving cache)
-    and saves with Uncle's custom tracking rules.
+    Directly adds/updates client case with eCourts live sync or instant local private vault tracking.
     """
     data = request.get_json() or {}
-    cnr = (data.get("cnr") or "DLND020047882015").strip().upper()
-    client_name = data.get("client_name", "Client")
-    client_phone = data.get("client_phone", "+919876543210")
+    
+    # 1. Clean Client Name & Phone
+    client_name = (data.get("client_name") or "New Client").strip()
+    raw_phone = str(data.get("client_phone") or "").strip()
+    digits = "".join(c for c in raw_phone if c.isdigit())
+    if len(digits) == 10:
+        client_phone = f"+91{digits}"
+    elif digits.startswith("91") and len(digits) == 12:
+        client_phone = f"+{digits}"
+    elif digits:
+        client_phone = f"+{digits}" if not raw_phone.startswith("+") else raw_phone
+    else:
+        client_phone = "+919443322110"
+
+    # 2. Clean CNR & Case Number
+    raw_input_no = (data.get("cnr") or data.get("case_number") or data.get("case_number_formatted") or "").strip().upper()
+    if not raw_input_no:
+        raw_input_no = f"TNKR-{int(time.time())}"
+    
+    # Case Number Formatted vs CNR
+    case_number_formatted = data.get("case_number_formatted") or raw_input_no
+    cnr = raw_input_no.replace(" ", "").replace("/", "-")
+    
     client_email = data.get("client_email", "")
     litigant_role = data.get("litigant_role", "Petitioner / Complainant")
+    court_name = data.get("court_name") or "Principal Sub Court, Karur"
+    court_room = data.get("court_room") or "Room 1"
+    item_number = data.get("item_number") or "1"
+    case_stage = data.get("case_stage") or "Evidence"
+    notes = data.get("notes") or ""
+    next_hearing_date = data.get("next_hearing_date") or "2026-08-14"
     force_live = bool(data.get("force_live", False))
-    
-    track_hearing = bool(data.get("track_next_hearing", True))
-    track_orders = bool(data.get("track_orders", True))
-    track_status = bool(data.get("track_case_status", True))
-    auto_wa = bool(data.get("auto_whatsapp_enabled", True))
-    notes = data.get("notes", "")
-    custom_header = data.get("custom_advocate_header", "Advocate Office Notice")
 
     api_key = get_api_key()
 
-    if api_key:
-        api_result = fetch_case_details(cnr, force_live=force_live)
-        if api_result.get("success"):
-            db_payload = {
-                "cnr_number": api_result.get("cnr_number") or cnr,
-                "case_title": api_result.get("case_title") or data.get("case_title") or f"{client_name} Matter",
-                "case_status": api_result.get("case_status") or data.get("case_status") or "PENDING",
-                "court_name": api_result.get("court_name") or data.get("court_name") or "District Court, Karur",
-                "parties": f"Petitioner: {', '.join(api_result.get('petitioners', []))} | Respondent: {', '.join(api_result.get('respondents', []))}",
-                "advocates": f"Petitioner Adv: {', '.join(api_result.get('petitioner_advocates', []))} | Respondent Adv: {', '.join(api_result.get('respondent_advocates', []))}",
-                "last_hearing_date": api_result.get("last_hearing_date") or data.get("last_hearing_date", ""),
-                "next_hearing_date": api_result.get("next_hearing_date") or data.get("next_hearing_date", "2026-08-14")
-            }
-            date_changed = upsert_case(
-                db_payload,
-                client_name=client_name,
-                client_phone=client_phone,
-                client_email=client_email,
-                litigant_role=litigant_role,
-                track_next_hearing=track_hearing,
-                track_orders=track_orders,
-                track_case_status=track_status,
-                auto_whatsapp_enabled=auto_wa,
-                notes=notes,
-                custom_advocate_header=custom_header,
-                case_number_formatted=data.get("case_number_formatted", ""),
-                case_stage=data.get("case_stage", "Evidence"),
-                court_room=data.get("court_room", "Room 1"),
-                item_number=data.get("item_number", "1"),
-                judge_name=data.get("judge_name", "")
-            )
+    # Try live eCourts if 16-char CNR
+    if api_key and len(cnr) == 16 and not "-" in cnr:
+        try:
+            api_result = fetch_case_details(cnr, force_live=force_live)
+            if api_result.get("success"):
+                db_payload = {
+                    "cnr_number": api_result.get("cnr_number") or cnr,
+                    "case_title": api_result.get("case_title") or f"{client_name} Matter",
+                    "case_status": api_result.get("case_status") or "PENDING",
+                    "court_name": api_result.get("court_name") or court_name,
+                    "parties": f"Petitioner: {', '.join(api_result.get('petitioners', []))} | Respondent: {', '.join(api_result.get('respondents', []))}",
+                    "advocates": f"Petitioner Adv: {', '.join(api_result.get('petitioner_advocates', []))} | Respondent Adv: {', '.join(api_result.get('respondent_advocates', []))}",
+                    "last_hearing_date": api_result.get("last_hearing_date") or "",
+                    "next_hearing_date": api_result.get("next_hearing_date") or next_hearing_date
+                }
+                date_changed = upsert_case(
+                    db_payload,
+                    client_name=client_name,
+                    client_phone=client_phone,
+                    client_email=client_email,
+                    litigant_role=litigant_role,
+                    track_next_hearing=True,
+                    track_orders=True,
+                    track_case_status=True,
+                    auto_whatsapp_enabled=True,
+                    notes=notes,
+                    case_number_formatted=case_number_formatted,
+                    case_stage=case_stage,
+                    court_room=court_room,
+                    item_number=item_number
+                )
+                return jsonify({
+                    "success": True,
+                    "date_changed": date_changed,
+                    "is_cached": api_result.get("is_cached", False),
+                    "cache_note": "Synced with eCourts live record",
+                    "case_data": api_result
+                })
+        except Exception:
+            pass
 
-            return jsonify({
-                "success": True,
-                "date_changed": date_changed,
-                "is_cached": api_result.get("is_cached", False),
-                "cache_note": api_result.get("cache_note", "Live API query used"),
-                "case_data": api_result
-            })
-        else:
-            # eCourts API did not have judicial record yet -> Save advocate's manual case details!
-            db_payload = {
-                "cnr_number": cnr,
-                "case_title": data.get("case_title") or f"{client_name} vs Opposing Party",
-                "case_status": data.get("case_status") or "PENDING",
-                "court_name": data.get("court_name") or "District Court, Karur",
-                "parties": f"{client_name} | Opposing Party",
-                "advocates": "Advocate R. Anbaiya",
-                "last_hearing_date": data.get("last_hearing_date", ""),
-                "next_hearing_date": data.get("next_hearing_date", "2026-08-14")
-            }
-            date_changed = upsert_case(
-                db_payload,
-                client_name=client_name,
-                client_phone=client_phone,
-                client_email=client_email,
-                litigant_role=litigant_role,
-                track_next_hearing=track_hearing,
-                track_orders=track_orders,
-                track_case_status=track_status,
-                auto_whatsapp_enabled=auto_wa,
-                notes=notes,
-                custom_advocate_header=custom_header,
-                case_number_formatted=data.get("case_number_formatted", ""),
-                case_stage=data.get("case_stage", "Evidence"),
-                court_room=data.get("court_room", "Room 1"),
-                item_number=data.get("item_number", "1"),
-                judge_name=data.get("judge_name", "")
-            )
-            return jsonify({
-                "success": True,
-                "date_changed": date_changed,
-                "is_cached": True,
-                "cache_note": "Saved into Private Chamber Vault",
-                "case_data": db_payload
-            })
+    # Instant Direct Private Chamber Enrollment
+    db_payload = {
+        "cnr_number": cnr,
+        "case_title": data.get("case_title") or f"{client_name} vs Opposing Party",
+        "case_status": data.get("case_status") or "PENDING",
+        "court_name": court_name,
+        "parties": f"{client_name} | Opposing Party",
+        "advocates": "Advocate R. Anbaiya",
+        "last_hearing_date": "2026-07-15",
+        "next_hearing_date": next_hearing_date
+    }
+    date_changed = upsert_case(
+        db_payload,
+        client_name=client_name,
+        client_phone=client_phone,
+        client_email=client_email,
+        litigant_role=litigant_role,
+        track_next_hearing=True,
+        track_orders=True,
+        track_case_status=True,
+        auto_whatsapp_enabled=True,
+        notes=notes,
+        case_number_formatted=case_number_formatted,
+        case_stage=case_stage,
+        court_room=court_room,
+        item_number=item_number,
+        judge_name=data.get("judge_name", "")
+    )
+    return jsonify({
+        "success": True,
+        "date_changed": date_changed,
+        "is_cached": True,
+        "cache_note": "Enrolled in Private Chamber Vault",
+        "case_data": db_payload
+    })
+
 
 
     # Fallback Sample Data for demo mode
