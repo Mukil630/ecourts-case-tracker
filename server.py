@@ -1,10 +1,12 @@
 import os
 import sys
 import json
-from flask import Flask, request, jsonify, send_from_directory
+import time
+from flask import Flask, request, jsonify, send_from_directory, render_template_string
 from flask_cors import CORS
 from ecourts_api import fetch_case_details, get_api_key
-from db import init_db, upsert_case, get_all_cases
+from db import init_db, upsert_case, get_all_cases, get_case_by_cnr, delete_case, get_case_history_logs, mark_log_notified
+from sync_engine import sync_worker
 
 # Ensure UTF-8 output
 if hasattr(sys.stdout, 'reconfigure'):
@@ -13,8 +15,9 @@ if hasattr(sys.stdout, 'reconfigure'):
 app = Flask(__name__, static_folder="static")
 CORS(app)
 
-# Initialize DB on startup
+# Initialize DB and start Background Auto-Poller on startup
 init_db()
+sync_worker.start()
 
 @app.route("/")
 def index():
@@ -29,7 +32,11 @@ def key_status():
     key = get_api_key()
     has_key = bool(key and key != "your_api_key_here")
     masked = (key[:8] + "..." + key[-4:]) if has_key and len(key) > 12 else ""
-    return jsonify({"configured": has_key, "masked_key": masked, "full_key": key if has_key else ""})
+    return jsonify({
+        "configured": has_key,
+        "masked_key": masked,
+        "full_key": key if has_key else ""
+    })
 
 @app.route("/api/save-key", methods=["POST"])
 def save_key():
@@ -51,9 +58,21 @@ def list_cases():
     cases = get_all_cases()
     return jsonify(cases)
 
+@app.route("/api/cases/<cnr>", methods=["GET"])
+def get_case(cnr):
+    case = get_case_by_cnr(cnr.upper())
+    if case:
+        return jsonify({"success": True, "case": case})
+    return jsonify({"success": False, "error": "Case not found"}), 404
+
+@app.route("/api/cases/<cnr>", methods=["DELETE"])
+def remove_case(cnr):
+    deleted = delete_case(cnr.upper())
+    return jsonify({"success": deleted})
+
 @app.route("/api/check-case", methods=["POST"])
 def check_case():
-    """Fetches case from eCourts API or fallback mock if key not set."""
+    """Fetches case from eCourts API or fallback demo data if key not set."""
     data = request.get_json() or {}
     cnr = (data.get("cnr") or "DLND020047882015").strip().upper()
     client_name = data.get("client_name", "Client")
@@ -118,6 +137,154 @@ def check_case():
         "date_changed": date_changed,
         "case_data": sample_case
     })
+
+@app.route("/api/sync-all", methods=["POST"])
+def sync_all():
+    """Triggers batch re-check of all tracked cases."""
+    result = sync_worker.sync_all_cases()
+    return jsonify(result)
+
+@app.route("/api/sync-status", methods=["GET"])
+def sync_status():
+    """Returns status of background auto-poller."""
+    return jsonify({
+        "running": sync_worker.running,
+        "interval_seconds": sync_worker.interval_seconds,
+        "last_sync_time": sync_worker.last_sync_time,
+        "last_sync_result": sync_worker.last_sync_result
+    })
+
+@app.route("/api/history", methods=["GET"])
+def get_history():
+    """Returns change audit trail."""
+    logs = get_case_history_logs(limit=50)
+    return jsonify(logs)
+
+@app.route("/api/dispatch-alert", methods=["POST"])
+def dispatch_alert():
+    """Simulates/records alert dispatch to client."""
+    data = request.get_json() or {}
+    cnr = data.get("cnr", "")
+    phone = data.get("phone", "")
+    message = data.get("message", "")
+    log_id = data.get("log_id")
+
+    if log_id:
+        mark_log_notified(log_id)
+
+    return jsonify({
+        "success": True,
+        "status": "DISPATCHED",
+        "recipient": phone,
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "channel": "WhatsApp"
+    })
+
+@app.route("/api/run-agent", methods=["POST"])
+def trigger_agent():
+    """Runs LangGraph Autonomous Vision Agent in separate thread or fallback."""
+    data = request.get_json() or {}
+    cnr = (data.get("cnr") or "DLND020047882015").strip().upper()
+    try:
+        from ecourts_agent_graph import run_agent
+        result = run_agent(cnr)
+        return jsonify({
+            "success": result.get("status") in ["SUCCESS", "COMPLETED"],
+            "status": result.get("status"),
+            "agent_state": {
+                "cnr": cnr,
+                "attempt": result.get("attempt"),
+                "status": result.get("status"),
+                "captcha_text": result.get("captcha_text"),
+                "screenshot": "/static/case_result_full.png" if os.path.exists("C:/Users/mukil/ecourts_automation/case_result_full.png") else None
+            }
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/api/export-case/<cnr>")
+def export_case(cnr):
+    """Renders a printable law firm case summary brief."""
+    case = get_case_by_cnr(cnr.upper())
+    if not case:
+        return "<h3>Case not found in database. Please track it first.</h3>", 404
+
+    html_template = """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Case Summary Brief - {{ case.cnr_number }}</title>
+        <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #1e293b; background: #fff; line-height: 1.6; }
+            .header { border-bottom: 3px solid #0f172a; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
+            .title { font-size: 24px; font-weight: 800; color: #0f172a; }
+            .badge { background: #0284c7; color: white; padding: 4px 12px; border-radius: 6px; font-size: 14px; font-weight: 600; }
+            .section { margin-bottom: 25px; }
+            .section-title { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; font-weight: 700; margin-bottom: 8px; }
+            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+            .card { background: #f8fafc; border: 1px solid #e2e8f0; padding: 16px; border-radius: 8px; }
+            .highlight-card { background: #eff6ff; border: 1px solid #bfdbfe; }
+            .hearing-date { font-size: 26px; font-weight: 800; color: #0369a1; }
+            .footer { margin-top: 50px; border-top: 1px solid #cbd5e1; padding-top: 15px; font-size: 12px; color: #94a3b8; text-align: center; }
+            @media print { .no-print { display: none; } body { padding: 0; } }
+        </style>
+    </head>
+    <body>
+        <div class="no-print" style="margin-bottom: 20px;">
+            <button onclick="window.print()" style="padding: 10px 20px; background: #0284c7; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">🖨️ Print / Save as PDF</button>
+        </div>
+
+        <div class="header">
+            <div>
+                <div class="title">⚖️ Case Hearing Brief</div>
+                <div style="color: #64748b; font-size: 14px;">Official Legal Case Summary & Client Record</div>
+            </div>
+            <span class="badge">{{ case.case_status }}</span>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Case Title & CNR</div>
+            <div style="font-size: 20px; font-weight: 700;">{{ case.case_title }}</div>
+            <div style="font-family: monospace; font-size: 16px; color: #0284c7; margin-top: 4px;">CNR: {{ case.cnr_number }}</div>
+        </div>
+
+        <div class="grid section">
+            <div class="card highlight-card">
+                <div class="section-title">Next Scheduled Hearing Date</div>
+                <div class="hearing-date">{{ case.next_hearing_date or 'Awaiting Schedule / Disposed' }}</div>
+            </div>
+            <div class="card">
+                <div class="section-title">Last Hearing Date</div>
+                <div style="font-size: 20px; font-weight: 600; color: #334155; margin-top: 6px;">{{ case.last_hearing_date or 'N/A' }}</div>
+            </div>
+        </div>
+
+        <div class="grid section">
+            <div class="card">
+                <div class="section-title">Court & Jurisdiction</div>
+                <div style="font-weight: 600;">{{ case.court_name }}</div>
+            </div>
+            <div class="card">
+                <div class="section-title">Client Information</div>
+                <div style="font-weight: 600;">{{ case.client_name or 'N/A' }}</div>
+                <div style="color: #64748b; font-size: 13px;">Phone: {{ case.client_phone or 'N/A' }}</div>
+            </div>
+        </div>
+
+        <div class="card section">
+            <div class="section-title">Parties & Advocates</div>
+            <div style="margin-bottom: 8px;"><strong>Parties:</strong> {{ case.parties or 'N/A' }}</div>
+            <div><strong>Advocates:</strong> {{ case.advocates or 'N/A' }}</div>
+        </div>
+
+        <div class="footer">
+            Generated via LegalCase eCourts Automated Management System &bull; Timestamp: {{ case.last_checked_at }}
+        </div>
+    </body>
+    </html>
+    """
+    return render_template_string(html_template, case=case)
 
 if __name__ == "__main__":
     port = 5000

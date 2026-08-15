@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LegalCase AutoTracker - eCourts India</title>
+  <title>LegalCase AutoTracker - Autonomous eCourts Case Engine</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -16,33 +16,69 @@
       <div class="brand">
         <div class="logo-badge">⚖️ LEX</div>
         <div class="brand-info">
-          <h1>eCourts Automation & WhatsApp Notifier</h1>
-          <p>Autonomous Legal Case Tracker & Client Update Dispatcher</p>
+          <h1>eCourts Autonomous Case Engine</h1>
+          <p>Multi-Agent Case Tracking & Automated Client Dispatch Platform</p>
         </div>
       </div>
-      <div style="display: flex; align-items: center; gap: 12px;">
-        <div class="status-pill" id="key-pill" style="cursor: pointer;" title="Click to update API Key">
+      <div class="header-actions">
+        <div class="status-pill" id="sync-pill" title="Background Auto-Poller Status">
+          <span class="status-dot pulsing" id="sync-dot"></span>
+          <span id="sync-status-text">Auto-Sync: Active (30m)</span>
+        </div>
+        <div class="status-pill" id="key-pill" title="eCourts Partner API Status">
           <span class="status-dot" id="status-dot"></span>
           <span id="api-status-text">Checking API Key...</span>
         </div>
       </div>
     </header>
 
+    <!-- Metrics Bar -->
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-icon">📁</div>
+        <div>
+          <div class="metric-label">Tracked Cases</div>
+          <div class="metric-value" id="stat-total-cases">0</div>
+        </div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon">📅</div>
+        <div>
+          <div class="metric-label">Active / Pending</div>
+          <div class="metric-value" id="stat-pending-cases">0</div>
+        </div>
+      </div>
+      <div class="metric-card" id="card-history-stat" style="cursor: pointer;" title="Click to view change audit history">
+        <div class="metric-icon">🔔</div>
+        <div>
+          <div class="metric-label">Date Changes Detected</div>
+          <div class="metric-value" id="stat-date-changes" style="color: var(--accent-amber);">0</div>
+        </div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon">🤖</div>
+        <div>
+          <div class="metric-label">Engine Mode</div>
+          <div class="metric-value" style="font-size: 1.1rem; color: var(--accent-blue);">Dual Engine</div>
+        </div>
+      </div>
+    </div>
+
     <!-- API Key Input Banner -->
-    <div class="card" id="key-config-card" style="margin-bottom: 24px; border: 2px solid var(--accent-blue);">
+    <div class="card" id="key-config-card" style="margin-bottom: 24px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-        <h3 style="font-size: 1rem; font-weight: 700; color: var(--accent-blue); display: flex; align-items: center; gap: 8px;">
+        <h3 style="font-size: 0.95rem; font-weight: 700; color: var(--accent-blue); display: flex; align-items: center; gap: 8px;">
           🔑 eCourtsIndia Partner API Key
         </h3>
-        <span style="font-size: 0.8rem; color: var(--text-muted);">Stored locally in .env</span>
+        <span style="font-size: 0.8rem; color: var(--text-muted);">Stored securely in .env</span>
       </div>
-      <div style="display: flex; gap: 10px; align-items: center;">
-        <input type="text" id="api-key-input" class="form-input" placeholder="Paste your eci_live_xxxxxxxxxxxxxxxxxxxx token here" style="flex: 1; font-family: monospace; font-size: 0.9rem;">
+      <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <input type="text" id="api-key-input" class="form-input" placeholder="Paste your eci_live_xxxxxxxxxxxxxxxxxxxx token here" style="flex: 1; min-width: 280px; font-family: monospace; font-size: 0.88rem;">
         <button type="button" id="btn-toggle-view" class="btn btn-secondary" style="flex: none; padding: 10px 14px;">👁️ View</button>
         <button type="button" id="btn-save-key" class="btn btn-primary" style="flex: none; padding: 10px 20px;">💾 Save Key</button>
       </div>
       <div id="key-helper" style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 8px;">
-        Current Key: <strong id="current-key-display" style="color: var(--accent-emerald); font-family: monospace;">Not Configured (Demo Mode)</strong>
+        Current Key: <strong id="current-key-display" style="color: var(--accent-emerald); font-family: monospace;">Checking...</strong>
       </div>
     </div>
 
@@ -50,37 +86,45 @@
     <div class="dashboard-grid">
       <!-- Input Panel -->
       <div class="card">
-        <h2 class="card-title">🔍 Query & Track Case</h2>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h2 class="card-title" style="margin: 0;">🔍 Query & Track Case</h2>
+          <div class="mode-select-wrap">
+            <select id="engine-mode-select" class="mode-select">
+              <option value="api">⚡ Partner API Mode (Instant)</option>
+              <option value="agent">🤖 LangGraph AI Vision Agent</option>
+            </select>
+          </div>
+        </div>
+
         <form id="case-form">
           <div class="form-group">
             <label class="form-label" for="cnr-input">16-Digit CNR Number *</label>
-            <input type="text" id="cnr-input" class="form-input" placeholder="e.g. DLND020047882015" value="DLND020047882015" required maxlength="16">
+            <input type="text" id="cnr-input" class="form-input code-font" placeholder="e.g. DLND020047882015" value="DLND020047882015" required maxlength="16">
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="client-name">Client Name</label>
-            <input type="text" id="client-name" class="form-input" placeholder="e.g. Rajesh Kumar" value="Rajesh Kumar">
+            <label class="form-label" for="client-name">Client / Litigant Name</label>
+            <input type="text" id="client-name" class="form-input" placeholder="e.g. Arun Jaitley" value="Arun Jaitley">
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="client-phone">Client WhatsApp Number (with country code)</label>
-            <input type="text" id="client-phone" class="form-input" placeholder="e.g. +919876543210" value="+919876543210">
+            <label class="form-label" for="client-phone">Client WhatsApp Number</label>
+            <input type="text" id="client-phone" class="form-input code-font" placeholder="e.g. +919876543210" value="+919876543210">
           </div>
 
           <div class="btn-row">
-            <button type="submit" id="btn-fetch" class="btn btn-primary">⚡ Fetch & Track Case</button>
-            <button type="button" id="btn-demo" class="btn btn-secondary">Load Sample Case</button>
+            <button type="submit" id="btn-fetch" class="btn btn-primary">⚡ Execute Tracking</button>
+            <button type="button" id="btn-demo" class="btn btn-secondary">Load Sample CNR</button>
           </div>
         </form>
       </div>
 
       <!-- Case Result & WhatsApp Preview -->
       <div class="card" id="result-card">
-        <h2 class="card-title">📊 Live Case Status</h2>
-        
+        <h2 class="card-title">📊 Case Intelligence & Dispatch</h2>
         <div id="case-result-content">
           <div class="empty-state">
-            <p>Enter a CNR Number on the left to inspect case details and preview automated WhatsApp alerts.</p>
+            <p>Enter a CNR Number to inspect live case details, view hearing predictions, and preview 1-click WhatsApp alerts.</p>
           </div>
         </div>
       </div>
@@ -88,9 +132,20 @@
 
     <!-- Tracked Cases Table -->
     <div class="card">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-        <h2 class="card-title" style="margin: 0;">📋 Tracked Cases in Database (<span id="cases-count">0</span>)</h2>
-        <button id="btn-refresh-list" class="btn btn-secondary" style="padding: 6px 14px; font-size: 0.85rem; flex: none;">🔄 Refresh List</button>
+      <div class="table-header-row">
+        <div>
+          <h2 class="card-title" style="margin: 0;">📋 Tracked Cases Portfolio (<span id="cases-count">0</span>)</h2>
+          <span style="font-size: 0.8rem; color: var(--text-muted);">Auto-monitored by background scheduler</span>
+        </div>
+        <div class="table-actions">
+          <input type="text" id="filter-input" class="form-input search-input" placeholder="🔍 Search by CNR, Title or Court...">
+          <button id="btn-sync-all" class="btn btn-primary" style="padding: 8px 16px; font-size: 0.85rem; flex: none;">
+            🔄 Sync All Cases Now
+          </button>
+          <button id="btn-open-history" class="btn btn-secondary" style="padding: 8px 16px; font-size: 0.85rem; flex: none;">
+            📜 History Logs (<span id="history-count">0</span>)
+          </button>
+        </div>
       </div>
 
       <div class="table-container">
@@ -99,10 +154,10 @@
             <tr>
               <th>CNR Number</th>
               <th>Case Title</th>
-              <th>Court</th>
+              <th>Court & Jurisdiction</th>
               <th>Status</th>
               <th>Next Hearing</th>
-              <th>Client Phone</th>
+              <th>Client Contact</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -112,6 +167,21 @@
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- History Audit Modal -->
+  <div id="history-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>📜 Hearing Date Change Audit Logs</h3>
+        <button id="btn-close-modal" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="history-logs-content">
+          <p class="empty-state">Loading history logs...</p>
+        </div>
       </div>
     </div>
   </div>

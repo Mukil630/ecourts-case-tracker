@@ -3,20 +3,32 @@ document.addEventListener("DOMContentLoaded", () => {
   const cnrInput = document.getElementById("cnr-input");
   const clientNameInput = document.getElementById("client-name");
   const clientPhoneInput = document.getElementById("client-phone");
+  const engineModeSelect = document.getElementById("engine-mode-select");
   const btnFetch = document.getElementById("btn-fetch");
   const btnDemo = document.getElementById("btn-demo");
-  const btnRefreshList = document.getElementById("btn-refresh-list");
+  const btnSyncAll = document.getElementById("btn-sync-all");
+  const btnOpenHistory = document.getElementById("btn-open-history");
+  const cardHistoryStat = document.getElementById("card-history-stat");
+  const filterInput = document.getElementById("filter-input");
   const caseResultContent = document.getElementById("case-result-content");
   const casesTbody = document.getElementById("cases-tbody");
   const casesCount = document.getElementById("cases-count");
+  const historyCount = document.getElementById("history-count");
+  const statTotalCases = document.getElementById("stat-total-cases");
+  const statPendingCases = document.getElementById("stat-pending-cases");
+  const statDateChanges = document.getElementById("stat-date-changes");
   const apiKeyInput = document.getElementById("api-key-input");
   const btnSaveKey = document.getElementById("btn-save-key");
   const btnToggleView = document.getElementById("btn-toggle-view");
   const currentKeyDisplay = document.getElementById("current-key-display");
   const apiStatusText = document.getElementById("api-status-text");
   const statusDot = document.getElementById("status-dot");
+  const historyModal = document.getElementById("history-modal");
+  const btnCloseModal = document.getElementById("btn-close-modal");
+  const historyLogsContent = document.getElementById("history-logs-content");
 
   let isKeyVisible = true;
+  let allTrackedCases = [];
 
   // Toggle View Button
   if (btnToggleView) {
@@ -27,8 +39,10 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Check key status on startup
+  // Check key & system status on startup
   checkKeyStatus();
+  loadTrackedCases();
+  loadHistoryLogsCount();
 
   // Save Key Handler
   btnSaveKey.addEventListener("click", async () => {
@@ -48,7 +62,7 @@ document.addEventListener("DOMContentLoaded", () => {
         currentKeyDisplay.innerText = key;
         apiStatusText.innerText = `API Key Active (${data.masked_key})`;
         statusDot.style.backgroundColor = "var(--accent-emerald)";
-        alert("✅ API Key saved successfully! Live eCourts API is active.");
+        alert("✅ API Key saved successfully! Live eCourts Partner API is active.");
       }
     } catch (e) {
       alert("Failed to save key: " + e.message);
@@ -63,20 +77,17 @@ document.addEventListener("DOMContentLoaded", () => {
       const res = await fetch("/api/key-status");
       const data = await res.json();
       if (data.configured) {
-        apiStatusText.innerText = `API Key Active (${data.masked_key})`;
+        apiStatusText.innerText = `API Active (${data.masked_key})`;
         currentKeyDisplay.innerText = data.full_key || data.masked_key;
         apiKeyInput.value = data.full_key || "";
         statusDot.style.backgroundColor = "var(--accent-emerald)";
       } else {
-        apiStatusText.innerText = "No API Key (Demo Mode)";
+        apiStatusText.innerText = "Demo Mode (No API Key)";
         currentKeyDisplay.innerText = "Not Configured (Demo Mode)";
         statusDot.style.backgroundColor = "var(--accent-amber)";
       }
     } catch (e) {}
   }
-
-  // Load initial cases list
-  loadTrackedCases();
 
   // Handle Form Submit
   caseForm.addEventListener("submit", async (e) => {
@@ -84,19 +95,21 @@ document.addEventListener("DOMContentLoaded", () => {
     const cnr = cnrInput.value.trim().toUpperCase();
     const name = clientNameInput.value.trim();
     const phone = clientPhoneInput.value.trim();
+    const mode = engineModeSelect.value;
 
     if (!cnr) return;
 
     btnFetch.disabled = true;
-    btnFetch.innerText = "⏳ Fetching from eCourts...";
+    btnFetch.innerText = mode === "agent" ? "🤖 Vision Agent Solving..." : "⏳ Querying eCourts...";
     caseResultContent.innerHTML = `
       <div class="empty-state">
-        <p>Connecting to eCourtsIndia API for CNR <strong>${cnr}</strong>...</p>
+        <p><strong>[${mode === 'agent' ? 'Autonomous AI Vision Agent' : 'Partner API'}]</strong> Executing case lookup for <code>${cnr}</code>...</p>
       </div>
     `;
 
     try {
-      const response = await fetch("/api/check-case", {
+      const endpoint = mode === "agent" ? "/api/run-agent" : "/api/check-case";
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ cnr, client_name: name, client_phone: phone })
@@ -105,6 +118,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const data = await response.json();
       renderCaseResult(data, phone);
       loadTrackedCases();
+      loadHistoryLogsCount();
     } catch (err) {
       caseResultContent.innerHTML = `
         <div class="empty-state" style="color: var(--accent-rose);">
@@ -113,7 +127,7 @@ document.addEventListener("DOMContentLoaded", () => {
       `;
     } finally {
       btnFetch.disabled = false;
-      btnFetch.innerText = "⚡ Fetch & Track Case";
+      btnFetch.innerText = "⚡ Execute Tracking";
     }
   });
 
@@ -125,7 +139,91 @@ document.addEventListener("DOMContentLoaded", () => {
     caseForm.dispatchEvent(new Event("submit"));
   });
 
-  btnRefreshList.addEventListener("click", loadTrackedCases);
+  // Sync All Cases Button
+  btnSyncAll.addEventListener("click", async () => {
+    btnSyncAll.disabled = true;
+    btnSyncAll.innerText = "🔄 Syncing Cases...";
+    try {
+      const res = await fetch("/api/sync-all", { method: "POST" });
+      const data = await res.json();
+      alert(`✅ Sync Complete!\n• Total Checked: ${data.total_checked}\n• Date Shifts Detected: ${data.date_changes_count}`);
+      loadTrackedCases();
+      loadHistoryLogsCount();
+    } catch (e) {
+      alert("Sync failed: " + e.message);
+    } finally {
+      btnSyncAll.disabled = false;
+      btnSyncAll.innerText = "🔄 Sync All Cases Now";
+    }
+  });
+
+  // Search Filter Handler
+  if (filterInput) {
+    filterInput.addEventListener("input", (e) => {
+      const term = e.target.value.toLowerCase();
+      const filtered = allTrackedCases.filter(c => 
+        (c.cnr_number || "").toLowerCase().includes(term) ||
+        (c.case_title || "").toLowerCase().includes(term) ||
+        (c.court_name || "").toLowerCase().includes(term) ||
+        (c.client_name || "").toLowerCase().includes(term)
+      );
+      renderTableRows(filtered);
+    });
+  }
+
+  // History Modal Triggers
+  btnOpenHistory.addEventListener("click", openHistoryModal);
+  if (cardHistoryStat) {
+    cardHistoryStat.addEventListener("click", openHistoryModal);
+  }
+  btnCloseModal.addEventListener("click", () => historyModal.style.display = "none");
+  window.addEventListener("click", (e) => {
+    if (e.target === historyModal) historyModal.style.display = "none";
+  });
+
+  async function openHistoryModal() {
+    historyModal.style.display = "flex";
+    historyLogsContent.innerHTML = `<p class="empty-state">Fetching audit history logs...</p>`;
+    try {
+      const res = await fetch("/api/history");
+      const logs = await res.json();
+      if (!logs || logs.length === 0) {
+        historyLogsContent.innerHTML = `<p class="empty-state">No hearing date changes detected yet. The background worker logs all shifts automatically.</p>`;
+        return;
+      }
+      historyLogsContent.innerHTML = logs.map(l => `
+        <div class="history-item">
+          <div class="history-item-header">
+            <span><strong>CNR:</strong> <code style="color: var(--accent-blue);">${escapeHtml(l.cnr_number)}</code> (${escapeHtml(l.case_title || 'Case')})</span>
+            <span>⏱️ ${escapeHtml(l.detected_at)}</span>
+          </div>
+          <div class="history-shift">
+            <span style="color: var(--text-muted); text-decoration: line-through;">${escapeHtml(l.previous_hearing_date || 'None')}</span>
+            <span>➡️</span>
+            <span style="color: var(--accent-emerald); font-size: 1.1rem;">${escapeHtml(l.new_hearing_date || 'Awaiting Date')}</span>
+          </div>
+          <div style="margin-top: 6px; font-size: 0.8rem; color: var(--text-secondary); display: flex; justify-content: space-between; align-items: center;">
+            <span>Client: ${escapeHtml(l.client_name || 'N/A')} (${escapeHtml(l.client_phone || 'N/A')})</span>
+            <span style="color: ${l.notified ? 'var(--accent-emerald)' : 'var(--accent-amber)'}; font-weight: 600;">
+              ${l.notified ? '✓ Notification Dispatched' : '⏳ Ready for Dispatch'}
+            </span>
+          </div>
+        </div>
+      `).join("");
+    } catch (e) {
+      historyLogsContent.innerHTML = `<p class="empty-state" style="color: var(--accent-rose);">Error loading history: ${e.message}</p>`;
+    }
+  }
+
+  async function loadHistoryLogsCount() {
+    try {
+      const res = await fetch("/api/history");
+      const logs = await res.json();
+      const count = logs ? logs.length : 0;
+      historyCount.innerText = count;
+      statDateChanges.innerText = count;
+    } catch (e) {}
+  }
 
   // Render Result Function
   function renderCaseResult(data, phone) {
@@ -181,9 +279,14 @@ document.addEventListener("DOMContentLoaded", () => {
           💬 WhatsApp Notification Preview:
         </div>
         <div class="whatsapp-bubble">${escapeHtml(waText)}</div>
-        <a href="${waLink}" target="_blank" class="btn btn-whatsapp" style="width: 100%;">
-          📲 Open in WhatsApp Web / App
-        </a>
+        <div style="display: flex; gap: 8px;">
+          <a href="${waLink}" target="_blank" class="btn btn-whatsapp" style="flex: 1;">
+            📲 Open in WhatsApp Web
+          </a>
+          <a href="/api/export-case/${encodeURIComponent(c.cnr_number)}" target="_blank" class="btn btn-secondary" style="flex: none; padding: 10px 16px;">
+            🖨️ Print Brief
+          </a>
+        </div>
       </div>
     `;
   }
@@ -193,40 +296,71 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const res = await fetch("/api/cases");
       const cases = await res.json();
-      casesCount.innerText = cases.length;
+      allTrackedCases = cases || [];
+      casesCount.innerText = allTrackedCases.length;
+      statTotalCases.innerText = allTrackedCases.length;
+      
+      const pending = allTrackedCases.filter(c => !((c.case_status || "").toLowerCase().includes("disp"))).length;
+      statPendingCases.innerText = pending;
 
-      if (!cases || cases.length === 0) {
-        casesTbody.innerHTML = `
-          <tr>
-            <td colspan="7" class="empty-state">No cases tracked in database yet.</td>
-          </tr>
-        `;
-        return;
-      }
-
-      casesTbody.innerHTML = cases.map(item => `
-        <tr>
-          <td><code style="color: var(--accent-blue);">${escapeHtml(item.cnr_number)}</code></td>
-          <td><strong>${escapeHtml(item.case_title || 'N/A')}</strong></td>
-          <td style="font-size: 0.85rem; color: var(--text-secondary);">${escapeHtml(item.court_name || 'District Court')}</td>
-          <td><span class="tag ${item.case_status && item.case_status.includes('DISP') ? 'tag-disposed' : 'tag-pending'}">${escapeHtml(item.case_status || 'PENDING')}</span></td>
-          <td style="font-weight: 700; color: var(--accent-blue);">${escapeHtml(item.next_hearing_date || 'N/A')}</td>
-          <td>${escapeHtml(item.client_phone || '-')}</td>
-          <td>
-            <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;" onclick="recheckCase('${item.cnr_number}')">
-              ⚡ Check
-            </button>
-          </td>
-        </tr>
-      `).join("");
+      renderTableRows(allTrackedCases);
     } catch (e) {
       console.error(e);
     }
   }
 
+  function renderTableRows(cases) {
+    if (!cases || cases.length === 0) {
+      casesTbody.innerHTML = `
+        <tr>
+          <td colspan="7" class="empty-state">No matching case records found in database.</td>
+        </tr>
+      `;
+      return;
+    }
+
+    casesTbody.innerHTML = cases.map(item => `
+      <tr>
+        <td><code style="color: var(--accent-blue); font-family: var(--font-mono);">${escapeHtml(item.cnr_number)}</code></td>
+        <td><strong>${escapeHtml(item.case_title || 'N/A')}</strong></td>
+        <td style="font-size: 0.85rem; color: var(--text-secondary);">${escapeHtml(item.court_name || 'District Court')}</td>
+        <td><span class="tag ${item.case_status && item.case_status.includes('DISP') ? 'tag-disposed' : 'tag-pending'}">${escapeHtml(item.case_status || 'PENDING')}</span></td>
+        <td style="font-weight: 700; color: var(--accent-blue);">${escapeHtml(item.next_hearing_date || 'N/A')}</td>
+        <td>${escapeHtml(item.client_phone || '-')}</td>
+        <td>
+          <div class="action-btn-group">
+            <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.75rem;" onclick="recheckCase('${item.cnr_number}')" title="Recheck Case">
+              ⚡ Check
+            </button>
+            <a href="/api/export-case/${encodeURIComponent(item.cnr_number)}" target="_blank" class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.75rem;" title="Print / PDF Brief">
+              🖨️
+            </a>
+            <button class="btn btn-danger" style="padding: 4px 8px; font-size: 0.75rem;" onclick="deleteTrackedCase('${item.cnr_number}')" title="Remove Case">
+              🗑️
+            </button>
+          </div>
+        </td>
+      </tr>
+    `).join("");
+  }
+
   window.recheckCase = (cnr) => {
     cnrInput.value = cnr;
     caseForm.dispatchEvent(new Event("submit"));
+  };
+
+  window.deleteTrackedCase = async (cnr) => {
+    if (!confirm(`Are you sure you want to remove CNR: ${cnr} from tracking?`)) return;
+    try {
+      const res = await fetch(`/api/cases/${encodeURIComponent(cnr)}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        loadTrackedCases();
+        loadHistoryLogsCount();
+      }
+    } catch (e) {
+      alert("Failed to delete case: " + e.message);
+    }
   };
 
   function formatWhatsAppText(c) {

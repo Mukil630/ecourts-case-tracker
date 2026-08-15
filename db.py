@@ -113,10 +113,55 @@ def get_all_cases() -> List[Dict[str, Any]]:
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM cases")
+    cursor.execute("SELECT * FROM cases ORDER BY id DESC")
     rows = [dict(r) for r in cursor.fetchall()]
     conn.close()
     return rows
+
+def get_case_by_cnr(cnr_number: str) -> Optional[Dict[str, Any]]:
+    """Fetches a single case by its CNR number."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM cases WHERE cnr_number = ?", (cnr_number,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def delete_case(cnr_number: str) -> bool:
+    """Deletes a case and its related logs from SQLite."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM cases WHERE cnr_number = ?", (cnr_number,))
+    cursor.execute("DELETE FROM case_history_logs WHERE cnr_number = ?", (cnr_number,))
+    conn.commit()
+    deleted = cursor.rowcount > 0
+    conn.close()
+    return deleted
+
+def get_case_history_logs(limit: int = 50) -> List[Dict[str, Any]]:
+    """Fetches case hearing change audit logs."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT l.*, c.case_title, c.client_name, c.client_phone 
+        FROM case_history_logs l
+        LEFT JOIN cases c ON l.cnr_number = c.cnr_number
+        ORDER BY l.id DESC LIMIT ?
+    """, (limit,))
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+def mark_log_notified(log_id: int) -> bool:
+    """Marks a case history change log as notified/dispatched."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("UPDATE case_history_logs SET notified = 1 WHERE id = ?", (log_id,))
+    conn.commit()
+    conn.close()
+    return True
 
 if __name__ == "__main__":
     init_db()

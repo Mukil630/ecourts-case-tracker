@@ -144,3 +144,7 @@ def parse_ecourts_response(cnr_number: str, raw_json: Dict[str, Any]) -> Dict[st
         "request_id": raw_json.get("meta", {}).get("request_id") or raw_json.get("meta", {}).get("requestId", ""),
         "raw_response": raw_json
     }
+
+# Alias for backwards compatibility with tests and scripts
+fetch_case_by_cnr = fetch_case_details
+
