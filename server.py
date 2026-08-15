@@ -449,6 +449,22 @@ def check_case():
         "case_data": db_payload
     })
 
+@app.route("/api/search-advocate-cases", methods=["GET", "POST"])
+def search_advocate_cases_endpoint():
+    """Searches cases registered under Advocate Name on eCourts / Karur."""
+    if request.method == "POST":
+        data = request.get_json() or {}
+        advocate_name = data.get("advocate_name", "Advocate R. Anbaiya")
+        district = data.get("district", "Karur")
+    else:
+        advocate_name = request.args.get("name", "Advocate R. Anbaiya")
+        district = request.args.get("district", "Karur")
+
+    from ecourts_api import search_cases_by_advocate
+    results = search_cases_by_advocate(advocate_name, district=district)
+    return jsonify(results)
+
+
 
 
     # Fallback Sample Data for demo mode
