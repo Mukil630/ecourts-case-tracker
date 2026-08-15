@@ -44,7 +44,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const btnFetch = document.getElementById("btn-fetch");
   const btnDemo = document.getElementById("btn-demo");
-  const btnSyncAll = document.getElementById("btn-sync-all");
+  const btnSmartSync = document.getElementById("btn-smart-sync");
+  const btnOpenSchedulerMonitor = document.getElementById("btn-open-scheduler-monitor");
   const btnOpenHistory = document.getElementById("btn-open-history");
   const cardHistoryStat = document.getElementById("card-history-stat");
   const filterInput = document.getElementById("filter-input");
@@ -87,6 +88,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const editRuleOrders = document.getElementById("edit-rule-orders");
   const editRuleStatus = document.getElementById("edit-rule-status");
   const editRuleWa = document.getElementById("edit-rule-wa");
+
+  const schedulerModal = document.getElementById("scheduler-modal");
+  const btnCloseScheduler = document.getElementById("btn-close-scheduler");
+  const schedulerSummaryBanner = document.getElementById("scheduler-summary-banner");
+  const schedulerEvaluationsList = document.getElementById("scheduler-evaluations-list");
 
   const historyModal = document.getElementById("history-modal");
   const btnCloseHistory = document.getElementById("btn-close-history");
@@ -364,28 +370,86 @@ document.addEventListener("DOMContentLoaded", () => {
     caseForm.dispatchEvent(new Event("submit"));
   });
 
-  // Sync All Cases Button
-  btnSyncAll.addEventListener("click", async () => {
-    btnSyncAll.disabled = true;
-    btnSyncAll.innerText = "🔄 Syncing All Cases...";
+  // Smart Schedule Sync Button (Hearing-Near vs Hearing-Far Optimizer)
+  if (btnSmartSync) {
+    btnSmartSync.addEventListener("click", async () => {
+      btnSmartSync.disabled = true;
+      btnSmartSync.innerText = "⚡ Running Smart Scheduler...";
+      try {
+        const res = await fetch("/api/scheduler/smart-sync", { method: "POST" });
+        const data = await res.json();
+        alert(`🎯 Smart Predictive Sync Complete!\n• Total Portfolio: ${data.total_portfolio}\n• 💤 Sleeping Cases (Far Away / Disposed): ${data.sleeping_cases + data.disposed_cases}\n• ⚡ Active Checked (Hearing Near): ${data.checked_cases}\n• 🛡️ Credits Saved this Run: ${data.credits_saved_this_run} credits\n• Date Shifts Detected: ${data.date_changes_count}`);
+        loadTrackedCases();
+        loadHistoryLogsCount();
+        loadDailyCauseList();
+      } catch (e) {
+        alert("Smart Sync failed: " + e.message);
+      } finally {
+        btnSmartSync.disabled = false;
+        btnSmartSync.innerText = "⚡ Smart Scheduler Sync (Save Credits)";
+      }
+    });
+  }
+
+  // Scheduler Monitor Modal Trigger
+  if (btnOpenSchedulerMonitor) {
+    btnOpenSchedulerMonitor.addEventListener("click", openSchedulerMonitorModal);
+  }
+  if (btnCloseScheduler) {
+    btnCloseScheduler.addEventListener("click", () => schedulerModal.style.display = "none");
+  }
+
+  async function openSchedulerMonitorModal() {
+    schedulerModal.style.display = "flex";
+    schedulerSummaryBanner.innerHTML = `<p class="empty-state">Evaluating cases with Smart Scheduler...</p>`;
+    schedulerEvaluationsList.innerHTML = "";
+
     try {
-      const res = await fetch("/api/sync-all", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ force_live: false })
-      });
+      const res = await fetch("/api/scheduler/evaluation");
       const data = await res.json();
-      alert(`✅ Portfolio Sync Complete!\n• Total Checked: ${data.total_checked}\n• Cached (0 credits): ${data.cached_count}\n• Date Shifts Detected: ${data.date_changes_count}`);
-      loadTrackedCases();
-      loadHistoryLogsCount();
-      loadDailyCauseList();
+
+      schedulerSummaryBanner.innerHTML = `
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; text-align: center;">
+          <div>
+            <div class="data-label">Total Cases</div>
+            <div style="font-size: 1.3rem; font-weight: 800; color: #fff;">${data.total_cases}</div>
+          </div>
+          <div>
+            <div class="data-label">💤 Sleeping (Far Away)</div>
+            <div style="font-size: 1.3rem; font-weight: 800; color: var(--accent-blue);">${data.sleeping_cases}</div>
+          </div>
+          <div>
+            <div class="data-label">⚡ Checking Today</div>
+            <div style="font-size: 1.3rem; font-weight: 800; color: var(--accent-emerald);">${data.due_cases}</div>
+          </div>
+          <div>
+            <div class="data-label">🛡️ Credits Saved Today</div>
+            <div style="font-size: 1.3rem; font-weight: 800; color: var(--accent-emerald);">${data.credits_saved_today} Credits</div>
+          </div>
+        </div>
+      `;
+
+      schedulerEvaluationsList.innerHTML = (data.evaluations || []).map(ev => `
+        <div class="history-item" style="border-left: 4px solid ${ev.should_check ? 'var(--accent-emerald)' : 'var(--border-color)'};">
+          <div class="history-item-header">
+            <span><strong>${escapeHtml(ev.case_title || 'Case')}</strong> &bull; <code style="color: var(--accent-blue);">${escapeHtml(ev.cnr)}</code></span>
+            <span style="font-weight: 700; color: ${ev.should_check ? 'var(--accent-emerald)' : 'var(--text-muted)'};">
+              ${ev.should_check ? '⚡ Active Query (1.5 Cr)' : '💤 Sleeping (0 Cr)'}
+            </span>
+          </div>
+          <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;">
+            <span>Client: ${escapeHtml(ev.client_name || 'Client')} &bull; Next Hearing: <strong>${escapeHtml(ev.next_hearing_date || 'N/A')}</strong></span>
+          </div>
+          <div style="font-size: 0.8rem; color: var(--accent-blue); margin-top: 4px;">
+            Decision Reason: ${escapeHtml(ev.reason)}
+          </div>
+        </div>
+      `).join("");
+
     } catch (e) {
-      alert("Sync failed: " + e.message);
-    } finally {
-      btnSyncAll.disabled = false;
-      btnSyncAll.innerText = "🔄 Sync All Cases Now";
+      schedulerSummaryBanner.innerHTML = `<p class="empty-state" style="color: var(--accent-rose);">Failed to evaluate scheduler: ${e.message}</p>`;
     }
-  });
+  }
 
   // Live Filter Handler
   if (filterInput) {
@@ -414,6 +478,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e.target === historyModal) historyModal.style.display = "none";
     if (e.target === settingsModal) settingsModal.style.display = "none";
     if (e.target === rulesModal) rulesModal.style.display = "none";
+    if (e.target === schedulerModal) schedulerModal.style.display = "none";
   });
 
   async function openHistoryModal() {

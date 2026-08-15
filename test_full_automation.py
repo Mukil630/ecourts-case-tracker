@@ -135,7 +135,38 @@ class TestFullAutomationSuite(unittest.TestCase):
         res = self.client.get("/api/history")
         self.assertEqual(res.status_code, 200)
 
+        # 5. Daily Cause List
+        res = self.client.get("/api/cause-list?date=2026-08-14")
+        self.assertEqual(res.status_code, 200)
+
         print("[TEST PASS] All Flask REST API Endpoints verified.")
+
+    def test_06_smart_scheduler_decision_logic(self):
+        from sync_engine import evaluate_case_check_need
+        import datetime
+
+        today = datetime.date(2026, 8, 15)
+
+        # Case 1: Hearing Far Away (30 days) -> SLEEP (0 credits)
+        far_case = {"cnr_number": "FAR1", "case_status": "PENDING", "next_hearing_date": "2026-09-15"}
+        eval_far = evaluate_case_check_need(far_case, today)
+        self.assertFalse(eval_far["should_check"])
+        self.assertEqual(eval_far["status_code"], "SLEEPING")
+
+        # Case 2: Hearing Tomorrow -> ACTIVE CHECK (1.5 credits)
+        near_case = {"cnr_number": "NEAR1", "case_status": "PENDING", "next_hearing_date": "2026-08-16"}
+        eval_near = evaluate_case_check_need(near_case, today)
+        self.assertTrue(eval_near["should_check"])
+        self.assertEqual(eval_near["status_code"], "HEARING_NEAR")
+
+        # Case 3: Disposed Case -> FROZEN (0 credits)
+        disp_case = {"cnr_number": "DISP1", "case_status": "DISPOSED", "next_hearing_date": "2026-08-14"}
+        eval_disp = evaluate_case_check_need(disp_case, today)
+        self.assertFalse(eval_disp["should_check"])
+        self.assertEqual(eval_disp["status_code"], "DISPOSED")
+
+        print("[TEST PASS] Smart Predictive Polling Logic verified (Far Away Sleep vs Near Active Query).")
 
 if __name__ == "__main__":
     unittest.main()
+

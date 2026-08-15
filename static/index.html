@@ -207,13 +207,17 @@
           </div>
           <div class="table-actions">
             <input type="text" id="filter-input" class="form-input search-input" placeholder="🔍 Search Client, CNR, Title...">
-            <button id="btn-sync-all" class="btn btn-primary" style="padding: 8px 16px; font-size: 0.85rem; flex: none;">
-              🔄 Sync All Cases Now
+            <button id="btn-smart-sync" class="btn btn-primary" style="padding: 8px 16px; font-size: 0.85rem; flex: none;" title="Checks only hearings due soon & sleeps far away cases">
+              ⚡ Smart Scheduler Sync (Save Credits)
             </button>
-            <button id="btn-open-history" class="btn btn-secondary" style="padding: 8px 16px; font-size: 0.85rem; flex: none;">
+            <button id="btn-open-scheduler-monitor" class="btn btn-secondary" style="padding: 8px 14px; font-size: 0.85rem; flex: none;">
+              🎯 Scheduler Monitor
+            </button>
+            <button id="btn-open-history" class="btn btn-secondary" style="padding: 8px 14px; font-size: 0.85rem; flex: none;">
               📜 History Logs (<span id="history-count">0</span>)
             </button>
           </div>
+
         </div>
 
         <div class="table-container">
@@ -351,6 +355,24 @@
             <button type="submit" class="btn btn-primary" style="flex: none; padding: 10px 24px;">💾 Update Rules</button>
           </div>
         </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Smart Scheduler Monitor Modal -->
+  <div id="scheduler-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-content" style="max-width: 850px;">
+      <div class="modal-header">
+        <h3>🎯 Smart Predictive Polling Engine & Credit Optimizer</h3>
+        <button id="btn-close-scheduler" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="scheduler-summary-banner" style="background: #0b1120; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 16px;">
+          <!-- Populated via JS -->
+        </div>
+        <div id="scheduler-evaluations-list">
+          <p class="empty-state">Evaluating case schedules...</p>
+        </div>
       </div>
     </div>
   </div>
