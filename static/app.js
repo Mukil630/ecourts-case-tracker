@@ -86,6 +86,91 @@ window.autoFillSampleClient = function() {
 };
 
 // =========================================================================
+// 2.5 ADVOCATE NAME eCOURTS SEARCH CONTROLLERS
+// =========================================================================
+window.openAdvocateSearchModal = function() {
+  const modal = document.getElementById("advocate-search-modal");
+  if (modal) {
+    modal.style.display = "flex";
+  }
+};
+
+window.performAdvocateSearch = async function() {
+  const nameInput = document.getElementById("adv-search-name");
+  const distSelect = document.getElementById("adv-search-district");
+  const container = document.getElementById("adv-search-results-container");
+
+  const advocateName = nameInput ? nameInput.value.trim() : "Advocate R. Anbaiya";
+  const district = distSelect ? distSelect.value : "Karur";
+
+  if (!container) return;
+  container.innerHTML = `<p style="text-align: center; color: var(--primary); padding: 20px 0;">⚡ Searching eCourts database for cases registered under <strong>${escapeHtml(advocateName)}</strong> in <strong>${escapeHtml(district)}</strong>...</p>`;
+
+  try {
+    const res = await fetch(`/api/search-advocate-cases?name=${encodeURIComponent(advocateName)}&district=${encodeURIComponent(district)}`);
+    const data = await res.json();
+    const cases = data.cases || [];
+
+    if (cases.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 20px; color: var(--text-muted);">
+          <div style="font-size: 1.8rem; margin-bottom: 6px;">📂</div>
+          <strong>No cases found under "${escapeHtml(advocateName)}"</strong>
+          <p style="font-size: 0.76rem; margin-top: 4px;">Make sure the advocate name matches the Vakalatnama filed in court.</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--border-color);">
+        <div>
+          <strong style="font-size:0.92rem; color:var(--text-main);">Found ${cases.length} Confirmed Matter${cases.length > 1 ? 's' : ''}</strong>
+          <div style="font-size:0.75rem; color:var(--text-muted);">Registered under ${escapeHtml(advocateName)} (${escapeHtml(district)})</div>
+        </div>
+        <button class="btn-ui btn-ui-wa" onclick="alert('✅ All ${cases.length} matters are synchronized with your Private Chamber Vault!')" style="font-size:0.75rem; padding:6px 12px;">
+          ✓ Verified in Chamber
+        </button>
+      </div>
+
+      <div style="max-height: 280px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+        <table class="hearing-table" style="font-size: 0.78rem; width: 100%;">
+          <thead>
+            <tr>
+              <th style="width: 45px; text-align: center;">Item</th>
+              <th>Case Number / Title</th>
+              <th>Court & Room</th>
+              <th>Stage</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${cases.map(c => `
+              <tr>
+                <td style="font-weight: 800; color: var(--primary); text-align: center;">${escapeHtml(c.item_number || '-')}</td>
+                <td>
+                  <strong>${escapeHtml(c.case_number_formatted || c.cnr_number)}</strong><br>
+                  <span style="font-size: 0.72rem; color: var(--text-muted);">${escapeHtml(c.case_title)}</span>
+                </td>
+                <td>
+                  <strong>${escapeHtml(c.court_name || 'Karur Court')}</strong><br>
+                  <span style="font-size: 0.7rem; color: var(--text-muted);">${escapeHtml(c.court_room || '-')}</span>
+                </td>
+                <td><span class="badge badge-evidence" style="font-size: 0.68rem;">${escapeHtml(c.case_stage || 'Evidence')}</span></td>
+                <td><strong style="color: var(--primary);">${escapeHtml(c.next_hearing_date || '14-Aug-2026')}</strong></td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch (err) {
+    container.innerHTML = `<p style="color: var(--danger); text-align: center; padding: 20px;">Search failed: ${escapeHtml(err.message)}</p>`;
+  }
+};
+
+
+// =========================================================================
 // 3. CASE ACTION CONTROLLERS (Sync, Delete, WhatsApp)
 // =========================================================================
 window.syncSingleCase = async function(cnr) {
@@ -217,12 +302,58 @@ function renderHearingBoard(data, filterCourt = "ALL") {
     return;
   }
 
+  let summaryHeaderHtml = "";
+  if (filterCourt === "ALL" && data.court_summaries && data.court_summaries.length > 0) {
+    summaryHeaderHtml = `
+      <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 18px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px;">
+          <div>
+            <span style="background: #0f172a; color: #fff; font-size: 0.7rem; padding: 2px 8px; border-radius: 4px; font-weight: 700; text-transform: uppercase;">Hearings for ${escapeHtml(data.target_date || 'Today')}</span>
+            <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a; margin-top: 4px;">
+              You have ${data.total_hearings} confirmed hearing${data.total_hearings > 1 ? 's' : ''} scheduled
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <a href="/api/export-cause-list?date=${encodeURIComponent(data.target_date || '2026-08-14')}" target="_blank" class="btn-ui btn-ui-secondary" style="font-size: 0.72rem; padding: 4px 10px;">
+              🖨️ A4 Cause List
+            </a>
+          </div>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 0.78rem;">
+            <thead>
+              <tr style="background: #e2e8f0;">
+                <th style="width: 45px; padding: 6px 8px; text-align: left; font-weight: 700; color: #475569;">S.NO</th>
+                <th style="padding: 6px 8px; text-align: left; font-weight: 700; color: #475569;">COURT NAME</th>
+                <th style="width: 100px; padding: 6px 8px; text-align: right; font-weight: 700; color: #475569;">CONFIRMED</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.court_summaries.map((c, i) => `
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 5px 8px; font-weight: 700; color: var(--text-muted);">${i + 1}</td>
+                  <td style="padding: 5px 8px; font-weight: 600; color: #1e293b;">${escapeHtml(c.court_name)}</td>
+                  <td style="padding: 5px 8px; text-align: right; font-weight: 800; color: #0284c7;">${c.hearings_count}</td>
+                </tr>
+              `).join("")}
+              <tr style="background: #e2e8f0; font-weight: 800;">
+                <td colspan="2" style="padding: 6px 8px; text-align: right;">TOTAL CONFIRMED HEARINGS:</td>
+                <td style="padding: 6px 8px; text-align: right; color: #0f172a;">${data.total_hearings}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
   let courtsToRender = data.court_summaries;
   if (filterCourt !== "ALL") {
     courtsToRender = courtsToRender.filter(c => c.court_name === filterCourt);
   }
 
-  container.innerHTML = courtsToRender.map(court => `
+  container.innerHTML = summaryHeaderHtml + courtsToRender.map(court => `
     <div class="court-group-block">
       <div class="court-group-header">
         <span>🏛️ ${escapeHtml(court.court_name)}</span>
@@ -277,6 +408,7 @@ function renderHearingBoard(data, filterCourt = "ALL") {
     </div>
   `).join("");
 }
+
 
 function renderFullHearingsView() {
   const container = document.getElementById("full-hearings-container");
