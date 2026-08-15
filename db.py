@@ -109,10 +109,10 @@ def init_db():
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS advocate_settings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            lawyer_name TEXT DEFAULT 'Advocate',
-            firm_name TEXT DEFAULT 'Lex Chambers & Associates',
-            lawyer_phone TEXT DEFAULT '+919876543210',
-            default_whatsapp_footer TEXT DEFAULT 'Sent on behalf of Advocate Office.'
+            lawyer_name TEXT DEFAULT 'Advocate R. Anbaiya',
+            firm_name TEXT DEFAULT 'LEX CHAMBERS',
+            lawyer_phone TEXT DEFAULT '+919842112233',
+            default_whatsapp_footer TEXT DEFAULT 'Sent on behalf of Lex Chambers Karur - Adv. R. Anbaiya'
         )
     """)
 
@@ -120,8 +120,17 @@ def init_db():
     if cursor.fetchone()[0] == 0:
         cursor.execute("""
             INSERT INTO advocate_settings (lawyer_name, firm_name, lawyer_phone, default_whatsapp_footer)
-            VALUES ('Senior Advocate', 'Law & Justice Chambers', '+919876543210', 'Sent via Advocate Case Management Portal')
+            VALUES ('Advocate R. Anbaiya', 'LEX CHAMBERS', '+919842112233', 'Sent on behalf of Lex Chambers Karur - Adv. R. Anbaiya')
         """)
+    else:
+        cursor.execute("""
+            UPDATE advocate_settings SET
+                lawyer_name = 'Advocate R. Anbaiya',
+                firm_name = 'LEX CHAMBERS',
+                default_whatsapp_footer = 'Sent on behalf of Lex Chambers Karur - Adv. R. Anbaiya'
+            WHERE id = 1
+        """)
+
 
     conn.commit()
     conn.close()

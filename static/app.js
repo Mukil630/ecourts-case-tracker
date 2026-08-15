@@ -1,862 +1,563 @@
+/**
+ * LEX CHAMBERS • eCourts Automation Platform
+ * Frontend Controller for Advocate R. Anbaiya
+ */
+
 document.addEventListener("DOMContentLoaded", () => {
-  // Navigation Tabs
-  const navTabs = document.querySelectorAll(".nav-tab");
-  const tabPanes = document.querySelectorAll(".tab-pane");
-
-  navTabs.forEach(tab => {
-    tab.addEventListener("click", () => {
-      navTabs.forEach(t => t.classList.remove("active"));
-      tabPanes.forEach(p => p.classList.remove("active"));
-
-      tab.classList.add("active");
-      const targetId = tab.getAttribute("data-tab");
-      const pane = document.getElementById(targetId);
-      if (pane) pane.classList.add("active");
-
-      if (targetId === "tab-cause-list") {
-        loadDailyCauseList();
-      } else if (targetId === "tab-portfolio") {
-        loadTrackedCases();
-      }
-    });
-  });
-
-  // Cause List Elements
-  const causeListDatePicker = document.getElementById("cause-list-date-picker");
-  const causeListContainer = document.getElementById("cause-list-container");
-  const courtSummaryChips = document.getElementById("court-summary-chips");
-  const btnLoadKarurSample = document.getElementById("btn-load-karur-sample");
-  const btnSendMorningDocket = document.getElementById("btn-send-morning-docket");
-  const btnPrintBoard = document.getElementById("btn-print-board");
-  const statBoardCount = document.getElementById("stat-board-count");
-
-  // Client Intake Form Elements
-  const caseForm = document.getElementById("case-form");
-  const cnrInput = document.getElementById("cnr-input");
-  const clientNameInput = document.getElementById("client-name");
-  const litigantRoleInput = document.getElementById("litigant-role");
-  const clientPhoneInput = document.getElementById("client-phone");
-  const clientEmailInput = document.getElementById("client-email");
-  const caseNumberInput = document.getElementById("case-number-input");
-  const caseStageInput = document.getElementById("case-stage-input");
-  const courtRoomInput = document.getElementById("court-room-input");
-  const itemNumberInput = document.getElementById("item-number-input");
-  const caseNotesInput = document.getElementById("case-notes");
-  const ruleTrackHearing = document.getElementById("rule-track-hearing");
-  const ruleTrackOrders = document.getElementById("rule-track-orders");
-  const ruleTrackStatus = document.getElementById("rule-track-status");
-  const ruleAutoWa = document.getElementById("rule-auto-wa");
-  const forceLiveToggle = document.getElementById("force-live-toggle");
-
-  const btnFetch = document.getElementById("btn-fetch");
-  const btnDemo = document.getElementById("btn-demo");
-  const btnClearForm = document.getElementById("btn-clear-form");
-  const btnClearAll = document.getElementById("btn-clear-all");
-  const btnSmartSync = document.getElementById("btn-smart-sync");
-  const btnOpenSchedulerMonitor = document.getElementById("btn-open-scheduler-monitor");
-  const btnOpenHistory = document.getElementById("btn-open-history");
-
-  const cardHistoryStat = document.getElementById("card-history-stat");
-  const filterInput = document.getElementById("filter-input");
-  const caseResultContent = document.getElementById("case-result-content");
-  const cacheBadge = document.getElementById("cache-badge");
-  const casesTbody = document.getElementById("cases-tbody");
-  const casesCount = document.getElementById("cases-count");
-  const historyCount = document.getElementById("history-count");
-  const statTotalCases = document.getElementById("stat-total-cases");
-  const statDateChanges = document.getElementById("stat-date-changes");
-  const headerFirmName = document.getElementById("header-firm-name");
-  const apiStatusText = document.getElementById("api-status-text");
-  const statusDot = document.getElementById("status-dot");
-
-  // Modals
-  const settingsModal = document.getElementById("settings-modal");
-  const btnOpenSettings = document.getElementById("btn-open-settings");
-  const btnCloseSettings = document.getElementById("btn-close-settings");
-  const btnCancelSettings = document.getElementById("btn-cancel-settings");
-  const settingsForm = document.getElementById("settings-form");
-  const settingFirmName = document.getElementById("setting-firm-name");
-  const settingLawyerName = document.getElementById("setting-lawyer-name");
-  const settingLawyerPhone = document.getElementById("setting-lawyer-phone");
-  const settingFooter = document.getElementById("setting-footer");
-  const apiKeyInput = document.getElementById("api-key-input");
-
-  const rulesModal = document.getElementById("rules-modal");
-  const btnCloseRules = document.getElementById("btn-close-rules");
-  const btnCancelRules = document.getElementById("btn-cancel-rules");
-  const rulesForm = document.getElementById("rules-form");
-  const editRuleCnr = document.getElementById("edit-rule-cnr");
-  const editClientName = document.getElementById("edit-client-name");
-  const editClientPhone = document.getElementById("edit-client-phone");
-  const editRoom = document.getElementById("edit-room");
-  const editItem = document.getElementById("edit-item");
-  const editStage = document.getElementById("edit-stage");
-  const editJudge = document.getElementById("edit-judge");
-  const editNotes = document.getElementById("edit-notes");
-  const editRuleHearing = document.getElementById("edit-rule-hearing");
-  const editRuleOrders = document.getElementById("edit-rule-orders");
-  const editRuleStatus = document.getElementById("edit-rule-status");
-  const editRuleWa = document.getElementById("edit-rule-wa");
-
-  const schedulerModal = document.getElementById("scheduler-modal");
-  const btnCloseScheduler = document.getElementById("btn-close-scheduler");
-  const schedulerSummaryBanner = document.getElementById("scheduler-summary-banner");
-  const schedulerEvaluationsList = document.getElementById("scheduler-evaluations-list");
-
-  const historyModal = document.getElementById("history-modal");
-  const btnCloseHistory = document.getElementById("btn-close-history");
-  const historyLogsContent = document.getElementById("history-logs-content");
-
-  let allTrackedCases = [];
+  // State
+  let allCases = [];
+  let causeListData = null;
   let currentAdvocateSettings = {};
+  let selectedCourtFilter = "ALL";
+
+  // Elements
+  const navItems = document.querySelectorAll(".nav-item[data-view]");
+  const viewSections = document.querySelectorAll(".view-section");
+  const dashboardDatePicker = document.getElementById("dashboard-date-picker");
+  const hearingBoardListContainer = document.getElementById("hearing-board-list-container");
+  const fullHearingsContainer = document.getElementById("full-hearings-container");
+  const allCasesTbody = document.getElementById("all-cases-tbody");
+  const clientsTbody = document.getElementById("clients-tbody");
+  const whatsappDocketsList = document.getElementById("whatsapp-dockets-list");
+  const alertsAuditList = document.getElementById("alerts-audit-list");
+
+  // KPI Elements
+  const kpiTodayHearings = document.getElementById("kpi-today-hearings");
+  const kpiActiveCases = document.getElementById("kpi-active-cases");
+  const badgeTodayHearings = document.getElementById("badge-today-hearings");
+  const badgeTotalCases = document.getElementById("badge-total-cases");
+
+  // Case Intake Wizard Elements
+  const caseIntakeModal = document.getElementById("case-intake-modal");
+  const btnNavCaseIntake = document.getElementById("btn-nav-case-intake");
+  const btnCloseIntakeModal = document.getElementById("btn-close-intake-modal");
+  const wizardForm = document.getElementById("wizard-form");
+  const wizClientName = document.getElementById("wiz-client-name");
+  const wizLitigantRole = document.getElementById("wiz-litigant-role");
+  const wizClientPhone = document.getElementById("wiz-client-phone");
+  const wizClientEmail = document.getElementById("wiz-client-email");
+  const wizCnr = document.getElementById("wiz-cnr");
+  const wizCaseNo = document.getElementById("wiz-case-no");
+  const wizStage = document.getElementById("wiz-stage");
+  const wizRoom = document.getElementById("wiz-room");
+  const wizItem = document.getElementById("wiz-item");
+  const wizNotes = document.getElementById("wiz-notes");
+  const intakeVerificationPreview = document.getElementById("intake-verification-preview");
+
+  // Settings
+  const firmSettingsForm = document.getElementById("firm-settings-form");
+  const cfgFirmName = document.getElementById("cfg-firm-name");
+  const cfgLawyerName = document.getElementById("cfg-lawyer-name");
+  const cfgLawyerPhone = document.getElementById("cfg-lawyer-phone");
+  const cfgFooter = document.getElementById("cfg-footer");
+  const cfgApiKey = document.getElementById("cfg-api-key");
 
   // Initialize
-  checkKeyStatus();
+  initNavigation();
   loadAdvocateSettings();
-  loadDailyCauseList();
+  loadDailyCauseList("2026-08-14");
   loadTrackedCases();
-  loadHistoryLogsCount();
+  loadAlertsAudit();
 
-  // Load Daily Cause List
-  causeListDatePicker.addEventListener("change", () => {
-    const selected = causeListDatePicker.value;
-    btnPrintBoard.href = `/api/export-cause-list?date=${selected}`;
-    loadDailyCauseList(selected);
-  });
-
-  btnLoadKarurSample.addEventListener("click", async () => {
-    btnLoadKarurSample.disabled = true;
-    btnLoadKarurSample.innerText = "⏳ Loading Karur Board...";
-    try {
-      const res = await fetch("/api/cause-list/import-karur", { method: "POST" });
-      const data = await res.json();
-      causeListDatePicker.value = "2026-08-14";
-      btnPrintBoard.href = `/api/export-cause-list?date=2026-08-14`;
-      loadDailyCauseList("2026-08-14");
-      loadTrackedCases();
-      alert("✅ " + data.message);
-    } catch (e) {
-      alert("Failed to load sample: " + e.message);
-    } finally {
-      btnLoadKarurSample.disabled = false;
-      btnLoadKarurSample.innerText = "📥 Load Karur Board (14)";
-    }
-  });
-
-  btnSendMorningDocket.addEventListener("click", async () => {
-    const selected = causeListDatePicker.value;
-    btnSendMorningDocket.disabled = true;
-    btnSendMorningDocket.innerText = "⏳ Generating...";
-    try {
-      const res = await fetch("/api/cause-list/generate-whatsapp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date: selected })
+  // Navigation Logic
+  function initNavigation() {
+    navItems.forEach(item => {
+      item.addEventListener("click", () => {
+        const targetViewId = item.getAttribute("data-view");
+        switchView(targetViewId);
       });
-      const data = await res.json();
-      if (data.text) {
-        const url = `https://wa.me/${(currentAdvocateSettings.lawyer_phone || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(data.text)}`;
-        window.open(url, "_blank");
-      }
-    } catch (e) {
-      alert("Failed to generate WhatsApp Docket: " + e.message);
-    } finally {
-      btnSendMorningDocket.disabled = false;
-      btnSendMorningDocket.innerText = "📲 WhatsApp Daily Docket";
+    });
+
+    if (btnNavCaseIntake) {
+      btnNavCaseIntake.addEventListener("click", openCaseIntakeModal);
     }
-  });
+    if (btnCloseIntakeModal) {
+      btnCloseIntakeModal.addEventListener("click", () => caseIntakeModal.style.display = "none");
+    }
+  }
 
-  async function loadDailyCauseList(targetDate = "") {
-    const dateQuery = targetDate || causeListDatePicker.value || "";
-    causeListContainer.innerHTML = `<p class="empty-state">Loading court hearing board for ${dateQuery || 'all dates'}...</p>`;
-    try {
-      const res = await fetch(`/api/cause-list?date=${dateQuery}`);
-      const data = await res.json();
-
-      statBoardCount.innerText = data.total_hearings || 0;
-
-      // Render Court Summary Chips
-      if (data.court_summaries && data.court_summaries.length > 0) {
-        courtSummaryChips.innerHTML = data.court_summaries.map(court => `
-          <div class="court-chip">
-            <span class="court-chip-name" title="${escapeHtml(court.court_name)}">${escapeHtml(court.court_name)}</span>
-            <span class="court-chip-count">${court.hearings_count}</span>
-          </div>
-        `).join("");
+  window.switchView = (viewId) => {
+    navItems.forEach(item => {
+      if (item.getAttribute("data-view") === viewId) {
+        item.classList.add("active");
       } else {
-        courtSummaryChips.innerHTML = "";
+        item.classList.remove("active");
       }
+    });
 
-      if (!data.court_summaries || data.court_summaries.length === 0) {
-        causeListContainer.innerHTML = `
-          <div class="empty-state">
-            <p>No hearings found for <strong>${escapeHtml(data.target_date)}</strong>.</p>
-            <button class="btn btn-secondary" style="margin-top: 10px;" onclick="document.getElementById('btn-load-karur-sample').click()">
-              📥 Click to Load Karur Sample (14 Hearings)
-            </button>
-          </div>
-        `;
-        return;
+    viewSections.forEach(sec => {
+      if (sec.id === viewId) {
+        sec.classList.add("active");
+      } else {
+        sec.classList.remove("active");
       }
+    });
 
-      causeListContainer.innerHTML = data.court_summaries.map(court => `
-        <div class="court-board-card">
-          <div class="court-board-title">
-            <span style="font-weight: 800; font-size: 1rem; color: #fff;">🏛️ ${escapeHtml(court.court_name)}</span>
-            <span class="badge-subtle">${court.hearings_count} Cases Confirmed</span>
-          </div>
-          <div>
-            ${court.cases.map(c => `
-              <div class="hearing-item-card">
-                <div>
-                  <div class="data-label" style="font-size: 0.68rem;">ITEM NO</div>
-                  <div class="item-badge">${escapeHtml(c.item_number || '-')}</div>
-                </div>
-                <div>
-                  <div class="data-label" style="font-size: 0.68rem;">COURT ROOM</div>
-                  <div style="font-weight: 700; color: #fff;">${escapeHtml(c.court_room || 'Room -')}</div>
-                  <div style="font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">${escapeHtml(c.case_number_formatted || c.cnr_number)}</div>
-                </div>
-                <div>
-                  <div style="font-weight: 700; font-size: 0.95rem; color: #fff;">${escapeHtml(c.case_title)}</div>
-                  <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">
-                    👤 Client: <strong>${escapeHtml(c.client_name || 'Client')}</strong> (${escapeHtml(c.client_phone || '-')})
-                    ${c.litigant_role ? `&bull; <span style="color: var(--accent-blue); font-size: 0.75rem;">${escapeHtml(c.litigant_role)}</span>` : ''}
-                    ${c.notes ? `&bull; <span style="color: var(--accent-amber);">📝 ${escapeHtml(c.notes)}</span>` : ''}
-                  </div>
-                  ${c.judge_name ? `<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">⚖️ Presiding: ${escapeHtml(c.judge_name)}</div>` : ''}
-                </div>
-                <div style="text-align: right;">
-                  <span class="stage-badge">${escapeHtml(c.case_stage || 'Evidence')}</span>
-                  <div style="margin-top: 6px;">
-                    <a href="https://wa.me/${(c.client_phone || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(formatWhatsAppText(c, c.client_name, c.notes))}" target="_blank" class="btn btn-whatsapp" style="padding: 4px 8px; font-size: 0.72rem; display: inline-flex;">
-                      💬 Alert Client
-                    </a>
-                  </div>
-                </div>
-              </div>
-            `).join("")}
-          </div>
-        </div>
-      `).join("");
+    if (viewId === "view-hearings") renderFullHearingsView();
+    if (viewId === "view-cases") renderAllCasesTable(allCases);
+    if (viewId === "view-clients") renderClientsTable(allCases);
+    if (viewId === "view-whatsapp") renderWhatsAppDockets(allCases);
+  };
 
-    } catch (e) {
-      causeListContainer.innerHTML = `<p class="empty-state" style="color: var(--accent-rose);">Failed to load cause list: ${e.message}</p>`;
-    }
+  // Date Picker Change
+  if (dashboardDatePicker) {
+    dashboardDatePicker.addEventListener("change", () => {
+      const selected = dashboardDatePicker.value;
+      const printLink = document.getElementById("btn-print-docket-link");
+      if (printLink) printLink.href = `/api/export-cause-list?date=${selected}`;
+      loadDailyCauseList(selected);
+    });
   }
 
-  // Load Advocate Settings
-  async function loadAdvocateSettings() {
-    try {
-      const res = await fetch("/api/advocate-settings");
-      const settings = await res.json();
-      currentAdvocateSettings = settings || {};
-      if (settings.firm_name) {
-        headerFirmName.innerText = `⚖️ ${settings.firm_name}`;
-        settingFirmName.value = settings.firm_name;
-      }
-      settingLawyerName.value = settings.lawyer_name || "";
-      settingLawyerPhone.value = settings.lawyer_phone || "";
-      settingFooter.value = settings.default_whatsapp_footer || "";
-    } catch (e) {}
-  }
-
-  // Save Advocate Settings
-  settingsForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const payload = {
-      firm_name: settingFirmName.value.trim(),
-      lawyer_name: settingLawyerName.value.trim(),
-      lawyer_phone: settingLawyerPhone.value.trim(),
-      default_whatsapp_footer: settingFooter.value.trim()
-    };
-    const newKey = apiKeyInput.value.trim();
-
-    try {
-      await fetch("/api/advocate-settings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-
-      if (newKey) {
-        await fetch("/api/save-key", {
+  // Generate Morning WhatsApp Docket
+  const btnMorningDocket = document.getElementById("btn-generate-morning-docket");
+  if (btnMorningDocket) {
+    btnMorningDocket.addEventListener("click", async () => {
+      const targetDate = dashboardDatePicker.value || "2026-08-14";
+      try {
+        const res = await fetch("/api/cause-list/generate-whatsapp", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ api_key: newKey })
+          body: JSON.stringify({ date: targetDate })
         });
+        const data = await res.json();
+        if (data.text) {
+          const rawPhone = currentAdvocateSettings.lawyer_phone || "+919842112233";
+          const cleanPhone = rawPhone.replace(/[^0-9]/g, "");
+          const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(data.text)}`;
+          window.open(waUrl, "_blank");
+        }
+      } catch (e) {
+        alert("Failed to generate WhatsApp Docket: " + e.message);
       }
-
-      alert("✅ Advocate Firm settings updated successfully!");
-      settingsModal.style.display = "none";
-      loadAdvocateSettings();
-      checkKeyStatus();
-      loadDailyCauseList();
-      loadTrackedCases();
-    } catch (err) {
-      alert("Failed to save settings: " + err.message);
-    }
-  });
-
-  btnOpenSettings.addEventListener("click", () => settingsModal.style.display = "flex");
-  btnCloseSettings.addEventListener("click", () => settingsModal.style.display = "none");
-  btnCancelSettings.addEventListener("click", () => settingsModal.style.display = "none");
-
-  // API Key Check
-  async function checkKeyStatus() {
-    try {
-      const res = await fetch("/api/key-status");
-      const data = await res.json();
-      if (data.configured) {
-        apiStatusText.innerText = `API Active (${data.masked_key})`;
-        apiKeyInput.value = data.full_key || "";
-        statusDot.style.backgroundColor = "var(--accent-emerald)";
-      } else {
-        apiStatusText.innerText = "Demo Mode (No API Key)";
-        statusDot.style.backgroundColor = "var(--accent-amber)";
-      }
-    } catch (e) {}
+    });
   }
 
-  // Handle Client Intake & Case Verification Form Submit
-  caseForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const cnr = cnrInput.value.trim().toUpperCase();
-    const name = clientNameInput.value.trim();
-    const role = litigantRoleInput ? litigantRoleInput.value : "Petitioner / Complainant";
-    const phone = clientPhoneInput.value.trim();
-    const email = clientEmailInput ? clientEmailInput.value.trim() : "";
-    const caseNumber = caseNumberInput ? caseNumberInput.value.trim() : "";
-    const caseStage = caseStageInput ? caseStageInput.value.trim() : "";
-    const courtRoom = courtRoomInput ? courtRoomInput.value.trim() : "";
-    const itemNumber = itemNumberInput ? itemNumberInput.value.trim() : "";
-    const notes = caseNotesInput.value.trim();
-    const forceLive = forceLiveToggle.checked;
+  // Load Daily Cause List
+  async function loadDailyCauseList(targetDate = "2026-08-14") {
+    hearingBoardListContainer.innerHTML = `<p style="padding: 24px; text-align: center; color: var(--text-muted);">Loading Daily Court Hearing Board for ${targetDate}...</p>`;
+    try {
+      const res = await fetch(`/api/cause-list?date=${targetDate}`);
+      const data = await res.json();
+      causeListData = data;
 
-    if (!cnr) return;
+      if (kpiTodayHearings) kpiTodayHearings.innerText = data.total_hearings || 0;
+      if (badgeTodayHearings) badgeTodayHearings.innerText = data.total_hearings || 0;
 
-    btnFetch.disabled = true;
-    btnFetch.innerText = forceLive ? "⚡ Live Querying eCourts (1.5 credits)..." : "⚡ Verifying Case...";
-    caseResultContent.innerHTML = `
-      <div class="empty-state">
-        <p>Verifying judicial records for CNR <code>${cnr}</code> & enrolling client <strong>${escapeHtml(name)}</strong>...</p>
-      </div>
+      renderHearingBoard(data, selectedCourtFilter);
+      setupCourtChips(data);
+    } catch (e) {
+      hearingBoardListContainer.innerHTML = `<p style="padding: 24px; color: var(--danger);">Failed to load hearing board: ${e.message}</p>`;
+    }
+  }
+
+  // Setup Court Chips Filter
+  function setupCourtChips(data) {
+    const chipsRow = document.getElementById("court-chips-row");
+    if (!chipsRow) return;
+
+    const summaries = data.court_summaries || [];
+    chipsRow.innerHTML = `
+      <button class="court-chip-btn ${selectedCourtFilter === 'ALL' ? 'active' : ''}" data-court="ALL">
+        All Courts <span class="chip-count">${data.total_hearings || 0}</span>
+      </button>
+      ${summaries.map(c => `
+        <button class="court-chip-btn ${selectedCourtFilter === c.court_name ? 'active' : ''}" data-court="${escapeHtml(c.court_name)}">
+          ${escapeHtml(c.court_name.replace(' Court, Karur', '').replace(' at Magisterial Level', ''))}
+          <span class="chip-count">${c.hearings_count}</span>
+        </button>
+      `).join("")}
     `;
 
-    try {
-      const response = await fetch("/api/check-case", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          cnr,
-          client_name: name,
-          client_phone: phone,
-          client_email: email,
-          litigant_role: role,
-          case_number_formatted: caseNumber,
-          case_stage: caseStage,
-          court_room: courtRoom,
-          item_number: itemNumber,
-          notes: notes,
-          force_live: forceLive,
-          track_next_hearing: ruleTrackHearing.checked,
-          track_orders: ruleTrackOrders.checked,
-          track_case_status: ruleTrackStatus.checked,
-          auto_whatsapp_enabled: ruleAutoWa.checked
-        })
+    chipsRow.querySelectorAll(".court-chip-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        chipsRow.querySelectorAll(".court-chip-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        selectedCourtFilter = btn.getAttribute("data-court");
+        renderHearingBoard(causeListData, selectedCourtFilter);
       });
-
-      const data = await response.json();
-      renderCaseResult(data, name, phone, notes, role, email);
-      loadTrackedCases();
-      loadHistoryLogsCount();
-      loadDailyCauseList();
-    } catch (err) {
-      caseResultContent.innerHTML = `
-        <div class="empty-state" style="color: var(--accent-rose);">
-          <p>Failed to verify case: ${err.message}</p>
-        </div>
-      `;
-    } finally {
-      btnFetch.disabled = false;
-      btnFetch.innerText = "⚡ Check & Verify Case Now";
-    }
-  });
-
-  // Demo Case Button (Loads Karur Client)
-  btnDemo.addEventListener("click", () => {
-    cnrInput.value = "TNKR060000692024";
-    clientNameInput.value = "Shobika Impex Private LTD";
-    if (litigantRoleInput) litigantRoleInput.value = "Financial Institution / Bank";
-    clientPhoneInput.value = "+919843011223";
-    if (clientEmailInput) clientEmailInput.value = "accounts@shobikaimpex.com";
-    if (caseNumberInput) caseNumberInput.value = "COS/69/2024";
-    if (caseStageInput) caseStageInput.value = "Evidence";
-    if (courtRoomInput) courtRoomInput.value = "Room 3";
-    if (itemNumberInput) itemNumberInput.value = "1";
-    caseNotesInput.value = "Commercial dispute trial & evidence documents marking";
-    caseForm.dispatchEvent(new Event("submit"));
-  });
-
-  // Clear Form Handler
-  if (btnClearForm) {
-
-    btnClearForm.addEventListener("click", () => {
-      caseForm.reset();
-      cnrInput.value = "";
-      clientNameInput.value = "";
-      clientPhoneInput.value = "";
-      if (clientEmailInput) clientEmailInput.value = "";
-      if (caseNumberInput) caseNumberInput.value = "";
-      if (caseStageInput) caseStageInput.value = "";
-      if (courtRoomInput) courtRoomInput.value = "";
-      if (itemNumberInput) itemNumberInput.value = "";
-      caseNotesInput.value = "";
-      caseResultContent.innerHTML = `
-        <div class="empty-state">
-          <p>Form cleared. Enter new client details on the left to verify a new case.</p>
-        </div>
-      `;
     });
   }
 
-  // Clear All Cases & Reset Database Handler
-  if (btnClearAll) {
-    btnClearAll.addEventListener("click", async () => {
-      if (!confirm("⚠️ Are you sure you want to delete ALL stored cases and history logs? This will reset the database to a clean state.")) {
-        return;
-      }
-      try {
-        const res = await fetch("/api/cases/clear-all", { method: "POST" });
-        const data = await res.json();
-        alert("✅ " + data.message);
-        loadTrackedCases();
-        loadHistoryLogsCount();
-        loadDailyCauseList();
-      } catch (e) {
-        alert("Failed to clear database: " + e.message);
-      }
-    });
-  }
-
-
-  // Smart Schedule Sync Button (Hearing-Near vs Hearing-Far Optimizer)
-  if (btnSmartSync) {
-    btnSmartSync.addEventListener("click", async () => {
-      btnSmartSync.disabled = true;
-      btnSmartSync.innerText = "⚡ Running Smart Scheduler...";
-      try {
-        const res = await fetch("/api/scheduler/smart-sync", { method: "POST" });
-        const data = await res.json();
-        alert(`🎯 Smart Predictive Sync Complete!\n• Total Portfolio: ${data.total_portfolio}\n• 💤 Sleeping Cases (Far Away / Disposed): ${data.sleeping_cases + data.disposed_cases}\n• ⚡ Active Checked (Hearing Near): ${data.checked_cases}\n• 🛡️ Credits Saved this Run: ${data.credits_saved_this_run} credits\n• Date Shifts Detected: ${data.date_changes_count}`);
-        loadTrackedCases();
-        loadHistoryLogsCount();
-        loadDailyCauseList();
-      } catch (e) {
-        alert("Smart Sync failed: " + e.message);
-      } finally {
-        btnSmartSync.disabled = false;
-        btnSmartSync.innerText = "⚡ Smart Scheduler Sync (Save Credits)";
-      }
-    });
-  }
-
-  // Scheduler Monitor Modal Trigger
-  if (btnOpenSchedulerMonitor) {
-    btnOpenSchedulerMonitor.addEventListener("click", openSchedulerMonitorModal);
-  }
-  if (btnCloseScheduler) {
-    btnCloseScheduler.addEventListener("click", () => schedulerModal.style.display = "none");
-  }
-
-  async function openSchedulerMonitorModal() {
-    schedulerModal.style.display = "flex";
-    schedulerSummaryBanner.innerHTML = `<p class="empty-state">Evaluating cases with Smart Scheduler...</p>`;
-    schedulerEvaluationsList.innerHTML = "";
-
-    try {
-      const res = await fetch("/api/scheduler/evaluation");
-      const data = await res.json();
-
-      schedulerSummaryBanner.innerHTML = `
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; text-align: center;">
-          <div>
-            <div class="data-label">Total Cases</div>
-            <div style="font-size: 1.3rem; font-weight: 800; color: #fff;">${data.total_cases}</div>
-          </div>
-          <div>
-            <div class="data-label">💤 Sleeping (Far Away)</div>
-            <div style="font-size: 1.3rem; font-weight: 800; color: var(--accent-blue);">${data.sleeping_cases}</div>
-          </div>
-          <div>
-            <div class="data-label">⚡ Checking Today</div>
-            <div style="font-size: 1.3rem; font-weight: 800; color: var(--accent-emerald);">${data.due_cases}</div>
-          </div>
-          <div>
-            <div class="data-label">🛡️ Credits Saved Today</div>
-            <div style="font-size: 1.3rem; font-weight: 800; color: var(--accent-emerald);">${data.credits_saved_today} Credits</div>
-          </div>
+  // Render Hearing Board
+  function renderHearingBoard(data, filterCourt = "ALL") {
+    if (!data || !data.court_summaries || data.court_summaries.length === 0) {
+      hearingBoardListContainer.innerHTML = `
+        <div style="padding: 30px; text-align: center; color: var(--text-muted);">
+          <p>No confirmed court hearings scheduled for this date.</p>
         </div>
       `;
-
-      schedulerEvaluationsList.innerHTML = (data.evaluations || []).map(ev => `
-        <div class="history-item" style="border-left: 4px solid ${ev.should_check ? 'var(--accent-emerald)' : 'var(--border-color)'};">
-          <div class="history-item-header">
-            <span><strong>${escapeHtml(ev.case_title || 'Case')}</strong> &bull; <code style="color: var(--accent-blue);">${escapeHtml(ev.cnr)}</code></span>
-            <span style="font-weight: 700; color: ${ev.should_check ? 'var(--accent-emerald)' : 'var(--text-muted)'};">
-              ${ev.should_check ? '⚡ Active Query (1.5 Cr)' : '💤 Sleeping (0 Cr)'}
-            </span>
-          </div>
-          <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;">
-            <span>Client: ${escapeHtml(ev.client_name || 'Client')} &bull; Next Hearing: <strong>${escapeHtml(ev.next_hearing_date || 'N/A')}</strong></span>
-          </div>
-          <div style="font-size: 0.8rem; color: var(--accent-blue); margin-top: 4px;">
-            Decision Reason: ${escapeHtml(ev.reason)}
-          </div>
-        </div>
-      `).join("");
-
-    } catch (e) {
-      schedulerSummaryBanner.innerHTML = `<p class="empty-state" style="color: var(--accent-rose);">Failed to evaluate scheduler: ${e.message}</p>`;
-    }
-  }
-
-  // Live Filter Handler
-  if (filterInput) {
-    filterInput.addEventListener("input", (e) => {
-      const term = e.target.value.toLowerCase();
-      const filtered = allTrackedCases.filter(c => 
-        (c.cnr_number || "").toLowerCase().includes(term) ||
-        (c.case_title || "").toLowerCase().includes(term) ||
-        (c.court_name || "").toLowerCase().includes(term) ||
-        (c.client_name || "").toLowerCase().includes(term) ||
-        (c.litigant_role || "").toLowerCase().includes(term) ||
-        (c.case_stage || "").toLowerCase().includes(term) ||
-        (c.case_number_formatted || "").toLowerCase().includes(term) ||
-        (c.notes || "").toLowerCase().includes(term)
-      );
-      renderTableRows(filtered);
-    });
-  }
-
-  // History Modal Triggers
-  btnOpenHistory.addEventListener("click", openHistoryModal);
-  if (cardHistoryStat) {
-    cardHistoryStat.addEventListener("click", openHistoryModal);
-  }
-  btnCloseHistory.addEventListener("click", () => historyModal.style.display = "none");
-  window.addEventListener("click", (e) => {
-    if (e.target === historyModal) historyModal.style.display = "none";
-    if (e.target === settingsModal) settingsModal.style.display = "none";
-    if (e.target === rulesModal) rulesModal.style.display = "none";
-    if (e.target === schedulerModal) schedulerModal.style.display = "none";
-  });
-
-  async function openHistoryModal() {
-    historyModal.style.display = "flex";
-    historyLogsContent.innerHTML = `<p class="empty-state">Fetching audit history logs...</p>`;
-    try {
-      const res = await fetch("/api/history");
-      const logs = await res.json();
-      if (!logs || logs.length === 0) {
-        historyLogsContent.innerHTML = `<p class="empty-state">No hearing date changes detected yet. The background worker logs all shifts automatically.</p>`;
-        return;
-      }
-      historyLogsContent.innerHTML = logs.map(l => `
-        <div class="history-item">
-          <div class="history-item-header">
-            <span><strong>CNR:</strong> <code style="color: var(--accent-blue);">${escapeHtml(l.cnr_number)}</code> (${escapeHtml(l.case_title || 'Case')})</span>
-            <span>⏱️ ${escapeHtml(l.detected_at)}</span>
-          </div>
-          <div class="history-shift">
-            <span style="color: var(--text-muted); text-decoration: line-through;">${escapeHtml(l.previous_hearing_date || 'None')}</span>
-            <span>➡️</span>
-            <span style="color: var(--accent-emerald); font-size: 1.1rem;">${escapeHtml(l.new_hearing_date || 'Awaiting Date')}</span>
-          </div>
-          <div style="margin-top: 6px; font-size: 0.8rem; color: var(--text-secondary); display: flex; justify-content: space-between; align-items: center;">
-            <span>Client: ${escapeHtml(l.client_name || 'N/A')} (${escapeHtml(l.client_phone || 'N/A')})</span>
-            <span style="color: ${l.notified ? 'var(--accent-emerald)' : 'var(--accent-amber)'}; font-weight: 600;">
-              ${l.notified ? '✓ Notification Dispatched' : '⏳ Ready for Dispatch'}
-            </span>
-          </div>
-        </div>
-      `).join("");
-    } catch (e) {
-      historyLogsContent.innerHTML = `<p class="empty-state" style="color: var(--accent-rose);">Error loading history: ${e.message}</p>`;
-    }
-  }
-
-  async function loadHistoryLogsCount() {
-    try {
-      const res = await fetch("/api/history");
-      const logs = await res.json();
-      const count = logs ? logs.length : 0;
-      historyCount.innerText = count;
-      statDateChanges.innerText = count;
-    } catch (e) {}
-  }
-
-  // Render Verification Result Function
-  function renderCaseResult(data, clientName, phone, notes, role = "", email = "") {
-    if (!data.success && data.error) {
-      caseResultContent.innerHTML = `
-        <div class="empty-state" style="color: var(--accent-rose);">
-          <p><strong>[${data.error_type || 'API Notice'}]</strong> ${data.error}</p>
-        </div>
-      `;
-      cacheBadge.style.display = "none";
       return;
     }
 
-    const c = data.case_data || data;
-    const isCached = data.is_cached;
-    cacheBadge.style.display = isCached ? "inline-block" : "none";
+    let courtsToRender = data.court_summaries;
+    if (filterCourt !== "ALL") {
+      courtsToRender = courtsToRender.filter(c => c.court_name === filterCourt);
+    }
 
-    const statusClass = (c.case_status || "").toLowerCase().includes("dispose") ? "tag-disposed" : "tag-pending";
-    const nextDate = c.next_hearing_date || "Not Scheduled / Disposed";
-    const waText = formatWhatsAppText(c, clientName, notes);
-    const cleanPhone = (phone || "").replace(/[^0-9]/g, "");
-    const waLink = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(waText)}`;
-
-    caseResultContent.innerHTML = `
-      <div class="case-header">
-        <div>
-          <div class="case-name">${escapeHtml(c.case_title || 'Case Title')}</div>
-          <span class="case-cnr-badge">${escapeHtml(c.cnr_number)}</span>
-          ${role ? `<span class="badge-subtle" style="margin-left: 6px;">${escapeHtml(role)}</span>` : ''}
+    hearingBoardListContainer.innerHTML = courtsToRender.map(court => `
+      <div class="court-group-block">
+        <div class="court-group-header">
+          <span>🏛️ ${escapeHtml(court.court_name)}</span>
+          <span class="court-group-count">${court.hearings_count} Case${court.hearings_count > 1 ? 's' : ''}</span>
         </div>
-        <span class="tag ${statusClass}">${escapeHtml(c.case_status || 'PENDING')}</span>
+        <table class="hearing-table">
+          <thead>
+            <tr>
+              <th style="width: 70px; text-align: center;">Item No</th>
+              <th>Case Details</th>
+              <th>Client</th>
+              <th>Status</th>
+              <th>Court Room</th>
+              <th style="text-align: right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${court.cases.map(c => `
+              <tr>
+                <td style="text-align: center;">
+                  <span class="item-number-cell">${escapeHtml(c.item_number || '-')}</span>
+                </td>
+                <td>
+                  <div class="case-title-bold">${escapeHtml(c.case_title)}</div>
+                  <div class="case-meta-line">
+                    <span class="case-no-pill">${escapeHtml(c.case_number_formatted || c.cnr_number)}</span>
+                    ${c.notes ? `&bull; <span style="color: var(--warning);">${escapeHtml(c.notes)}</span>` : ''}
+                  </div>
+                  ${c.judge_name ? `<div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">⚖️ Presiding: ${escapeHtml(c.judge_name)}</div>` : ''}
+                </td>
+                <td>
+                  <strong>${escapeHtml(c.client_name || 'Client')}</strong>
+                  <div style="font-size: 0.72rem; color: var(--text-muted);">${escapeHtml(c.client_phone || '-')}</div>
+                </td>
+                <td>
+                  <span class="badge ${getBadgeClass(c.case_stage)}">${escapeHtml(c.case_stage || 'Evidence')}</span>
+                </td>
+                <td>
+                  <strong style="color: var(--text-main);">${escapeHtml(c.court_room || '-')}</strong>
+                </td>
+                <td style="text-align: right;">
+                  <a href="${getWhatsAppUrl(c)}" target="_blank" class="btn-ui btn-ui-wa" style="padding: 4px 10px; font-size: 0.72rem;">
+                    💬 WhatsApp
+                  </a>
+                </td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
       </div>
-
-      <div class="hearing-box">
-        <div>
-          <div class="data-label">Next Scheduled Hearing Date</div>
-          <div class="hearing-date">${escapeHtml(nextDate)}</div>
-        </div>
-        <div style="text-align: right;">
-          <div class="data-label">Verification Status</div>
-          <div style="font-weight: 800; font-size: 1rem; color: var(--accent-emerald);">✓ Record Verified</div>
-        </div>
-      </div>
-
-      <div class="data-grid">
-        <div class="data-item">
-          <div class="data-label">Court & District</div>
-          <div class="data-val">${escapeHtml(c.court_name || 'District Court')}</div>
-        </div>
-        <div class="data-item">
-          <div class="data-label">Enrolled Client</div>
-          <div class="data-val">${escapeHtml(clientName || 'Client')} (${escapeHtml(phone || '-')})</div>
-        </div>
-      </div>
-
-      ${c.latest_order_date ? `
-      <div class="data-item" style="margin-bottom: 14px; border-color: rgba(56, 189, 248, 0.3);">
-        <div class="data-label">📜 Latest Court Order Passed</div>
-        <div class="data-val" style="color: var(--accent-blue);">Order Date: ${escapeHtml(c.latest_order_date)} ${c.latest_order_pdf ? `&bull; <a href="${c.latest_order_pdf}" target="_blank" style="color: var(--accent-emerald);">Download Order PDF</a>` : ''}</div>
-      </div>
-      ` : ''}
-
-      <div class="whatsapp-card">
-        <div style="font-size: 0.8rem; font-weight: 600; color: #8696a0; margin-bottom: 8px; display: flex; justify-content: space-between;">
-          <span>💬 Automated Client WhatsApp Notice:</span>
-          <span>Target: <strong>${escapeHtml(phone || '')}</strong></span>
-        </div>
-        <div class="whatsapp-bubble">${escapeHtml(waText)}</div>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          <a href="${waLink}" target="_blank" class="btn btn-whatsapp" style="flex: 1;">
-            📲 Dispatch Notice to Client WhatsApp
-          </a>
-          <a href="/api/export-case/${encodeURIComponent(c.cnr_number)}" target="_blank" class="btn btn-secondary" style="flex: none; padding: 10px 16px;">
-            🖨️ Print Intake Brief
-          </a>
-        </div>
-      </div>
-    `;
+    `).join("");
   }
 
-  // Load Database Tracked Cases
+  // Load All Stored Cases
   async function loadTrackedCases() {
     try {
       const res = await fetch("/api/cases");
-      const cases = await res.json();
-      allTrackedCases = cases || [];
-      casesCount.innerText = allTrackedCases.length;
-      statTotalCases.innerText = allTrackedCases.length;
+      const data = await res.json();
+      allCases = data || [];
 
-      renderTableRows(allTrackedCases);
+      if (kpiActiveCases) kpiActiveCases.innerText = allCases.length;
+      if (badgeTotalCases) badgeTotalCases.innerText = allCases.length;
+
+      renderAllCasesTable(allCases);
+      renderClientsTable(allCases);
+      renderWhatsAppDockets(allCases);
     } catch (e) {
       console.error(e);
     }
   }
 
-  function renderTableRows(cases) {
+  // Render All Cases Table
+  function renderAllCasesTable(cases) {
+    if (!allCasesTbody) return;
     if (!cases || cases.length === 0) {
-      casesTbody.innerHTML = `
-        <tr>
-          <td colspan="8" class="empty-state">No matching client cases found in database.</td>
-        </tr>
-      `;
+      allCasesTbody.innerHTML = `<tr><td colspan="8" style="padding: 24px; text-align: center; color: var(--text-muted);">No cases found in database.</td></tr>`;
       return;
     }
 
-    casesTbody.innerHTML = cases.map(item => `
+    allCasesTbody.innerHTML = cases.map(c => `
       <tr>
+        <td><strong>${escapeHtml(c.client_name || 'Client')}</strong></td>
         <td>
-          <strong>${escapeHtml(item.client_name || 'Litigant')}</strong>
-          ${item.litigant_role ? `<div style="font-size: 0.72rem; color: var(--accent-blue); font-weight: 600;">${escapeHtml(item.litigant_role)}</div>` : ''}
-          <div style="font-size: 0.8rem; color: var(--text-muted);">${escapeHtml(item.client_phone || '-')}</div>
+          <div class="case-title-bold">${escapeHtml(c.case_title)}</div>
+          <div style="font-size:0.72rem; color:var(--text-muted);">${escapeHtml(c.parties || '')}</div>
         </td>
+        <td><span class="case-no-pill">${escapeHtml(c.case_number_formatted || '-')}</span></td>
+        <td><code style="font-family: var(--font-mono); font-size:0.75rem; color:var(--primary);">${escapeHtml(c.cnr_number)}</code></td>
+        <td>${escapeHtml(c.court_name || 'Karur Court')}</td>
+        <td><strong style="color:var(--primary);">${escapeHtml(c.next_hearing_date || 'Awaiting Date')}</strong></td>
+        <td><span class="badge ${c.case_status === 'DISPOSED' ? 'badge-disposed' : 'badge-pending'}">${escapeHtml(c.case_status || 'PENDING')}</span></td>
         <td>
-          <span class="item-badge" style="font-size: 0.85rem; padding: 2px 6px;">#${escapeHtml(item.item_number || '-')}</span>
-          <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">${escapeHtml(item.court_room || '-')}</div>
-        </td>
-        <td>
-          <div style="font-weight: 700; color: #fff;">${escapeHtml(item.case_number_formatted || '-')}</div>
-          <code style="color: var(--accent-blue); font-family: var(--font-mono); font-size: 0.75rem;">${escapeHtml(item.cnr_number)}</code>
-        </td>
-        <td>
-          <div style="font-weight: 600;">${escapeHtml(item.case_title || 'N/A')}</div>
-          <div style="font-size: 0.78rem; color: var(--text-secondary);">${escapeHtml(item.court_name || 'District Court')}</div>
-        </td>
-        <td><span class="stage-badge">${escapeHtml(item.case_stage || 'Evidence')}</span></td>
-        <td style="font-weight: 700; color: var(--accent-blue);">${escapeHtml(item.next_hearing_date || 'N/A')}</td>
-        <td>
-          <div>
-            ${item.track_next_hearing ? '<span class="rule-chip">📅 Date</span>' : ''}
-            ${item.track_orders ? '<span class="rule-chip">📜 Orders</span>' : ''}
-            ${item.auto_whatsapp_enabled ? '<span class="rule-chip" style="color: var(--accent-emerald);">💬 WA</span>' : ''}
-          </div>
-        </td>
-        <td>
-          <div class="action-btn-group">
-            <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.75rem;" onclick="recheckCase('${item.cnr_number}')" title="Recheck Case (Cached/Free)">
-              ⚡ Check
-            </button>
-            <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.75rem;" onclick="openEditRulesModal('${item.cnr_number}')" title="Edit Case Details & Rules">
-              ⚙️
-            </button>
-            <a href="/api/export-case/${encodeURIComponent(item.cnr_number)}" target="_blank" class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.75rem;" title="Print / PDF Brief">
-              🖨️
-            </a>
-            <button class="btn btn-danger" style="padding: 4px 8px; font-size: 0.75rem;" onclick="deleteTrackedCase('${item.cnr_number}')" title="Remove Case">
-              🗑️
-            </button>
+          <div style="display:flex; gap:6px;">
+            <a href="${getWhatsAppUrl(c)}" target="_blank" class="btn-ui btn-ui-wa" style="padding:3px 6px; font-size:0.7rem;">💬</a>
+            <a href="/api/export-case/${encodeURIComponent(c.cnr_number)}" target="_blank" class="btn-ui btn-ui-secondary" style="padding:3px 6px; font-size:0.7rem;">🖨️</a>
           </div>
         </td>
       </tr>
     `).join("");
   }
 
-  window.recheckCase = (cnr) => {
-    const item = allTrackedCases.find(c => c.cnr_number === cnr);
-    cnrInput.value = cnr;
-    if (item) {
-      clientNameInput.value = item.client_name || "";
-      if (litigantRoleInput) litigantRoleInput.value = item.litigant_role || "Petitioner / Complainant";
-      clientPhoneInput.value = item.client_phone || "";
-      if (clientEmailInput) clientEmailInput.value = item.client_email || "";
-      if (caseNumberInput) caseNumberInput.value = item.case_number_formatted || "";
-      if (caseStageInput) caseStageInput.value = item.case_stage || "";
-      if (courtRoomInput) courtRoomInput.value = item.court_room || "";
-      if (itemNumberInput) itemNumberInput.value = item.item_number || "";
-      caseNotesInput.value = item.notes || "";
-    }
-    // Switch to Add Client tab
-    document.querySelector('.nav-tab[data-tab="tab-add-client"]').click();
-    caseForm.dispatchEvent(new Event("submit"));
-  };
+  // Render Clients Table
+  function renderClientsTable(cases) {
+    if (!clientsTbody) return;
+    const clientMap = {};
+    cases.forEach(c => {
+      const name = c.client_name || "Client";
+      if (!clientMap[name]) {
+        clientMap[name] = {
+          name: name,
+          phone: c.client_phone || "-",
+          role: c.litigant_role || "Petitioner / Complainant",
+          count: 0,
+          nextDate: c.next_hearing_date || "Awaiting Date",
+          caseObj: c
+        };
+      }
+      clientMap[name].count += 1;
+    });
 
-  // Edit Rules Modal
-  window.openEditRulesModal = (cnr) => {
-    const item = allTrackedCases.find(c => c.cnr_number === cnr);
-    if (!item) return;
+    const clientList = Object.values(clientMap);
+    clientsTbody.innerHTML = clientList.map(cl => `
+      <tr>
+        <td><strong>${escapeHtml(cl.name)}</strong></td>
+        <td><code style="font-family: var(--font-mono); font-size:0.78rem;">${escapeHtml(cl.phone)}</code></td>
+        <td><span class="badge badge-evidence">${escapeHtml(cl.role)}</span></td>
+        <td><strong>${cl.count} Active Case${cl.count > 1 ? 's' : ''}</strong></td>
+        <td><strong style="color:var(--primary);">${escapeHtml(cl.nextDate)}</strong></td>
+        <td><span style="color:var(--success); font-weight:700; font-size:0.76rem;">✓ WhatsApp Active</span></td>
+        <td>
+          <a href="${getWhatsAppUrl(cl.caseObj)}" target="_blank" class="btn-ui btn-ui-wa" style="padding:4px 10px; font-size:0.72rem;">
+            💬 Send Notice
+          </a>
+        </td>
+      </tr>
+    `).join("");
+  }
 
-    editRuleCnr.value = cnr;
-    editClientName.value = item.client_name || "";
-    editClientPhone.value = item.client_phone || "";
-    editRoom.value = item.court_room || "";
-    editItem.value = item.item_number || "";
-    editStage.value = item.case_stage || "";
-    editJudge.value = item.judge_name || "";
-    editNotes.value = item.notes || "";
-    editRuleHearing.checked = Boolean(item.track_next_hearing);
-    editRuleOrders.checked = Boolean(item.track_orders);
-    editRuleStatus.checked = Boolean(item.track_case_status);
-    editRuleWa.checked = Boolean(item.auto_whatsapp_enabled);
+  // Render WhatsApp Dockets Page
+  function renderWhatsAppDockets(cases) {
+    if (!whatsappDocketsList) return;
+    whatsappDocketsList.innerHTML = cases.map(c => `
+      <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px 18px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; gap: 14px;">
+        <div>
+          <div style="font-weight: 800; font-size: 0.92rem; color: var(--text-main);">${escapeHtml(c.client_name || 'Client')} (${escapeHtml(c.client_phone || '-')})</div>
+          <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">
+            Case: <strong>${escapeHtml(c.case_title)}</strong> &bull; Item: <strong>#${escapeHtml(c.item_number || '-')}</strong> (${escapeHtml(c.court_room || '-')}) &bull; Stage: <strong>${escapeHtml(c.case_stage || 'Evidence')}</strong>
+          </div>
+          <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 2px;">
+            🏛️ ${escapeHtml(c.court_name || '')} &bull; Next Hearing: <strong style="color: var(--primary);">${escapeHtml(c.next_hearing_date || '14-08-2026')}</strong>
+          </div>
+        </div>
+        <a href="${getWhatsAppUrl(c)}" target="_blank" class="btn-ui btn-ui-wa" style="flex-shrink: 0;">
+          📲 Send WhatsApp
+        </a>
+      </div>
+    `).join("");
+  }
 
-    rulesModal.style.display = "flex";
-  };
+  // Full Hearings View
+  function renderFullHearingsView() {
+    if (!fullHearingsContainer || !causeListData) return;
+    renderHearingBoard(causeListData, "ALL");
+    fullHearingsContainer.innerHTML = hearingBoardListContainer.innerHTML;
+  }
 
-  rulesForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const cnr = editRuleCnr.value;
-    const payload = {
-      client_name: editClientName.value.trim(),
-      client_phone: editClientPhone.value.trim(),
-      court_room: editRoom.value.trim(),
-      item_number: editItem.value.trim(),
-      case_stage: editStage.value.trim(),
-      judge_name: editJudge.value.trim(),
-      notes: editNotes.value.trim(),
-      track_next_hearing: editRuleHearing.checked,
-      track_orders: editRuleOrders.checked,
-      track_case_status: editRuleStatus.checked,
-      auto_whatsapp_enabled: editRuleWa.checked
-    };
-
+  // Load Alerts Audit
+  async function loadAlertsAudit() {
+    if (!alertsAuditList) return;
     try {
-      await fetch(`/api/cases/${encodeURIComponent(cnr)}/preferences`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      rulesModal.style.display = "none";
-      loadTrackedCases();
-      loadDailyCauseList();
-    } catch (err) {
-      alert("Failed to update case details: " + err.message);
+      const res = await fetch("/api/history");
+      const logs = await res.json();
+      if (!logs || logs.length === 0) {
+        alertsAuditList.innerHTML = `<p style="padding:20px; text-align:center; color:var(--text-muted);">No hearing date changes detected recently.</p>`;
+        return;
+      }
+      alertsAuditList.innerHTML = logs.map(l => `
+        <div class="alert-card-item alert-orange" style="margin-bottom: 10px;">
+          <div class="alert-icon">📅</div>
+          <div style="flex: 1;">
+            <strong>Hearing Date Shift Detected</strong> &bull; CNR: <code>${escapeHtml(l.cnr_number)}</code><br>
+            Previous Date: <span style="text-decoration: line-through;">${escapeHtml(l.previous_hearing_date || 'None')}</span> ➡️ New Date: <strong>${escapeHtml(l.new_hearing_date)}</strong><br>
+            <span style="font-size: 0.7rem; color: #92400e;">Logged at: ${escapeHtml(l.detected_at)}</span>
+          </div>
+        </div>
+      `).join("");
+    } catch (e) {}
+  }
+
+  // Load Advocate Settings
+  async function loadAdvocateSettings() {
+    try {
+      const res = await fetch("/api/advocate-settings");
+      const data = await res.json();
+      currentAdvocateSettings = data || {};
+      if (cfgFirmName) cfgFirmName.value = data.firm_name || "LEX CHAMBERS";
+      if (cfgLawyerName) cfgLawyerName.value = data.lawyer_name || "Advocate R. Anbaiya";
+      if (cfgLawyerPhone) cfgLawyerPhone.value = data.lawyer_phone || "+919842112233";
+      if (cfgFooter) cfgFooter.value = data.default_whatsapp_footer || "";
+    } catch (e) {}
+  }
+
+  // Save Settings
+  if (firmSettingsForm) {
+    firmSettingsForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        await fetch("/api/advocate-settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            firm_name: cfgFirmName.value.trim(),
+            lawyer_name: cfgLawyerName.value.trim(),
+            lawyer_phone: cfgLawyerPhone.value.trim(),
+            default_whatsapp_footer: cfgFooter.value.trim()
+          })
+        });
+        alert("✅ Advocate & Firm Settings saved successfully!");
+        loadAdvocateSettings();
+      } catch (err) {
+        alert("Failed to save: " + err.message);
+      }
+    });
+  }
+
+  // Case Intake Wizard Functions
+  window.openCaseIntakeModal = () => {
+    caseIntakeModal.style.display = "flex";
+    goToStep(1);
+  };
+
+  window.goToStep = async (stepNum) => {
+    const step1 = document.getElementById("wizard-step-1");
+    const step2 = document.getElementById("wizard-step-2");
+    const step3 = document.getElementById("wizard-step-3");
+    const ind1 = document.getElementById("step-ind-1");
+    const ind2 = document.getElementById("step-ind-2");
+    const ind3 = document.getElementById("step-ind-3");
+
+    [step1, step2, step3].forEach(s => s.style.display = "none");
+    [ind1, ind2, ind3].forEach(i => i.classList.remove("active"));
+
+    if (stepNum === 1) {
+      step1.style.display = "block";
+      ind1.classList.add("active");
+    } else if (stepNum === 2) {
+      if (!wizClientName.value.trim() || !wizClientPhone.value.trim()) {
+        alert("Please enter the client name and WhatsApp number.");
+        step1.style.display = "block";
+        ind1.classList.add("active");
+        return;
+      }
+      step2.style.display = "block";
+      ind2.classList.add("active");
+    } else if (stepNum === 3) {
+      const cnr = wizCnr.value.trim().toUpperCase();
+      if (!cnr) {
+        alert("Please enter the 16-digit CNR number.");
+        step2.style.display = "block";
+        ind2.classList.add("active");
+        return;
+      }
+      step3.style.display = "block";
+      ind3.classList.add("active");
+      
+      intakeVerificationPreview.innerHTML = `
+        <div style="text-align: center; padding: 16px;">
+          <p style="font-weight: 700; color: var(--primary);">⚡ Checking judicial records for CNR ${cnr}...</p>
+        </div>
+      `;
+
+      try {
+        const res = await fetch("/api/check-case", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            cnr: cnr,
+            client_name: wizClientName.value.trim(),
+            client_phone: wizClientPhone.value.trim(),
+            client_email: wizClientEmail.value.trim(),
+            litigant_role: wizLitigantRole.value,
+            case_number_formatted: wizCaseNo.value.trim(),
+            case_stage: wizStage.value.trim(),
+            court_room: wizRoom.value.trim(),
+            item_number: wizItem.value.trim(),
+            notes: wizNotes.value.trim(),
+            force_live: false
+          })
+        });
+
+        const data = await res.json();
+        const c = data.case_data || data;
+
+        intakeVerificationPreview.innerHTML = `
+          <div style="font-size: 0.85rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+              <strong style="color:var(--text-main); font-size:0.95rem;">${escapeHtml(c.case_title || 'Case Title')}</strong>
+              <span class="badge badge-evidence">✓ Verified Record</span>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+              <div><strong>CNR:</strong> <code style="font-family:var(--font-mono); color:var(--primary);">${escapeHtml(c.cnr_number)}</code></div>
+              <div><strong>Court:</strong> ${escapeHtml(c.court_name || 'District Court')}</div>
+              <div><strong>Status:</strong> ${escapeHtml(c.case_status || 'PENDING')}</div>
+              <div><strong>Next Hearing:</strong> <strong style="color:var(--primary);">${escapeHtml(c.next_hearing_date || 'Awaiting Schedule')}</strong></div>
+            </div>
+            <div style="background:#ecfdf5; border:1px solid #a7f3d0; padding:8px 12px; border-radius:4px; font-size:0.78rem; color:#065f46;">
+              Client: <strong>${escapeHtml(wizClientName.value)}</strong> (${escapeHtml(wizClientPhone.value)}) enrolled as <strong>${escapeHtml(wizLitigantRole.value)}</strong>.
+            </div>
+          </div>
+        `;
+      } catch (err) {
+        intakeVerificationPreview.innerHTML = `<p style="color:var(--danger);">Verification notice: ${err.message}</p>`;
+      }
     }
+  };
+
+  // Submit Intake Form
+  wizardForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    caseIntakeModal.style.display = "none";
+    alert("✅ Case successfully added to tracking!");
+    loadTrackedCases();
+    loadDailyCauseList("2026-08-14");
+    switchView("view-cases");
   });
 
-  btnCloseRules.addEventListener("click", () => rulesModal.style.display = "none");
-  btnCancelRules.addEventListener("click", () => rulesModal.style.display = "none");
+  // Helpers
+  function getBadgeClass(stage) {
+    if (!stage) return "badge-evidence";
+    const s = stage.toLowerCase();
+    if (s.includes("trial")) return "badge-trial";
+    if (s.includes("ia")) return "badge-ia";
+    if (s.includes("warrant") || s.includes("arrest")) return "badge-warrant";
+    if (s.includes("step")) return "badge-steps";
+    if (s.includes("dispose")) return "badge-disposed";
+    return "badge-evidence";
+  }
 
-  window.deleteTrackedCase = async (cnr) => {
-    if (!confirm(`Are you sure you want to remove CNR: ${cnr} from tracking?`)) return;
-    try {
-      const res = await fetch(`/api/cases/${encodeURIComponent(cnr)}`, { method: "DELETE" });
-      const data = await res.json();
-      if (data.success) {
-        loadTrackedCases();
-        loadHistoryLogsCount();
-        loadDailyCauseList();
-      }
-    } catch (e) {
-      alert("Failed to delete case: " + e.message);
-    }
-  };
+  function getWhatsAppUrl(c) {
+    if (!c) return "#";
+    const lawyer = currentAdvocateSettings.lawyer_name || "Advocate R. Anbaiya";
+    const firm = currentAdvocateSettings.firm_name || "LEX CHAMBERS";
+    const footer = currentAdvocateSettings.default_whatsapp_footer || "Sent on behalf of Lex Chambers Karur";
 
-  function formatWhatsAppText(c, clientName, notes) {
-    const firm = currentAdvocateSettings.firm_name || "Advocate Chambers";
-    const lawyer = currentAdvocateSettings.lawyer_name || "Senior Advocate";
-    const footer = currentAdvocateSettings.default_whatsapp_footer || "Sent on behalf of Advocate Office.";
-
-    return `⚖️ *${firm.toUpperCase()}*
+    const text = `⚖️ *${firm}*
 *HEARING UPDATE NOTICE*
 ---------------------------------------
-Dear *${clientName || 'Client'}*,
+Dear *${c.client_name || 'Client'}*,
 
-Your court matter details have been updated:
-• *Case:* ${c.case_title || 'Case Matter'}
+Your court hearing details have been confirmed:
+• *Case:* ${c.case_title || 'Case Title'}
 • *Court:* ${c.court_name || 'Court'}
 • *Item No:* ${c.item_number || '-'} (${c.court_room || '-'})
 • *Stage:* *${c.case_stage || 'Evidence'}*
-• *Next Hearing Date:* *${c.next_hearing_date || 'Awaiting Schedule / Disposed'}*
+• *Next Hearing Date:* *${c.next_hearing_date || 'Awaiting Date'}*
 ${c.notes ? `• *Advocate Note:* ${c.notes}` : ''}
 ---------------------------------------
 ${footer}
 *Advocate:* ${lawyer}`;
+
+    const cleanPhone = (c.client_phone || "").replace(/[^0-9]/g, "");
+    return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
   }
 
   function escapeHtml(str) {
