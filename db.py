@@ -696,6 +696,51 @@ def import_karur_sample_data():
             "client_name": "K Lakshmi",
             "client_phone": "+919842333221",
             "notes": "Commissioner report objection"
+        },
+        {
+            "cnr_number": "TNKR040008422024",
+            "case_number_formatted": "OS/842/2024",
+            "case_title": "Karthik vs Rajesh Kumar",
+            "court_name": "Principal District Court, Karur",
+            "court_room": "Room 2",
+            "item_number": "12",
+            "judge_name": "Tmt. S.SUMATHY, M.L., District Judge",
+            "case_stage": "Arguments",
+            "case_status": "PENDING",
+            "next_hearing_date": "2026-08-15",
+            "client_name": "Karthik",
+            "client_phone": "+919443112233",
+            "notes": "Final trial arguments"
+        },
+        {
+            "cnr_number": "TNKR030002452024",
+            "case_number_formatted": "HMA/245/2024",
+            "case_title": "Sangeetha vs Suresh",
+            "court_name": "Mahila Court, Karur",
+            "court_room": "Room 9",
+            "item_number": "5",
+            "judge_name": "Thiru P.Thangavel, B.Sc., LL.M., Sessions Judge",
+            "case_stage": "Final Hearing",
+            "case_status": "PENDING",
+            "next_hearing_date": "2026-08-16",
+            "client_name": "Sangeetha",
+            "client_phone": "+919789112244",
+            "notes": "Maintenance dispute final hearing"
+        },
+        {
+            "cnr_number": "TNKR060001562023",
+            "case_number_formatted": "CRP/156/2023",
+            "case_title": "Venkatesh vs State",
+            "court_name": "Principal Sub Court, Karur",
+            "court_room": "Room 3",
+            "item_number": "8",
+            "judge_name": "Tmt K.L.Priyanga, B.A., B.L.(Hons)",
+            "case_stage": "Judgment Pronounced",
+            "case_status": "DISPOSED",
+            "next_hearing_date": "2026-08-10",
+            "client_name": "Venkatesh",
+            "client_phone": "+919842778899",
+            "notes": "Decree granted in favor of petitioner"
         }
     ]
 
@@ -706,7 +751,7 @@ def import_karur_sample_data():
             "case_status": h["case_status"],
             "court_name": h["court_name"],
             "parties": h["case_title"].replace(" vs ", " | "),
-            "advocates": "Senior Advocate",
+            "advocates": "Advocate R. Anbaiya",
             "last_hearing_date": "2026-07-15",
             "next_hearing_date": h["next_hearing_date"]
         }
@@ -725,6 +770,22 @@ def import_karur_sample_data():
             item_number=h["item_number"],
             judge_name=h["judge_name"]
         )
+
+    # Log sample alerts
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO case_history_logs (cnr_number, change_type, previous_hearing_date, new_hearing_date, details)
+        VALUES (?, 'WARRANT_ISSUED', ?, ?, ?)
+    """, ("TNKR020003832025", "2026-08-01", "2026-08-14", "Service Pending - Non-Bailable Warrant execution pending"))
+    cursor.execute("""
+        INSERT INTO case_history_logs (cnr_number, change_type, previous_hearing_date, new_hearing_date, details)
+        VALUES (?, 'HEARING_DATE_CHANGE', ?, ?, ?)
+    """, ("TNKR010010352023", "2026-07-28", "2026-08-14", "Hearing date updated for Evidence cross examination"))
+    conn.commit()
+    conn.close()
+
+
 
 if __name__ == "__main__":
     init_db()

@@ -327,9 +327,85 @@ document.addEventListener("DOMContentLoaded", () => {
       renderWhatsAppDockets(allCases);
       updateReportsView();
     } catch (e) {
-      console.error(e);
+      console.error("loadTrackedCases error:", e);
     }
   }
+
+  function renderUpcomingHearingsWidget(cases) {
+    const container = document.getElementById("upcoming-hearings-widget-list");
+    if (!container) return;
+
+    const todayStr = dashboardDatePicker ? dashboardDatePicker.value : "2026-08-14";
+    const futureCases = (cases || []).filter(c => c.next_hearing_date && c.next_hearing_date > todayStr);
+    
+    // Sort by hearing date ascending
+    futureCases.sort((a, b) => a.next_hearing_date.localeCompare(b.next_hearing_date));
+
+    if (futureCases.length === 0) {
+      container.innerHTML = `
+        <div style="padding: 16px; text-align: center; color: var(--text-muted); font-size: 0.78rem;">
+          No upcoming hearings scheduled. Enroll new matters using <strong>+ Case Intake</strong>.
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = futureCases.slice(0, 4).map(c => {
+      const parts = (c.next_hearing_date || "").split("-");
+      const day = parts[2] || "15";
+      const monthNum = parseInt(parts[1] || "8", 10);
+      const monthNamesShort = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+      const month = monthNamesShort[monthNum - 1] || "AUG";
+
+      return `
+        <div class="upcoming-item">
+          <div class="upcoming-date-box">
+            <span class="upcoming-date-day">${day}</span>
+            <span class="upcoming-date-month">${month}</span>
+          </div>
+          <div class="upcoming-details">
+            <div class="upcoming-title">${escapeHtml(c.case_title)}</div>
+            <div class="upcoming-meta">${escapeHtml(c.case_number_formatted || c.cnr_number)} &bull; ${escapeHtml(c.case_stage || 'Hearing')}</div>
+            <div class="upcoming-court">${escapeHtml(c.court_name || '')} &bull; ${escapeHtml(c.court_room || '-')}</div>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  function renderAlertsWidget(cases) {
+    const container = document.getElementById("alerts-widget-list");
+    if (!container) return;
+
+    fetch("/api/history")
+      .then(res => res.json())
+      .then(logs => {
+        if (!logs || logs.length === 0) {
+          container.innerHTML = `
+            <div style="padding: 14px; text-align: center; color: var(--text-muted); font-size: 0.78rem;">
+              ✓ No active judicial alerts.
+            </div>
+          `;
+          return;
+        }
+
+        if (badgeAlertsCount) badgeAlertsCount.innerText = logs.length;
+
+        container.innerHTML = logs.slice(0, 3).map(l => `
+          <div class="alert-card-item alert-orange" style="margin-bottom: 8px; padding: 8px 10px;">
+            <div class="alert-icon" style="font-size: 1rem;">⚠️</div>
+            <div style="flex: 1;">
+              <strong style="font-size: 0.78rem; color: #92400e;">${escapeHtml(l.details || 'Hearing Date Updated')}</strong>
+              <div style="font-size: 0.7rem; color: #b45309;">CNR: ${escapeHtml(l.cnr_number)} &bull; New Date: ${escapeHtml(l.new_hearing_date)}</div>
+            </div>
+          </div>
+        `).join("");
+      })
+      .catch(() => {
+        container.innerHTML = `<div style="padding: 10px; color: var(--text-muted); font-size: 0.78rem;">No active judicial alerts.</div>`;
+      });
+  }
+
 
   if (allCasesSearch) {
     allCasesSearch.addEventListener("input", () => {
