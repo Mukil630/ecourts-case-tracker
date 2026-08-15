@@ -172,13 +172,16 @@
               <h3 class="main-card-title">⚖️ Daily Court Hearing Board</h3>
               <p class="main-card-sub">Grouped by Court Complex, Presiding Judge, Court Room & Item Number</p>
             </div>
-            <div style="display: flex; gap: 8px; align-items: center;">
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+              <button onclick="openBulkWhatsAppModal()" class="btn-ui btn-ui-wa" style="font-size: 0.75rem; font-weight: 800; background: #15803d; box-shadow: 0 2px 4px rgba(22, 163, 74, 0.3);">
+                📲 Send Notice to All 14 Clients
+              </button>
               <input type="date" id="dashboard-date-picker" class="form-input-ui" style="width: auto; padding: 4px 8px; font-size: 0.75rem;" value="2026-08-14">
               <a href="/api/export-cause-list?date=2026-08-14" target="_blank" class="btn-ui btn-ui-secondary" style="font-size: 0.75rem;">
                 🖨️ Print Board
               </a>
-              <button id="btn-generate-morning-docket" class="btn-ui btn-ui-wa" style="font-size: 0.75rem;">
-                📲 WhatsApp Docket
+              <button id="btn-generate-morning-docket" class="btn-ui btn-ui-secondary" style="font-size: 0.75rem;">
+                📋 Docket Summary
               </button>
             </div>
           </div>
@@ -194,6 +197,7 @@
           </div>
         </div>
       </section>
+
 
 
       <!-- ======================================================================
@@ -559,7 +563,67 @@
     </div>
   </div>
 
-  <script src="/static/app.js?v=10.0"></script>
+  <!-- ==========================================================================
+       6. SIDE CASE DETAILS INSPECTOR DRAWER
+       ========================================================================== -->
+  <div id="case-drawer-overlay" class="case-drawer-overlay" onclick="closeCaseDrawer()"></div>
+  <div id="case-detail-drawer" class="case-drawer-panel">
+    <div class="case-drawer-header">
+      <div>
+        <span id="drawer-case-no-badge" style="background: #0284c7; color: #fff; font-size: 0.72rem; padding: 2px 8px; border-radius: 4px; font-weight: 800;">COS/69/2024</span>
+        <h4 id="drawer-case-header-title" style="font-size: 0.95rem; font-weight: 800; margin-top: 4px; color: #fff;">Case Details Inspector</h4>
+      </div>
+      <button onclick="closeCaseDrawer()" style="background: transparent; border: none; color: #ffffff; font-size: 1.2rem; cursor: pointer;">✕</button>
+    </div>
+
+    <div class="case-drawer-body" id="case-drawer-body-content">
+      <!-- Populated dynamically by app.js -->
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       7. BULK WHATSAPP DISPATCH MODAL
+       ========================================================================== -->
+  <div id="bulk-whatsapp-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card" style="max-width: 650px;">
+      <div class="modal-header">
+        <h3 style="font-size: 0.96rem; font-weight: 800;">📲 Dispatch WhatsApp Notices to All 14 Clients</h3>
+        <button class="btn-ui btn-ui-secondary" style="padding: 2px 8px; color: #fff; background: transparent; border-color: #334155;" onclick="document.getElementById('bulk-whatsapp-modal').style.display='none'">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <p style="font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 12px;">
+          Send personalized hearing docket notices to all clients scheduled for today (14-Aug-2026).
+        </p>
+
+        <div style="max-height: 280px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm); margin-bottom: 14px;">
+          <table class="hearing-table" style="font-size: 0.78rem;">
+            <thead>
+              <tr style="background: #f1f5f9;">
+                <th style="width: 40px; text-align: center;">Item</th>
+                <th>Client Name & Phone</th>
+                <th>Case & Room</th>
+                <th style="text-align: right;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="bulk-wa-tbody">
+              <!-- Populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 0.75rem; color: var(--text-muted);">14 Notices Ready for Instant Send</span>
+          <button onclick="sendAllQueuedNotices()" class="btn-ui btn-ui-wa" style="padding: 8px 16px; font-weight: 800;">
+            🚀 Open First 3 Notices in WhatsApp
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js?v=11.0"></script>
 </body>
 </html>
+
 

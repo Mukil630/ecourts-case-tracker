@@ -660,9 +660,108 @@ body {
   gap: 10px;
 }
 
+.clickable-case-cell {
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.clickable-case-cell:hover .case-title-text {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+/* Side Case Details Drawer */
+.case-drawer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(2px);
+  z-index: 110;
+  display: none;
+}
+
+.case-drawer-panel {
+  position: fixed;
+  right: -480px;
+  top: 0;
+  width: 460px;
+  max-width: 90vw;
+  height: 100vh;
+  background: #ffffff;
+  border-left: 2px solid var(--border-color);
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.15);
+  z-index: 115;
+  display: flex;
+  flex-direction: column;
+  transition: right 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.case-drawer-header {
+  padding: 16px 20px;
+  background: #0f172a;
+  color: #ffffff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.case-drawer-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.drawer-section-card {
+  background: #f8fafc;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+}
+
+.drawer-section-title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 4px;
+}
+
+.drawer-field-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 0.8rem;
+}
+
+.drawer-field-row:last-child {
+  margin-bottom: 0;
+}
+
+.drawer-field-label {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.drawer-field-val {
+  color: var(--text-main);
+  font-weight: 700;
+  text-align: right;
+}
+
 @media (max-width: 900px) {
   .sidebar { width: 64px; }
   .sidebar .sidebar-brand-title, .sidebar .sidebar-brand-sub, .sidebar .nav-item span, .sidebar .nav-section-label, .sidebar .profile-info, .sidebar .nav-badge { display: none; }
   .main-wrapper { margin-left: 64px; }
   .kpi-strip { grid-template-columns: repeat(2, 1fr); }
+  .case-drawer-panel { width: 100vw; }
 }
+

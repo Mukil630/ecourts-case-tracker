@@ -54,7 +54,7 @@ window.switchView = function(viewId) {
 };
 
 // =========================================================================
-// 2. CLIENT INTAKE & ADVOCATE SEARCH MODALS
+// 2. CLIENT INTAKE, ADVOCATE SEARCH & CASE DRAWER
 // =========================================================================
 window.openCaseIntakeModal = function() {
   const modal = document.getElementById("case-intake-modal");
@@ -65,6 +65,184 @@ window.openAdvocateSearchModal = function() {
   const modal = document.getElementById("advocate-search-modal");
   if (modal) modal.style.display = "flex";
 };
+
+window.openCaseDrawer = function(cnrNumber) {
+  if (!cnrNumber) return;
+
+  // Find case in allCases or causeListData
+  let c = allCases.find(item => item.cnr_number === cnrNumber);
+  if (!c && causeListData && causeListData.court_summaries) {
+    for (const court of causeListData.court_summaries) {
+      const match = court.cases.find(item => item.cnr_number === cnrNumber);
+      if (match) {
+        c = match;
+        break;
+      }
+    }
+  }
+
+  if (!c) {
+    alert("Case details not found for " + cnrNumber);
+    return;
+  }
+
+  const badgeElem = document.getElementById("drawer-case-no-badge");
+  const titleElem = document.getElementById("drawer-case-header-title");
+  const bodyContent = document.getElementById("case-drawer-body-content");
+  const overlay = document.getElementById("case-drawer-overlay");
+  const panel = document.getElementById("case-detail-drawer");
+
+  if (badgeElem) badgeElem.innerText = c.case_number_formatted || c.cnr_number;
+  if (titleElem) titleElem.innerText = c.case_title || "Case Details";
+
+  if (bodyContent) {
+    bodyContent.innerHTML = `
+      <!-- 1. Case Identity Card -->
+      <div class="drawer-section-card">
+        <div class="drawer-section-title">🏛️ Court & Hearing Identity</div>
+        <div class="drawer-field-row">
+          <span class="drawer-field-label">Court Complex:</span>
+          <span class="drawer-field-val">${escapeHtml(c.court_name || 'Karur District Court')}</span>
+        </div>
+        <div class="drawer-field-row">
+          <span class="drawer-field-label">Court Room:</span>
+          <span class="drawer-field-val" style="color:var(--primary);">${escapeHtml(c.court_room || '-')}</span>
+        </div>
+        <div class="drawer-field-row">
+          <span class="drawer-field-label">Item Number:</span>
+          <span class="drawer-field-val" style="font-size:0.95rem; color:#0284c7;">#${escapeHtml(c.item_number || '-')}</span>
+        </div>
+        <div class="drawer-field-row">
+          <span class="drawer-field-label">Presiding Judge:</span>
+          <span class="drawer-field-val">${escapeHtml(c.judge_name || '-')}</span>
+        </div>
+        <div class="drawer-field-row">
+          <span class="drawer-field-label">16-Digit CNR:</span>
+          <span class="drawer-field-val"><code style="font-family:var(--font-mono); font-size:0.75rem;">${escapeHtml(c.cnr_number)}</code></span>
+        </div>
+      </div>
+
+      <!-- 2. Client & Litigant Card -->
+      <div class="drawer-section-card">
+        <div class="drawer-section-title">👤 Client Contact & Role</div>
+        <div class="drawer-field-row">
+          <span class="drawer-field-label">Client Name:</span>
+          <span class="drawer-field-val">${escapeHtml(c.client_name || 'Client')}</span>
+        </div>
+        <div class="drawer-field-row">
+          <span class="drawer-field-label">Litigant Role:</span>
+          <span class="drawer-field-val"><span class="badge badge-evidence">${escapeHtml(c.litigant_role || 'Petitioner')}</span></span>
+        </div>
+        <div class="drawer-field-row">
+          <span class="drawer-field-label">WhatsApp Phone:</span>
+          <span class="drawer-field-val"><strong>${escapeHtml(c.client_phone || '-')}</strong></span>
+        </div>
+        <div class="drawer-field-row">
+          <span class="drawer-field-label">Parties:</span>
+          <span class="drawer-field-val" style="font-size:0.75rem;">${escapeHtml(c.parties || c.case_title)}</span>
+        </div>
+      </div>
+
+      <!-- 3. Stage & Next Hearing Card -->
+      <div class="drawer-section-card">
+        <div class="drawer-section-title">📅 Hearing Status & Stage</div>
+        <div class="drawer-field-row">
+          <span class="drawer-field-label">Next Hearing Date:</span>
+          <span class="drawer-field-val" style="color:var(--primary); font-size:0.9rem;">${escapeHtml(c.next_hearing_date || 'Awaiting Date')}</span>
+        </div>
+        <div class="drawer-field-row">
+          <span class="drawer-field-label">Hearing Stage:</span>
+          <span class="drawer-field-val"><span class="badge ${getBadgeClass(c.case_stage)}">${escapeHtml(c.case_stage || 'Evidence')}</span></span>
+        </div>
+        <div class="drawer-field-row">
+          <span class="drawer-field-label">Advocate Notes:</span>
+          <span class="drawer-field-val" style="color:#b45309;">${escapeHtml(c.notes || 'None')}</span>
+        </div>
+      </div>
+
+      <!-- 4. Quick Actions -->
+      <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px;">
+        <a href="${getWhatsAppUrl(c)}" target="_blank" class="btn-ui btn-ui-wa" style="text-align:center; padding:10px; font-weight:800; font-size:0.85rem;">
+          📲 Send WhatsApp Hearing Notice
+        </a>
+        <div style="display:flex; gap:8px;">
+          <a href="/api/export-case/${encodeURIComponent(c.cnr_number)}" target="_blank" class="btn-ui btn-ui-secondary" style="flex:1; text-align:center; padding:8px; font-size:0.75rem;">
+            🖨️ Print Case Brief
+          </a>
+          <button onclick="syncSingleCase('${escapeHtml(c.cnr_number)}')" class="btn-ui btn-ui-secondary" style="flex:1; padding:8px; font-size:0.75rem;">
+            🔄 Sync eCourts
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  if (overlay) overlay.style.display = "block";
+  if (panel) panel.style.right = "0px";
+};
+
+window.closeCaseDrawer = function() {
+  const overlay = document.getElementById("case-drawer-overlay");
+  const panel = document.getElementById("case-detail-drawer");
+  if (overlay) overlay.style.display = "none";
+  if (panel) panel.style.right = "-480px";
+};
+
+window.openBulkWhatsAppModal = function() {
+  const modal = document.getElementById("bulk-whatsapp-modal");
+  const tbody = document.getElementById("bulk-wa-tbody");
+  if (!modal || !tbody) return;
+
+  const todayCases = [];
+  if (causeListData && causeListData.court_summaries) {
+    for (const court of causeListData.court_summaries) {
+      todayCases.push(...(court.cases || []));
+    }
+  }
+
+  if (todayCases.length === 0) {
+    alert("No hearings scheduled for today to dispatch notices.");
+    return;
+  }
+
+  tbody.innerHTML = todayCases.map(c => `
+    <tr>
+      <td style="text-align: center; font-weight: 800; color: var(--primary);">#${escapeHtml(c.item_number || '-')}</td>
+      <td>
+        <strong>${escapeHtml(c.client_name || 'Client')}</strong><br>
+        <code style="font-size:0.72rem; color:var(--text-muted);">${escapeHtml(c.client_phone || '-')}</code>
+      </td>
+      <td>
+        <span style="font-weight:600;">${escapeHtml(c.case_number_formatted || c.cnr_number)}</span><br>
+        <span style="font-size:0.7rem; color:var(--text-muted);">${escapeHtml(c.court_name)} (${escapeHtml(c.court_room || '-')})</span>
+      </td>
+      <td style="text-align: right;">
+        <a href="${getWhatsAppUrl(c)}" target="_blank" class="btn-ui btn-ui-wa" style="padding:4px 8px; font-size:0.7rem;">
+          📲 Send Notice
+        </a>
+      </td>
+    </tr>
+  `).join("");
+
+  modal.style.display = "flex";
+};
+
+window.sendAllQueuedNotices = function() {
+  const todayCases = [];
+  if (causeListData && causeListData.court_summaries) {
+    for (const court of causeListData.court_summaries) {
+      todayCases.push(...(court.cases || []));
+    }
+  }
+
+  // Open the first 3 clients in separate tabs
+  const top3 = todayCases.slice(0, 3);
+  top3.forEach(c => {
+    window.open(getWhatsAppUrl(c), "_blank");
+  });
+  alert(`🚀 Opened WhatsApp notices for the first ${top3.length} clients! Click on remaining rows to send.`);
+};
+
 
 window.autoFillSampleClient = function() {
   const nameInput = document.getElementById("wiz-client-name");
@@ -353,15 +531,18 @@ function renderHearingBoard(data, filterCourt = "ALL") {
   if (filterCourt === "ALL" && data.court_summaries && data.court_summaries.length > 0) {
     summaryHeaderHtml = `
       <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px 16px; margin: 14px 16px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
           <div>
             <span style="background: #0f172a; color: #fff; font-size: 0.68rem; padding: 2px 8px; border-radius: 4px; font-weight: 700; text-transform: uppercase;">Hearings for ${escapeHtml(data.target_date || 'Today')}</span>
             <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a; margin-top: 4px;">
               You have ${data.total_hearings} confirmed hearings scheduled across 6 Karur Courts
             </div>
           </div>
-          <div style="display: flex; gap: 8px;">
-            <a href="/api/export-cause-list?date=${encodeURIComponent(data.target_date || '2026-08-14')}" target="_blank" class="btn-ui btn-ui-secondary" style="font-size: 0.72rem; padding: 4px 10px;">
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button onclick="openBulkWhatsAppModal()" class="btn-ui btn-ui-wa" style="font-size: 0.72rem; padding: 5px 12px; font-weight: 800; background: #15803d;">
+              📲 Send Notice to All 14 Clients
+            </button>
+            <a href="/api/export-cause-list?date=${encodeURIComponent(data.target_date || '2026-08-14')}" target="_blank" class="btn-ui btn-ui-secondary" style="font-size: 0.72rem; padding: 5px 10px;">
               🖨️ A4 Cause List
             </a>
           </div>
@@ -411,7 +592,7 @@ function renderHearingBoard(data, filterCourt = "ALL") {
           <thead>
             <tr>
               <th style="width: 50px; text-align: center;">Item</th>
-              <th>Case Details</th>
+              <th>Case Details (Click to View Side Details)</th>
               <th>Client</th>
               <th>Status</th>
               <th>Room & Judge</th>
@@ -420,11 +601,11 @@ function renderHearingBoard(data, filterCourt = "ALL") {
           </thead>
           <tbody>
             ${court.cases.map(c => `
-              <tr>
-                <td style="text-align: center;">
-                  <div class="item-badge-cell">${escapeHtml(c.item_number || '-')}</div>
+              <tr class="clickable-case-row">
+                <td style="text-align: center;" onclick="openCaseDrawer('${escapeHtml(c.cnr_number)}')">
+                  <div class="item-badge-cell" style="cursor: pointer;">${escapeHtml(c.item_number || '-')}</div>
                 </td>
-                <td>
+                <td class="clickable-case-cell" onclick="openCaseDrawer('${escapeHtml(c.cnr_number)}')">
                   <div class="case-title-text">${escapeHtml(c.case_title)}</div>
                   <div class="case-sub-text">
                     <strong>${escapeHtml(c.case_number_formatted || c.cnr_number)}</strong>
@@ -455,6 +636,7 @@ function renderHearingBoard(data, filterCourt = "ALL") {
     </div>
   `).join("");
 }
+
 
 async function loadTrackedCases() {
   try {
@@ -503,20 +685,21 @@ function renderAllCasesTable(cases) {
   }
 
   tbody.innerHTML = cases.map(c => `
-    <tr>
-      <td>
+    <tr class="clickable-case-row">
+      <td class="clickable-case-cell" onclick="openCaseDrawer('${escapeHtml(c.cnr_number)}')">
         <strong>${escapeHtml(c.client_name || 'Client')}</strong>
         <div style="font-size: 0.7rem; color: var(--text-muted);">${escapeHtml(c.litigant_role || 'Litigant')}</div>
       </td>
-      <td>
+      <td class="clickable-case-cell" onclick="openCaseDrawer('${escapeHtml(c.cnr_number)}')">
         <div class="case-title-text">${escapeHtml(c.case_title)}</div>
         <div style="font-size:0.7rem; color:var(--text-muted);">${escapeHtml(c.parties || '')}</div>
       </td>
-      <td><strong>${escapeHtml(c.case_number_formatted || '-')}</strong></td>
-      <td><code style="font-family: var(--font-mono); font-size:0.75rem; color:var(--primary);">${escapeHtml(c.cnr_number)}</code></td>
+      <td onclick="openCaseDrawer('${escapeHtml(c.cnr_number)}')"><strong>${escapeHtml(c.case_number_formatted || '-')}</strong></td>
+      <td onclick="openCaseDrawer('${escapeHtml(c.cnr_number)}')"><code style="font-family: var(--font-mono); font-size:0.75rem; color:var(--primary);">${escapeHtml(c.cnr_number)}</code></td>
       <td>${escapeHtml(c.court_name || 'District Court')}</td>
       <td><strong style="color:var(--primary);">${escapeHtml(c.next_hearing_date || 'Awaiting Date')}</strong></td>
       <td><span class="badge ${c.case_status === 'DISPOSED' ? 'badge-disposed' : 'badge-evidence'}">${escapeHtml(c.case_status || 'PENDING')}</span></td>
+
       <td style="text-align: right;">
         <div style="display:flex; gap:4px; justify-content:flex-end;">
           <a href="${getWhatsAppUrl(c)}" target="_blank" class="btn-ui btn-ui-wa" style="padding:3px 6px; font-size:0.7rem;">💬</a>
