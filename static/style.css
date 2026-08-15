@@ -73,7 +73,7 @@ body {
    1. FIXED LEFT SIDEBAR
    ========================================================================== */
 .sidebar {
-  width: 260px;
+  width: 240px;
   background-color: var(--bg-sidebar);
   border-right: 1px solid var(--border-color);
   height: 100vh;
@@ -87,68 +87,76 @@ body {
 }
 
 .sidebar-header {
-  padding: 20px;
+  padding: 16px 18px;
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .sidebar-logo-icon {
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   background: var(--primary);
   color: #fff;
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   font-weight: 800;
   flex-shrink: 0;
 }
 
 .sidebar-brand-title {
-  font-size: 1rem;
+  font-size: 0.88rem;
   font-weight: 800;
   color: var(--text-main);
   letter-spacing: -0.2px;
   line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 165px;
 }
 
 .sidebar-brand-sub {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 600;
   color: var(--primary);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 165px;
 }
 
 .sidebar-nav {
-  padding: 16px 12px;
+  padding: 12px 10px;
   flex: 1;
   overflow-y: auto;
 }
 
 .nav-section-label {
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.8px;
-  padding: 8px 12px 6px;
-  margin-top: 8px;
+  padding: 6px 10px 4px;
+  margin-top: 6px;
 }
 
 .nav-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 12px;
+  padding: 8px 10px;
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
   text-decoration: none;
-  font-size: 0.86rem;
+  font-size: 0.84rem;
   font-weight: 600;
   cursor: pointer;
   transition: var(--transition);
@@ -171,24 +179,24 @@ body {
 }
 
 .nav-item-icon {
-  font-size: 1.05rem;
-  width: 20px;
+  font-size: 1rem;
+  width: 18px;
   display: inline-flex;
   justify-content: center;
 }
 
 .nav-badge {
   margin-left: auto;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 700;
   background: var(--primary-light);
   color: var(--primary);
-  padding: 2px 7px;
+  padding: 2px 6px;
   border-radius: 999px;
 }
 
 .sidebar-footer {
-  padding: 14px 16px;
+  padding: 12px 14px;
   border-top: 1px solid var(--border-color);
   background-color: #fafafa;
 }
@@ -197,12 +205,12 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .profile-avatar {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   background: var(--primary-light);
   color: var(--primary);
@@ -210,19 +218,24 @@ body {
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   border: 1px solid var(--primary-border);
+  flex-shrink: 0;
 }
 
 .profile-info h4 {
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   font-weight: 700;
   color: var(--text-main);
   line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 155px;
 }
 
 .profile-info span {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   color: var(--success);
   font-weight: 600;
 }
@@ -231,53 +244,60 @@ body {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
-  padding: 8px 10px;
+  padding: 6px 8px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.76rem;
+  font-size: 0.74rem;
 }
 
 /* ==========================================================================
    2. MAIN APPLICATION CONTENT AREA
    ========================================================================== */
 .app-content {
-  margin-left: 260px;
-  flex: 1;
+  margin-left: 240px;
+  width: calc(100vw - 240px);
+  max-width: calc(100vw - 240px);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 /* Top Header */
 .top-header {
   background-color: var(--bg-card);
   border-bottom: 1px solid var(--border-color);
-  padding: 14px 28px;
+  padding: 12px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   position: sticky;
   top: 0;
   z-index: 40;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-width: 0;
 }
 
 .header-greeting h2 {
-  font-size: 1.22rem;
+  font-size: 1.15rem;
   font-weight: 800;
   color: var(--text-main);
   letter-spacing: -0.3px;
 }
 
 .header-greeting p {
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   color: var(--text-muted);
 }
 
 .header-meta {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .api-badge {
@@ -287,15 +307,15 @@ body {
   background-color: var(--success-bg);
   color: #065f46;
   border: 1px solid var(--success-border);
-  padding: 5px 12px;
+  padding: 4px 10px;
   border-radius: 999px;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
 }
 
 .api-badge-dot {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background-color: var(--success);
 }
@@ -306,9 +326,9 @@ body {
   gap: 6px;
   background-color: var(--bg-hover);
   border: 1px solid var(--border-color);
-  padding: 5px 12px;
+  padding: 4px 10px;
   border-radius: 999px;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
   color: var(--text-secondary);
 }
@@ -316,29 +336,34 @@ body {
 .header-date {
   text-align: right;
   border-left: 1px solid var(--border-color);
-  padding-left: 14px;
+  padding-left: 10px;
 }
 
 .header-date-day {
-  font-size: 0.84rem;
+  font-size: 0.8rem;
   font-weight: 700;
   color: var(--text-main);
   line-height: 1.2;
 }
 
 .header-date-sub {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   color: var(--text-muted);
 }
 
 /* Main View Container */
 .main-view-container {
-  padding: 24px 28px;
+  padding: 16px 20px;
   flex: 1;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .view-section {
   display: none;
+  width: 100%;
+  min-width: 0;
 }
 
 .view-section.active {
@@ -356,21 +381,23 @@ body {
    ========================================================================== */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+  width: 100%;
 }
 
 .kpi-card {
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  padding: 16px 20px;
+  padding: 12px 16px;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   box-shadow: var(--shadow-sm);
   transition: var(--transition);
+  min-width: 0;
 }
 
 .kpi-card:hover {
@@ -379,13 +406,13 @@ body {
 }
 
 .kpi-icon-box {
-  width: 44px;
-  height: 44px;
+  width: 38px;
+  height: 38px;
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.4rem;
+  font-size: 1.2rem;
   flex-shrink: 0;
 }
 
@@ -396,26 +423,33 @@ body {
 
 .kpi-info {
   line-height: 1.2;
+  min-width: 0;
 }
 
 .kpi-label {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .kpi-value {
-  font-size: 1.6rem;
+  font-size: 1.35rem;
   font-weight: 800;
   color: var(--text-main);
-  margin: 4px 0 2px;
+  margin: 2px 0;
 }
 
 .kpi-sub {
-  font-size: 0.74rem;
+  font-size: 0.68rem;
   color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ==========================================================================
@@ -423,15 +457,23 @@ body {
    ========================================================================== */
 .dashboard-layout {
   display: grid;
-  grid-template-columns: 1fr 340px;
-  gap: 20px;
+  grid-template-columns: minmax(0, 1fr) minmax(290px, 320px);
+  gap: 16px;
+  align-items: start;
+  width: 100%;
+  min-width: 0;
 }
 
-@media (max-width: 1200px) {
+.dashboard-layout > div {
+  min-width: 0;
+}
+
+@media (max-width: 1140px) {
   .dashboard-layout {
     grid-template-columns: 1fr;
   }
 }
+
 
 /* Card Base */
 .ui-card {
@@ -542,8 +584,8 @@ body {
 
 .court-group-header {
   background-color: #f1f5f9;
-  padding: 10px 20px;
-  font-size: 0.84rem;
+  padding: 8px 14px;
+  font-size: 0.82rem;
   font-weight: 800;
   color: var(--text-main);
   display: flex;
@@ -553,35 +595,43 @@ body {
 }
 
 .court-group-count {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 700;
   color: var(--primary);
   background: var(--primary-light);
-  padding: 2px 8px;
+  padding: 2px 6px;
   border-radius: var(--radius-sm);
 }
 
 /* Tables */
+.hearing-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .hearing-table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
+  min-width: 520px;
 }
 
 .hearing-table th {
   background-color: #ffffff;
   color: var(--text-muted);
-  padding: 10px 16px;
+  padding: 8px 12px;
   font-weight: 700;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
 }
 
 .hearing-table td {
-  padding: 12px 16px;
+  padding: 9px 12px;
   border-bottom: 1px solid #f1f5f9;
   vertical-align: middle;
 }
@@ -591,13 +641,13 @@ body {
 }
 
 .item-number-cell {
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   font-weight: 800;
   color: var(--primary);
   text-align: center;
   background-color: var(--primary-light);
-  width: 50px;
-  height: 40px;
+  width: 40px;
+  height: 32px;
   border-radius: var(--radius-sm);
   display: inline-flex;
   align-items: center;
@@ -607,14 +657,16 @@ body {
 .case-title-bold {
   font-weight: 700;
   color: var(--text-main);
-  font-size: 0.88rem;
+  font-size: 0.84rem;
+  line-height: 1.25;
 }
 
 .case-meta-line {
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   color: var(--text-muted);
   margin-top: 2px;
 }
+
 
 .case-no-pill {
   font-family: var(--font-mono);

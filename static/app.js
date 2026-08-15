@@ -201,52 +201,55 @@ document.addEventListener("DOMContentLoaded", () => {
           <span>🏛️ ${escapeHtml(court.court_name)}</span>
           <span class="court-group-count">${court.hearings_count} Case${court.hearings_count > 1 ? 's' : ''}</span>
         </div>
-        <table class="hearing-table">
-          <thead>
-            <tr>
-              <th style="width: 70px; text-align: center;">Item No</th>
-              <th>Case Details</th>
-              <th>Client</th>
-              <th>Status</th>
-              <th>Court Room</th>
-              <th style="text-align: right;">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${court.cases.map(c => `
+        <div class="hearing-table-wrapper">
+          <table class="hearing-table">
+            <thead>
               <tr>
-                <td style="text-align: center;">
-                  <span class="item-number-cell">${escapeHtml(c.item_number || '-')}</span>
-                </td>
-                <td>
-                  <div class="case-title-bold">${escapeHtml(c.case_title)}</div>
-                  <div class="case-meta-line">
-                    <span class="case-no-pill">${escapeHtml(c.case_number_formatted || c.cnr_number)}</span>
-                    ${c.notes ? `&bull; <span style="color: var(--warning);">${escapeHtml(c.notes)}</span>` : ''}
-                  </div>
-                  ${c.judge_name ? `<div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">⚖️ Presiding: ${escapeHtml(c.judge_name)}</div>` : ''}
-                </td>
-                <td>
-                  <strong>${escapeHtml(c.client_name || 'Client')}</strong>
-                  <div style="font-size: 0.72rem; color: var(--text-muted);">${escapeHtml(c.client_phone || '-')}</div>
-                </td>
-                <td>
-                  <span class="badge ${getBadgeClass(c.case_stage)}">${escapeHtml(c.case_stage || 'Evidence')}</span>
-                </td>
-                <td>
-                  <strong style="color: var(--text-main);">${escapeHtml(c.court_room || '-')}</strong>
-                </td>
-                <td style="text-align: right;">
-                  <a href="${getWhatsAppUrl(c)}" target="_blank" class="btn-ui btn-ui-wa" style="padding: 4px 10px; font-size: 0.72rem;">
-                    💬 WhatsApp
-                  </a>
-                </td>
+                <th style="width: 55px; text-align: center;">Item</th>
+                <th>Case Details</th>
+                <th>Client</th>
+                <th>Status</th>
+                <th>Court Room</th>
+                <th style="text-align: right;">Actions</th>
               </tr>
-            `).join("")}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              ${court.cases.map(c => `
+                <tr>
+                  <td style="text-align: center;">
+                    <span class="item-number-cell">${escapeHtml(c.item_number || '-')}</span>
+                  </td>
+                  <td>
+                    <div class="case-title-bold">${escapeHtml(c.case_title)}</div>
+                    <div class="case-meta-line">
+                      <span class="case-no-pill">${escapeHtml(c.case_number_formatted || c.cnr_number)}</span>
+                      ${c.notes ? `&bull; <span style="color: var(--warning);">${escapeHtml(c.notes)}</span>` : ''}
+                    </div>
+                    ${c.judge_name ? `<div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">⚖️ Presiding: ${escapeHtml(c.judge_name)}</div>` : ''}
+                  </td>
+                  <td>
+                    <strong>${escapeHtml(c.client_name || 'Client')}</strong>
+                    <div style="font-size: 0.72rem; color: var(--text-muted);">${escapeHtml(c.client_phone || '-')}</div>
+                  </td>
+                  <td>
+                    <span class="badge ${getBadgeClass(c.case_stage)}">${escapeHtml(c.case_stage || 'Evidence')}</span>
+                  </td>
+                  <td>
+                    <strong style="color: var(--text-main);">${escapeHtml(c.court_room || '-')}</strong>
+                  </td>
+                  <td style="text-align: right;">
+                    <a href="${getWhatsAppUrl(c)}" target="_blank" class="btn-ui btn-ui-wa" style="padding: 4px 8px; font-size: 0.72rem;">
+                      💬 WhatsApp
+                    </a>
+                  </td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
       </div>
     `).join("");
+
   }
 
   // Load All Stored Cases
