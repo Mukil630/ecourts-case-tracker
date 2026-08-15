@@ -266,20 +266,20 @@ function setupCourtChips(data) {
 
   const summaries = data.court_summaries || [];
   chipsRow.innerHTML = `
-    <button class="court-chip-btn ${selectedCourtFilter === 'ALL' ? 'active' : ''}" data-court="ALL">
-      All Courts <span class="chip-count">${data.total_hearings || 0}</span>
+    <button class="court-tab-btn ${selectedCourtFilter === 'ALL' ? 'active' : ''}" data-court="ALL">
+      All Courts <span class="tab-badge">${data.total_hearings || 0}</span>
     </button>
     ${summaries.map(c => `
-      <button class="court-chip-btn ${selectedCourtFilter === c.court_name ? 'active' : ''}" data-court="${escapeHtml(c.court_name)}">
+      <button class="court-tab-btn ${selectedCourtFilter === c.court_name ? 'active' : ''}" data-court="${escapeHtml(c.court_name)}">
         ${escapeHtml(c.court_name.replace(' Court, Karur', '').replace(' at Magisterial Level', ''))}
-        <span class="chip-count">${c.hearings_count}</span>
+        <span class="tab-badge">${c.hearings_count}</span>
       </button>
     `).join("")}
   `;
 
-  chipsRow.querySelectorAll(".court-chip-btn").forEach(btn => {
+  chipsRow.querySelectorAll(".court-tab-btn").forEach(btn => {
     btn.addEventListener("click", () => {
-      chipsRow.querySelectorAll(".court-chip-btn").forEach(b => b.classList.remove("active"));
+      chipsRow.querySelectorAll(".court-tab-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       selectedCourtFilter = btn.getAttribute("data-court");
       renderHearingBoard(causeListData, selectedCourtFilter);
@@ -296,7 +296,7 @@ function renderHearingBoard(data, filterCourt = "ALL") {
       <div style="padding: 36px 20px; text-align: center; color: var(--text-muted);">
         <div style="font-size: 2rem; margin-bottom: 8px;">📋</div>
         <strong style="font-size: 0.95rem; color: var(--text-main);">No Hearings Scheduled for This Date</strong>
-        <p style="font-size: 0.78rem; margin-top: 4px;">Click <strong>"+ Case Intake"</strong> in the sidebar to add your first client.</p>
+        <p style="font-size: 0.78rem; margin-top: 4px;">Click <strong>"+ Add New Case"</strong> in the sidebar to add your first client.</p>
       </div>
     `;
     return;
@@ -305,12 +305,12 @@ function renderHearingBoard(data, filterCourt = "ALL") {
   let summaryHeaderHtml = "";
   if (filterCourt === "ALL" && data.court_summaries && data.court_summaries.length > 0) {
     summaryHeaderHtml = `
-      <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 18px;">
+      <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px 16px; margin: 14px 16px;">
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px;">
           <div>
-            <span style="background: #0f172a; color: #fff; font-size: 0.7rem; padding: 2px 8px; border-radius: 4px; font-weight: 700; text-transform: uppercase;">Hearings for ${escapeHtml(data.target_date || 'Today')}</span>
+            <span style="background: #0f172a; color: #fff; font-size: 0.68rem; padding: 2px 8px; border-radius: 4px; font-weight: 700; text-transform: uppercase;">Hearings for ${escapeHtml(data.target_date || 'Today')}</span>
             <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a; margin-top: 4px;">
-              You have ${data.total_hearings} confirmed hearing${data.total_hearings > 1 ? 's' : ''} scheduled
+              You have ${data.total_hearings} confirmed hearings scheduled across 6 Karur Courts
             </div>
           </div>
           <div style="display: flex; gap: 8px;">
@@ -354,50 +354,50 @@ function renderHearingBoard(data, filterCourt = "ALL") {
   }
 
   container.innerHTML = summaryHeaderHtml + courtsToRender.map(court => `
-    <div class="court-group-block">
-      <div class="court-group-header">
+    <div class="court-block">
+      <div class="court-block-header">
         <span>🏛️ ${escapeHtml(court.court_name)}</span>
-        <span class="court-group-count">${court.hearings_count} Case${court.hearings_count > 1 ? 's' : ''}</span>
+        <span class="court-block-count">${court.hearings_count} Case${court.hearings_count > 1 ? 's' : ''}</span>
       </div>
-      <div class="hearing-table-wrapper">
+      <div style="overflow-x: auto;">
         <table class="hearing-table">
           <thead>
             <tr>
-              <th style="width: 55px; text-align: center;">Item</th>
+              <th style="width: 50px; text-align: center;">Item</th>
               <th>Case Details</th>
               <th>Client</th>
               <th>Status</th>
-              <th>Court Room</th>
-              <th style="text-align: right;">Actions</th>
+              <th>Room & Judge</th>
+              <th style="text-align: right;">WhatsApp</th>
             </tr>
           </thead>
           <tbody>
             ${court.cases.map(c => `
               <tr>
                 <td style="text-align: center;">
-                  <span class="item-number-cell">${escapeHtml(c.item_number || '-')}</span>
+                  <div class="item-badge-cell">${escapeHtml(c.item_number || '-')}</div>
                 </td>
                 <td>
-                  <div class="case-title-bold">${escapeHtml(c.case_title)}</div>
-                  <div class="case-meta-line">
-                    <span class="case-no-pill">${escapeHtml(c.case_number_formatted || c.cnr_number)}</span>
-                    ${c.notes ? `&bull; <span style="color: var(--warning);">${escapeHtml(c.notes)}</span>` : ''}
+                  <div class="case-title-text">${escapeHtml(c.case_title)}</div>
+                  <div class="case-sub-text">
+                    <strong>${escapeHtml(c.case_number_formatted || c.cnr_number)}</strong>
+                    ${c.notes ? `&bull; <span style="color: #b45309; font-weight:600;">Note: ${escapeHtml(c.notes)}</span>` : ''}
                   </div>
-                  ${c.judge_name ? `<div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">⚖️ Presiding: ${escapeHtml(c.judge_name)}</div>` : ''}
                 </td>
                 <td>
-                  <strong>${escapeHtml(c.client_name || 'Client')}</strong>
+                  <strong style="color: var(--text-main); font-size: 0.82rem;">${escapeHtml(c.client_name || 'Client')}</strong>
                   <div style="font-size: 0.72rem; color: var(--text-muted);">${escapeHtml(c.client_phone || '-')}</div>
                 </td>
                 <td>
                   <span class="badge ${getBadgeClass(c.case_stage)}">${escapeHtml(c.case_stage || 'Evidence')}</span>
                 </td>
                 <td>
-                  <strong style="color: var(--text-main);">${escapeHtml(c.court_room || '-')}</strong>
+                  <div class="room-badge">${escapeHtml(c.court_room || '-')}</div>
+                  <div style="font-size: 0.7rem; color: var(--text-muted);">${escapeHtml(c.judge_name || '-')}</div>
                 </td>
                 <td style="text-align: right;">
                   <a href="${getWhatsAppUrl(c)}" target="_blank" class="btn-ui btn-ui-wa" style="padding: 4px 8px; font-size: 0.72rem;">
-                    💬 WhatsApp
+                    📲 Send Notice
                   </a>
                 </td>
               </tr>
@@ -408,6 +408,7 @@ function renderHearingBoard(data, filterCourt = "ALL") {
     </div>
   `).join("");
 }
+
 
 
 function renderFullHearingsView() {
