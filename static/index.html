@@ -26,52 +26,53 @@
 
     <nav class="sidebar-nav">
       <div class="nav-section-label">MAIN</div>
-      <button class="nav-item active" data-view="view-dashboard">
+      <button class="nav-item active" data-view="view-dashboard" onclick="switchView('view-dashboard')">
         <span class="nav-item-icon">📊</span>
         <span>Dashboard</span>
       </button>
-      <button class="nav-item" data-view="view-hearings">
+      <button class="nav-item" data-view="view-hearings" onclick="switchView('view-hearings')">
         <span class="nav-item-icon">📋</span>
         <span>Today's Hearings</span>
         <span class="nav-badge" id="badge-today-hearings">0</span>
       </button>
-      <button class="nav-item" data-view="view-cases">
+      <button class="nav-item" data-view="view-cases" onclick="switchView('view-cases')">
         <span class="nav-item-icon">📁</span>
         <span>All Cases</span>
         <span class="nav-badge" id="badge-total-cases">0</span>
       </button>
-      <button class="nav-item" data-view="view-clients">
+      <button class="nav-item" data-view="view-clients" onclick="switchView('view-clients')">
         <span class="nav-item-icon">👥</span>
         <span>Clients</span>
       </button>
-      <button class="nav-item" data-view="view-calendar">
+      <button class="nav-item" data-view="view-calendar" onclick="switchView('view-calendar')">
         <span class="nav-item-icon">📅</span>
         <span>Calendar</span>
       </button>
-      <button class="nav-item" data-view="view-alerts">
+      <button class="nav-item" data-view="view-alerts" onclick="switchView('view-alerts')">
         <span class="nav-item-icon">🔔</span>
         <span>Alerts</span>
         <span class="nav-badge" id="badge-alerts-count" style="background:#fee2e2; color:#b91c1c;">0</span>
       </button>
 
       <div class="nav-section-label">MANAGEMENT</div>
-      <button class="nav-item" id="btn-nav-case-intake">
+      <button class="nav-item" id="btn-nav-case-intake" onclick="openCaseIntakeModal()">
         <span class="nav-item-icon">➕</span>
         <span>Case Intake</span>
       </button>
-      <button class="nav-item" data-view="view-whatsapp">
+      <button class="nav-item" data-view="view-whatsapp" onclick="switchView('view-whatsapp')">
         <span class="nav-item-icon">📲</span>
         <span>WhatsApp Dockets</span>
       </button>
-      <button class="nav-item" data-view="view-reports">
+      <button class="nav-item" data-view="view-reports" onclick="switchView('view-reports')">
         <span class="nav-item-icon">📈</span>
         <span>Reports</span>
       </button>
-      <button class="nav-item" data-view="view-settings">
+      <button class="nav-item" data-view="view-settings" onclick="switchView('view-settings')">
         <span class="nav-item-icon">⚙️</span>
         <span>Settings</span>
       </button>
     </nav>
+
 
     <div class="sidebar-footer">
       <div class="profile-card">
@@ -545,10 +546,12 @@
               <label class="form-label-ui">Email Address (Optional)</label>
               <input type="email" id="wiz-client-email" class="form-input-ui" placeholder="client@domain.com">
             </div>
-            <div style="display:flex; justify-content:flex-end; margin-top:16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px;">
+              <button type="button" class="btn-ui btn-ui-secondary" onclick="autoFillSampleClient()" style="font-size:0.75rem;">⚡ Sample Karur Client</button>
               <button type="button" class="btn-ui btn-ui-primary" onclick="goToStep(2)">Next: Case Details →</button>
             </div>
           </div>
+
 
           <!-- STEP 2: CASE DETAILS -->
           <div id="wizard-step-2" style="display: none;">

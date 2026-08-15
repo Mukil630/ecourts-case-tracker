@@ -825,14 +825,65 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  wizardForm.addEventListener("submit", (e) => {
+  window.autoFillSampleClient = () => {
+    wizClientName.value = "Shobika Impex Private LTD";
+    wizLitigantRole.value = "Financial Institution / Bank";
+    wizClientPhone.value = "+919843011223";
+    wizClientEmail.value = "accounts@shobikaimpex.com";
+    wizCnr.value = "TNKR060000692024";
+    wizCaseNo.value = "COS/69/2024";
+    wizStage.value = "Evidence";
+    wizRoom.value = "Room 3";
+    wizItem.value = "1";
+    wizNotes.value = "Commercial dispute trial & evidence documents marking";
+    goToStep(2);
+  };
+
+  wizardForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    caseIntakeModal.style.display = "none";
-    alert("✅ Case successfully added to tracking!");
-    loadTrackedCases();
-    loadDailyCauseList(dashboardDatePicker ? dashboardDatePicker.value : "2026-08-14");
-    switchView("view-cases");
+    const btnSubmit = document.getElementById("btn-confirm-intake");
+    if (btnSubmit) {
+      btnSubmit.disabled = true;
+      btnSubmit.innerText = "⏳ Enrolling Case...";
+    }
+
+    try {
+      const res = await fetch("/api/check-case", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cnr: wizCnr.value.trim().toUpperCase(),
+          client_name: wizClientName.value.trim(),
+          client_phone: wizClientPhone.value.trim(),
+          client_email: wizClientEmail.value.trim(),
+          litigant_role: wizLitigantRole.value,
+          case_number_formatted: wizCaseNo.value.trim(),
+          case_stage: wizStage.value.trim(),
+          court_room: wizRoom.value.trim(),
+          item_number: wizItem.value.trim(),
+          notes: wizNotes.value.trim(),
+          next_hearing_date: dashboardDatePicker ? dashboardDatePicker.value : "2026-08-14",
+          force_live: false
+        })
+      });
+
+      const data = await res.json();
+      caseIntakeModal.style.display = "none";
+      alert("✅ Case successfully enrolled and added to your Private Chamber Tracking!");
+      
+      await loadTrackedCases();
+      await loadDailyCauseList(dashboardDatePicker ? dashboardDatePicker.value : "2026-08-14");
+      switchView("view-cases");
+    } catch (err) {
+      alert("Failed to enroll case: " + err.message);
+    } finally {
+      if (btnSubmit) {
+        btnSubmit.disabled = false;
+        btnSubmit.innerText = "✓ Confirm & Track Case";
+      }
+    }
   });
+
 
   // Helpers
   function getBadgeClass(stage) {
