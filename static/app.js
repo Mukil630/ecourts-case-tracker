@@ -30,11 +30,17 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnPrintBoard = document.getElementById("btn-print-board");
   const statBoardCount = document.getElementById("stat-board-count");
 
-  // Form Elements
+  // Client Intake Form Elements
   const caseForm = document.getElementById("case-form");
   const cnrInput = document.getElementById("cnr-input");
   const clientNameInput = document.getElementById("client-name");
+  const litigantRoleInput = document.getElementById("litigant-role");
   const clientPhoneInput = document.getElementById("client-phone");
+  const clientEmailInput = document.getElementById("client-email");
+  const caseNumberInput = document.getElementById("case-number-input");
+  const caseStageInput = document.getElementById("case-stage-input");
+  const courtRoomInput = document.getElementById("court-room-input");
+  const itemNumberInput = document.getElementById("item-number-input");
   const caseNotesInput = document.getElementById("case-notes");
   const ruleTrackHearing = document.getElementById("rule-track-hearing");
   const ruleTrackOrders = document.getElementById("rule-track-orders");
@@ -212,6 +218,7 @@ document.addEventListener("DOMContentLoaded", () => {
                   <div style="font-weight: 700; font-size: 0.95rem; color: #fff;">${escapeHtml(c.case_title)}</div>
                   <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">
                     👤 Client: <strong>${escapeHtml(c.client_name || 'Client')}</strong> (${escapeHtml(c.client_phone || '-')})
+                    ${c.litigant_role ? `&bull; <span style="color: var(--accent-blue); font-size: 0.75rem;">${escapeHtml(c.litigant_role)}</span>` : ''}
                     ${c.notes ? `&bull; <span style="color: var(--accent-amber);">📝 ${escapeHtml(c.notes)}</span>` : ''}
                   </div>
                   ${c.judge_name ? `<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">⚖️ Presiding: ${escapeHtml(c.judge_name)}</div>` : ''}
@@ -308,22 +315,28 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (e) {}
   }
 
-  // Handle Form Submit (Add New Case & Client)
+  // Handle Client Intake & Case Verification Form Submit
   caseForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const cnr = cnrInput.value.trim().toUpperCase();
     const name = clientNameInput.value.trim();
+    const role = litigantRoleInput ? litigantRoleInput.value : "Petitioner / Complainant";
     const phone = clientPhoneInput.value.trim();
+    const email = clientEmailInput ? clientEmailInput.value.trim() : "";
+    const caseNumber = caseNumberInput ? caseNumberInput.value.trim() : "";
+    const caseStage = caseStageInput ? caseStageInput.value.trim() : "";
+    const courtRoom = courtRoomInput ? courtRoomInput.value.trim() : "";
+    const itemNumber = itemNumberInput ? itemNumberInput.value.trim() : "";
     const notes = caseNotesInput.value.trim();
     const forceLive = forceLiveToggle.checked;
 
     if (!cnr) return;
 
     btnFetch.disabled = true;
-    btnFetch.innerText = forceLive ? "⚡ Live Querying eCourts (1.5 credits)..." : "⚡ Loading Case...";
+    btnFetch.innerText = forceLive ? "⚡ Live Querying eCourts (1.5 credits)..." : "⚡ Verifying Case...";
     caseResultContent.innerHTML = `
       <div class="empty-state">
-        <p>Fetching case intelligence for CNR <code>${cnr}</code> for client <strong>${escapeHtml(name)}</strong>...</p>
+        <p>Verifying judicial records for CNR <code>${cnr}</code> & enrolling client <strong>${escapeHtml(name)}</strong>...</p>
       </div>
     `;
 
@@ -335,6 +348,12 @@ document.addEventListener("DOMContentLoaded", () => {
           cnr,
           client_name: name,
           client_phone: phone,
+          client_email: email,
+          litigant_role: role,
+          case_number_formatted: caseNumber,
+          case_stage: caseStage,
+          court_room: courtRoom,
+          item_number: itemNumber,
           notes: notes,
           force_live: forceLive,
           track_next_hearing: ruleTrackHearing.checked,
@@ -345,28 +364,34 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       const data = await response.json();
-      renderCaseResult(data, name, phone, notes);
+      renderCaseResult(data, name, phone, notes, role, email);
       loadTrackedCases();
       loadHistoryLogsCount();
       loadDailyCauseList();
     } catch (err) {
       caseResultContent.innerHTML = `
         <div class="empty-state" style="color: var(--accent-rose);">
-          <p>Failed to track case: ${err.message}</p>
+          <p>Failed to verify case: ${err.message}</p>
         </div>
       `;
     } finally {
       btnFetch.disabled = false;
-      btnFetch.innerText = "⚡ Fetch & Track Case";
+      btnFetch.innerText = "⚡ Check & Verify Case Now";
     }
   });
 
-  // Demo Case Button
+  // Demo Case Button (Loads Karur Client)
   btnDemo.addEventListener("click", () => {
-    cnrInput.value = "DLND020047882015";
-    clientNameInput.value = "Arun Jaitley";
-    clientPhoneInput.value = "+919876543210";
-    caseNotesInput.value = "Criminal defamation trial & 65B evidence review";
+    cnrInput.value = "TNKR060000692024";
+    clientNameInput.value = "Shobika Impex Private LTD";
+    if (litigantRoleInput) litigantRoleInput.value = "Financial Institution / Bank";
+    clientPhoneInput.value = "+919843011223";
+    if (clientEmailInput) clientEmailInput.value = "accounts@shobikaimpex.com";
+    if (caseNumberInput) caseNumberInput.value = "COS/69/2024";
+    if (caseStageInput) caseStageInput.value = "Evidence";
+    if (courtRoomInput) courtRoomInput.value = "Room 3";
+    if (itemNumberInput) itemNumberInput.value = "1";
+    caseNotesInput.value = "Commercial dispute trial & evidence documents marking";
     caseForm.dispatchEvent(new Event("submit"));
   });
 
@@ -460,6 +485,7 @@ document.addEventListener("DOMContentLoaded", () => {
         (c.case_title || "").toLowerCase().includes(term) ||
         (c.court_name || "").toLowerCase().includes(term) ||
         (c.client_name || "").toLowerCase().includes(term) ||
+        (c.litigant_role || "").toLowerCase().includes(term) ||
         (c.case_stage || "").toLowerCase().includes(term) ||
         (c.case_number_formatted || "").toLowerCase().includes(term) ||
         (c.notes || "").toLowerCase().includes(term)
@@ -525,8 +551,8 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (e) {}
   }
 
-  // Render Result Function
-  function renderCaseResult(data, clientName, phone, notes) {
+  // Render Verification Result Function
+  function renderCaseResult(data, clientName, phone, notes, role = "", email = "") {
     if (!data.success && data.error) {
       caseResultContent.innerHTML = `
         <div class="empty-state" style="color: var(--accent-rose);">
@@ -552,6 +578,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <div>
           <div class="case-name">${escapeHtml(c.case_title || 'Case Title')}</div>
           <span class="case-cnr-badge">${escapeHtml(c.cnr_number)}</span>
+          ${role ? `<span class="badge-subtle" style="margin-left: 6px;">${escapeHtml(role)}</span>` : ''}
         </div>
         <span class="tag ${statusClass}">${escapeHtml(c.case_status || 'PENDING')}</span>
       </div>
@@ -562,18 +589,18 @@ document.addEventListener("DOMContentLoaded", () => {
           <div class="hearing-date">${escapeHtml(nextDate)}</div>
         </div>
         <div style="text-align: right;">
-          <div class="data-label">Total Hearings</div>
-          <div style="font-weight: 700; font-size: 1.1rem; color: #fff;">${c.hearing_count || 25}</div>
+          <div class="data-label">Verification Status</div>
+          <div style="font-weight: 800; font-size: 1rem; color: var(--accent-emerald);">✓ Record Verified</div>
         </div>
       </div>
 
       <div class="data-grid">
         <div class="data-item">
           <div class="data-label">Court & District</div>
-          <div class="data-val">${escapeHtml(c.court_name || 'Chief Metropolitan Magistrate')}</div>
+          <div class="data-val">${escapeHtml(c.court_name || 'District Court')}</div>
         </div>
         <div class="data-item">
-          <div class="data-label">Assigned Client</div>
+          <div class="data-label">Enrolled Client</div>
           <div class="data-val">${escapeHtml(clientName || 'Client')} (${escapeHtml(phone || '-')})</div>
         </div>
       </div>
@@ -587,16 +614,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
       <div class="whatsapp-card">
         <div style="font-size: 0.8rem; font-weight: 600; color: #8696a0; margin-bottom: 8px; display: flex; justify-content: space-between;">
-          <span>💬 Prepared WhatsApp Notice:</span>
-          <span>Client: <strong>${escapeHtml(phone || '')}</strong></span>
+          <span>💬 Automated Client WhatsApp Notice:</span>
+          <span>Target: <strong>${escapeHtml(phone || '')}</strong></span>
         </div>
         <div class="whatsapp-bubble">${escapeHtml(waText)}</div>
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
           <a href="${waLink}" target="_blank" class="btn btn-whatsapp" style="flex: 1;">
-            📲 Dispatch to Client WhatsApp
+            📲 Dispatch Notice to Client WhatsApp
           </a>
           <a href="/api/export-case/${encodeURIComponent(c.cnr_number)}" target="_blank" class="btn btn-secondary" style="flex: none; padding: 10px 16px;">
-            🖨️ Print Brief
+            🖨️ Print Intake Brief
           </a>
         </div>
       </div>
@@ -632,6 +659,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <tr>
         <td>
           <strong>${escapeHtml(item.client_name || 'Litigant')}</strong>
+          ${item.litigant_role ? `<div style="font-size: 0.72rem; color: var(--accent-blue); font-weight: 600;">${escapeHtml(item.litigant_role)}</div>` : ''}
           <div style="font-size: 0.8rem; color: var(--text-muted);">${escapeHtml(item.client_phone || '-')}</div>
         </td>
         <td>
@@ -680,7 +708,13 @@ document.addEventListener("DOMContentLoaded", () => {
     cnrInput.value = cnr;
     if (item) {
       clientNameInput.value = item.client_name || "";
+      if (litigantRoleInput) litigantRoleInput.value = item.litigant_role || "Petitioner / Complainant";
       clientPhoneInput.value = item.client_phone || "";
+      if (clientEmailInput) clientEmailInput.value = item.client_email || "";
+      if (caseNumberInput) caseNumberInput.value = item.case_number_formatted || "";
+      if (caseStageInput) caseStageInput.value = item.case_stage || "";
+      if (courtRoomInput) courtRoomInput.value = item.court_room || "";
+      if (itemNumberInput) itemNumberInput.value = item.item_number || "";
       caseNotesInput.value = item.notes || "";
     }
     // Switch to Add Client tab

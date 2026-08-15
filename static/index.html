@@ -70,9 +70,10 @@
     <!-- Navigation Tabs -->
     <div class="nav-tabs-bar">
       <button class="nav-tab active" data-tab="tab-cause-list">📋 Daily Court Board & Cause List</button>
-      <button class="nav-tab" data-tab="tab-add-client">➕ Add Client & Automation Rules</button>
+      <button class="nav-tab" data-tab="tab-add-client">👤 Client Intake & Case Verification</button>
       <button class="nav-tab" data-tab="tab-portfolio">📁 Tracked Case Portfolio</button>
     </div>
+
 
     <!-- TAB 1: DAILY CAUSE LIST & COURT BOARD (THE ₹4000/MO KILLER FEATURE) -->
     <div id="tab-cause-list" class="tab-pane active">
@@ -110,42 +111,92 @@
       </div>
     </div>
 
-    <!-- TAB 2: ADD CLIENT & AUTOMATION RULES -->
+    <!-- TAB 2: CLIENT INTAKE & CASE VERIFICATION -->
     <div id="tab-add-client" class="tab-pane">
       <div class="dashboard-grid">
-        <!-- Add Form -->
+        <!-- Client Intake Form -->
         <div class="card">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <h2 class="card-title" style="margin: 0;">➕ Add New Client & Case</h2>
-            <span class="badge-subtle">Auto-Monitored</span>
+            <div>
+              <h2 class="card-title" style="margin: 0;">👤 New Client Intake & Case Enrollment</h2>
+              <span style="font-size: 0.8rem; color: var(--text-secondary);">Register client details and instantly verify case on eCourts</span>
+            </div>
+            <span class="badge-subtle">🛡️ Credit Safe</span>
           </div>
 
           <form id="case-form">
-            <div class="form-group">
-              <label class="form-label" for="cnr-input">16-Digit CNR Number *</label>
-              <input type="text" id="cnr-input" class="form-input code-font" placeholder="e.g. DLND020047882015" value="DLND020047882015" required maxlength="16">
+            <!-- 1. Client Contact Details Section -->
+            <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: var(--accent-blue); margin-bottom: 8px; letter-spacing: 0.5px;">
+              1. Client Personal & Contact Profile
+            </div>
+            <div class="form-row">
+              <div class="form-group" style="flex: 1.2;">
+                <label class="form-label" for="client-name">Client Full Name *</label>
+                <input type="text" id="client-name" class="form-input" placeholder="e.g. A Palaniyappan" value="A Palaniyappan" required>
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" for="litigant-role">Client Role *</label>
+                <select id="litigant-role" class="form-input">
+                  <option value="Petitioner / Complainant" selected>Petitioner / Complainant</option>
+                  <option value="Respondent / Defendant">Respondent / Defendant</option>
+                  <option value="Accused / Defense">Accused / Defense</option>
+                  <option value="Appellant">Appellant</option>
+                  <option value="Financial Institution / Bank">Financial Institution / Bank</option>
+                </select>
+              </div>
             </div>
 
             <div class="form-row">
               <div class="form-group" style="flex: 1;">
-                <label class="form-label" for="client-name">Client Name *</label>
-                <input type="text" id="client-name" class="form-input" placeholder="e.g. Rajesh Kumar" value="Arun Jaitley" required>
+                <label class="form-label" for="client-phone">WhatsApp Contact Number *</label>
+                <input type="text" id="client-phone" class="form-input code-font" placeholder="e.g. +919842555666" value="+919842555666" required>
               </div>
               <div class="form-group" style="flex: 1;">
-                <label class="form-label" for="client-phone">Client WhatsApp Number *</label>
-                <input type="text" id="client-phone" class="form-input code-font" placeholder="e.g. +919876543210" value="+919876543210" required>
+                <label class="form-label" for="client-email">Email Address (Optional)</label>
+                <input type="email" id="client-email" class="form-input" placeholder="client@domain.com">
+              </div>
+            </div>
+
+            <!-- 2. Judicial Identifiers Section -->
+            <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: var(--accent-blue); margin-top: 10px; margin-bottom: 8px; letter-spacing: 0.5px;">
+              2. Court & Case Identifiers
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="cnr-input">16-Digit CNR Number *</label>
+              <input type="text" id="cnr-input" class="form-input code-font" placeholder="e.g. TNKR050001392021" value="TNKR050001392021" required maxlength="16">
+            </div>
+
+            <div class="form-row">
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" for="case-number-input">Case Number (Optional)</label>
+                <input type="text" id="case-number-input" class="form-input" placeholder="e.g. OS/139/2021" value="OS/139/2021">
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" for="case-stage-input">Current Stage</label>
+                <input type="text" id="case-stage-input" class="form-input" placeholder="e.g. Evidence / Trial" value="Trial">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" for="court-room-input">Court Room</label>
+                <input type="text" id="court-room-input" class="form-input" placeholder="e.g. Room 5" value="Room 5">
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" for="item-number-input">Item Number</label>
+                <input type="text" id="item-number-input" class="form-input" placeholder="e.g. 23" value="23">
               </div>
             </div>
 
             <div class="form-group">
-              <label class="form-label" for="case-notes">Advocate Notes / Subject</label>
-              <input type="text" id="case-notes" class="form-input" placeholder="e.g. Complainant evidence / Bail review" value="Criminal defamation evidence review">
+              <label class="form-label" for="case-notes">Advocate Private Notes / Instructions</label>
+              <input type="text" id="case-notes" class="form-input" placeholder="e.g. Cross examination witness 2 / Arguments pending" value="Final trial arguments & document markings">
             </div>
 
-            <!-- Automation Rules Selectors -->
+            <!-- 3. Automation Rules Selectors -->
             <div class="automation-rules-box">
               <div class="rules-header">
-                <span style="font-size: 0.85rem; font-weight: 700; color: var(--accent-blue);">⚙️ Select What to Fetch & Send Automatically:</span>
+                <span style="font-size: 0.85rem; font-weight: 700; color: var(--accent-blue);">⚙️ Automated Monitoring Triggers for this Client:</span>
               </div>
               <div class="checkbox-grid">
                 <label class="checkbox-label">
@@ -175,27 +226,28 @@
             </div>
 
             <div class="btn-row">
-              <button type="submit" id="btn-fetch" class="btn btn-primary">⚡ Fetch & Track Case</button>
-              <button type="button" id="btn-demo" class="btn btn-secondary">Load Sample CNR</button>
+              <button type="submit" id="btn-fetch" class="btn btn-primary">⚡ Check & Verify Case Now</button>
+              <button type="button" id="btn-demo" class="btn btn-secondary">Load Sample Client</button>
             </div>
           </form>
         </div>
 
-        <!-- Result Preview -->
+        <!-- Verification & Intelligence Result Card -->
         <div class="card" id="result-card">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <h2 class="card-title" style="margin: 0;">📊 Case Intelligence & Dispatch</h2>
+            <h2 class="card-title" style="margin: 0;">📊 Case Verification & Client Dispatch</h2>
             <span id="cache-badge" class="tag tag-cached" style="display: none;">⚡ Cached (0 credits)</span>
           </div>
           
           <div id="case-result-content">
             <div class="empty-state">
-              <p>Add a client case on the left to inspect court details, check upcoming hearing dates, and preview automated WhatsApp alerts.</p>
+              <p>Enter the client and CNR details on the left, then click <strong>"⚡ Check & Verify Case Now"</strong> to validate judicial records, pull opposing parties, and preview the automated WhatsApp notice.</p>
             </div>
           </div>
         </div>
       </div>
     </div>
+
 
     <!-- TAB 3: CASE PORTFOLIO & CLIENT DIRECTORY -->
     <div id="tab-portfolio" class="tab-pane">

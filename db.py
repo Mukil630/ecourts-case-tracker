@@ -46,6 +46,8 @@ def init_db():
     existing_cols = [row[1] for row in cursor.fetchall()]
     
     cols_to_add = [
+        ("client_email", "TEXT DEFAULT ''"),
+        ("litigant_role", "TEXT DEFAULT 'Petitioner / Complainant'"),
         ("case_number_formatted", "TEXT DEFAULT ''"),
         ("case_stage", "TEXT DEFAULT 'Trial / Evidence'"),
         ("court_room", "TEXT DEFAULT ''"),
@@ -58,6 +60,7 @@ def init_db():
         ("notes", "TEXT DEFAULT ''"),
         ("custom_advocate_header", "TEXT DEFAULT 'Advocate Office Notice'")
     ]
+
     for col_name, col_type in cols_to_add:
         if col_name not in existing_cols:
             try:
@@ -151,6 +154,7 @@ def set_cached_case(cnr_number: str, raw_json: Dict[str, Any]):
     conn.close()
 
 def upsert_case(case_data: Dict[str, Any], client_name: str = "", client_phone: str = "",
+                client_email: str = "", litigant_role: str = "Petitioner / Complainant",
                 track_next_hearing: bool = True, track_orders: bool = True,
                 track_case_status: bool = True, auto_whatsapp_enabled: bool = True,
                 notes: str = "", custom_advocate_header: str = "Advocate Office Notice",
@@ -192,6 +196,8 @@ def upsert_case(case_data: Dict[str, Any], client_name: str = "", client_phone: 
                 next_hearing_date = COALESCE(?, next_hearing_date),
                 client_name = CASE WHEN ? != '' THEN ? ELSE client_name END,
                 client_phone = CASE WHEN ? != '' THEN ? ELSE client_phone END,
+                client_email = CASE WHEN ? != '' THEN ? ELSE client_email END,
+                litigant_role = CASE WHEN ? != '' THEN ? ELSE litigant_role END,
                 track_next_hearing = ?,
                 track_orders = ?,
                 track_case_status = ?,
@@ -215,6 +221,8 @@ def upsert_case(case_data: Dict[str, Any], client_name: str = "", client_phone: 
             new_next_hearing,
             client_name, client_name,
             client_phone, client_phone,
+            client_email, client_email,
+            litigant_role, litigant_role,
             1 if track_next_hearing else 0,
             1 if track_orders else 0,
             1 if track_case_status else 0,
@@ -232,16 +240,18 @@ def upsert_case(case_data: Dict[str, Any], client_name: str = "", client_phone: 
         # Insert new case record
         cursor.execute("""
             INSERT INTO cases (
-                cnr_number, client_name, client_phone, case_title, case_status,
+                cnr_number, client_name, client_phone, client_email, litigant_role, case_title, case_status,
                 court_name, parties, advocates, last_hearing_date, next_hearing_date,
                 track_next_hearing, track_orders, track_case_status, auto_whatsapp_enabled,
                 notes, custom_advocate_header, case_number_formatted, case_stage,
                 court_room, item_number, judge_name
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             cnr,
             client_name,
             client_phone,
+            client_email,
+            litigant_role,
             case_data.get("case_title"),
             case_data.get("case_status"),
             case_data.get("court_name"),
@@ -262,18 +272,21 @@ def upsert_case(case_data: Dict[str, Any], client_name: str = "", client_phone: 
             judge_name
         ))
 
+
     conn.commit()
     conn.close()
     return date_changed
 
 def update_case_preferences(cnr_number: str, prefs: Dict[str, Any]) -> bool:
-    """Updates automation toggles and notes for a specific case."""
+    """Updates automation toggles, client profile, and notes for a specific case."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("""
         UPDATE cases SET
             client_name = COALESCE(?, client_name),
             client_phone = COALESCE(?, client_phone),
+            client_email = COALESCE(?, client_email),
+            litigant_role = COALESCE(?, litigant_role),
             track_next_hearing = ?,
             track_orders = ?,
             track_case_status = ?,
@@ -289,6 +302,8 @@ def update_case_preferences(cnr_number: str, prefs: Dict[str, Any]) -> bool:
     """, (
         prefs.get("client_name"),
         prefs.get("client_phone"),
+        prefs.get("client_email"),
+        prefs.get("litigant_role"),
         1 if prefs.get("track_next_hearing", True) else 0,
         1 if prefs.get("track_orders", True) else 0,
         1 if prefs.get("track_case_status", True) else 0,
@@ -306,6 +321,7 @@ def update_case_preferences(cnr_number: str, prefs: Dict[str, Any]) -> bool:
     updated = cursor.rowcount > 0
     conn.close()
     return updated
+
 
 def get_all_cases() -> List[Dict[str, Any]]:
     """Fetches all tracked cases."""

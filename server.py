@@ -252,6 +252,8 @@ def check_case():
     cnr = (data.get("cnr") or "DLND020047882015").strip().upper()
     client_name = data.get("client_name", "Client")
     client_phone = data.get("client_phone", "+919876543210")
+    client_email = data.get("client_email", "")
+    litigant_role = data.get("litigant_role", "Petitioner / Complainant")
     force_live = bool(data.get("force_live", False))
     
     track_hearing = bool(data.get("track_next_hearing", True))
@@ -280,6 +282,8 @@ def check_case():
                 db_payload,
                 client_name=client_name,
                 client_phone=client_phone,
+                client_email=client_email,
+                litigant_role=litigant_role,
                 track_next_hearing=track_hearing,
                 track_orders=track_orders,
                 track_case_status=track_status,
@@ -287,6 +291,7 @@ def check_case():
                 notes=notes,
                 custom_advocate_header=custom_header
             )
+
             return jsonify({
                 "success": True,
                 "date_changed": date_changed,
@@ -329,6 +334,8 @@ def check_case():
         db_payload,
         client_name=client_name,
         client_phone=client_phone,
+        client_email=client_email,
+        litigant_role=litigant_role,
         track_next_hearing=track_hearing,
         track_orders=track_orders,
         track_case_status=track_status,
@@ -336,6 +343,7 @@ def check_case():
         notes=notes,
         custom_advocate_header=custom_header
     )
+
 
     return jsonify({
         "success": True,
