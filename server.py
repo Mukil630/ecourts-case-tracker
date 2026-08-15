@@ -5,7 +5,11 @@ import time
 from flask import Flask, request, jsonify, send_from_directory, render_template_string
 from flask_cors import CORS
 from ecourts_api import fetch_case_details, get_api_key
-from db import init_db, upsert_case, get_all_cases, get_case_by_cnr, delete_case, get_case_history_logs, mark_log_notified
+from db import (
+    init_db, upsert_case, get_all_cases, get_case_by_cnr, delete_case,
+    get_case_history_logs, mark_log_notified, update_case_preferences,
+    get_advocate_settings, update_advocate_settings
+)
 from sync_engine import sync_worker
 
 # Ensure UTF-8 output
@@ -70,19 +74,44 @@ def remove_case(cnr):
     deleted = delete_case(cnr.upper())
     return jsonify({"success": deleted})
 
+@app.route("/api/cases/<cnr>/preferences", methods=["PUT"])
+def update_preferences(cnr):
+    data = request.get_json() or {}
+    success = update_case_preferences(cnr.upper(), data)
+    return jsonify({"success": success})
+
+@app.route("/api/advocate-settings", methods=["GET", "POST"])
+def advocate_settings_route():
+    if request.method == "POST":
+        data = request.get_json() or {}
+        update_advocate_settings(data)
+        return jsonify({"success": True, "settings": get_advocate_settings()})
+    return jsonify(get_advocate_settings())
+
 @app.route("/api/check-case", methods=["POST"])
 def check_case():
-    """Fetches case from eCourts API or fallback demo data if key not set."""
+    """
+    Fetches case from eCourts API (with smart credit-saving cache)
+    and saves with Uncle's custom tracking rules.
+    """
     data = request.get_json() or {}
     cnr = (data.get("cnr") or "DLND020047882015").strip().upper()
     client_name = data.get("client_name", "Client")
     client_phone = data.get("client_phone", "+919876543210")
+    force_live = bool(data.get("force_live", False))
+    
+    # Uncle's automation preferences
+    track_hearing = bool(data.get("track_next_hearing", True))
+    track_orders = bool(data.get("track_orders", True))
+    track_status = bool(data.get("track_case_status", True))
+    auto_wa = bool(data.get("auto_whatsapp_enabled", True))
+    notes = data.get("notes", "")
+    custom_header = data.get("custom_advocate_header", "Advocate Office Notice")
 
     api_key = get_api_key()
 
-    # If API Key is present, call the real eCourts API
     if api_key:
-        api_result = fetch_case_details(cnr)
+        api_result = fetch_case_details(cnr, force_live=force_live)
         if api_result.get("success"):
             db_payload = {
                 "cnr_number": api_result.get("cnr_number"),
@@ -94,16 +123,28 @@ def check_case():
                 "last_hearing_date": api_result.get("last_hearing_date"),
                 "next_hearing_date": api_result.get("next_hearing_date")
             }
-            date_changed = upsert_case(db_payload, client_name=client_name, client_phone=client_phone)
+            date_changed = upsert_case(
+                db_payload,
+                client_name=client_name,
+                client_phone=client_phone,
+                track_next_hearing=track_hearing,
+                track_orders=track_orders,
+                track_case_status=track_status,
+                auto_whatsapp_enabled=auto_wa,
+                notes=notes,
+                custom_advocate_header=custom_header
+            )
             return jsonify({
                 "success": True,
                 "date_changed": date_changed,
+                "is_cached": api_result.get("is_cached", False),
+                "cache_note": api_result.get("cache_note", "Live API query used"),
                 "case_data": api_result
             })
         else:
             return jsonify(api_result)
 
-    # Fallback Sample Data for instant testing if key not set yet
+    # Fallback Sample Data for demo mode
     sample_case = {
         "success": True,
         "cnr_number": cnr,
@@ -117,7 +158,8 @@ def check_case():
         "hearing_count": 25,
         "order_count": 10,
         "is_mock": True,
-        "note": "Running in Demo Mode. Add ECOURTS_API_KEY in .env for live API queries."
+        "is_cached": True,
+        "cache_note": "Demo Mode (0 credits used)"
     }
 
     db_payload = {
@@ -130,28 +172,42 @@ def check_case():
         "last_hearing_date": sample_case["last_hearing_date"],
         "next_hearing_date": sample_case["next_hearing_date"]
     }
-    date_changed = upsert_case(db_payload, client_name=client_name, client_phone=client_phone)
+    date_changed = upsert_case(
+        db_payload,
+        client_name=client_name,
+        client_phone=client_phone,
+        track_next_hearing=track_hearing,
+        track_orders=track_orders,
+        track_case_status=track_status,
+        auto_whatsapp_enabled=auto_wa,
+        notes=notes,
+        custom_advocate_header=custom_header
+    )
 
     return jsonify({
         "success": True,
         "date_changed": date_changed,
+        "is_cached": True,
         "case_data": sample_case
     })
 
 @app.route("/api/sync-all", methods=["POST"])
 def sync_all():
     """Triggers batch re-check of all tracked cases."""
-    result = sync_worker.sync_all_cases()
+    data = request.get_json() or {}
+    force_live = bool(data.get("force_live", False))
+    result = sync_worker.sync_all_cases(force_live=force_live)
     return jsonify(result)
 
 @app.route("/api/sync-status", methods=["GET"])
 def sync_status():
-    """Returns status of background auto-poller."""
+    """Returns status of background auto-poller and credits saved."""
     return jsonify({
         "running": sync_worker.running,
         "interval_seconds": sync_worker.interval_seconds,
         "last_sync_time": sync_worker.last_sync_time,
-        "last_sync_result": sync_worker.last_sync_result
+        "last_sync_result": sync_worker.last_sync_result,
+        "total_credits_saved": sync_worker.total_credits_saved
     })
 
 @app.route("/api/history", methods=["GET"])
@@ -182,7 +238,7 @@ def dispatch_alert():
 
 @app.route("/api/run-agent", methods=["POST"])
 def trigger_agent():
-    """Runs LangGraph Autonomous Vision Agent in separate thread or fallback."""
+    """Runs LangGraph Autonomous Vision Agent."""
     data = request.get_json() or {}
     cnr = (data.get("cnr") or "DLND020047882015").strip().upper()
     try:
@@ -204,10 +260,12 @@ def trigger_agent():
 
 @app.route("/api/export-case/<cnr>")
 def export_case(cnr):
-    """Renders a printable law firm case summary brief."""
+    """Renders a printable law firm case summary brief with Uncle's firm branding."""
     case = get_case_by_cnr(cnr.upper())
     if not case:
         return "<h3>Case not found in database. Please track it first.</h3>", 404
+
+    settings = get_advocate_settings()
 
     html_template = """
     <!DOCTYPE html>
@@ -217,36 +275,38 @@ def export_case(cnr):
         <title>Case Summary Brief - {{ case.cnr_number }}</title>
         <style>
             body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #1e293b; background: #fff; line-height: 1.6; }
-            .header { border-bottom: 3px solid #0f172a; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
-            .title { font-size: 24px; font-weight: 800; color: #0f172a; }
+            .header { border-bottom: 3px solid #0f172a; padding-bottom: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; }
+            .firm-name { font-size: 24px; font-weight: 800; color: #0f172a; }
+            .firm-subtitle { font-size: 14px; color: #64748b; font-weight: 600; }
             .badge { background: #0284c7; color: white; padding: 4px 12px; border-radius: 6px; font-size: 14px; font-weight: 600; }
-            .section { margin-bottom: 25px; }
-            .section-title { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; font-weight: 700; margin-bottom: 8px; }
-            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-            .card { background: #f8fafc; border: 1px solid #e2e8f0; padding: 16px; border-radius: 8px; }
+            .section { margin-bottom: 20px; }
+            .section-title { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; font-weight: 700; margin-bottom: 6px; }
+            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+            .card { background: #f8fafc; border: 1px solid #e2e8f0; padding: 14px; border-radius: 8px; }
             .highlight-card { background: #eff6ff; border: 1px solid #bfdbfe; }
-            .hearing-date { font-size: 26px; font-weight: 800; color: #0369a1; }
-            .footer { margin-top: 50px; border-top: 1px solid #cbd5e1; padding-top: 15px; font-size: 12px; color: #94a3b8; text-align: center; }
+            .hearing-date { font-size: 24px; font-weight: 800; color: #0369a1; }
+            .footer { margin-top: 40px; border-top: 1px solid #cbd5e1; padding-top: 15px; font-size: 12px; color: #94a3b8; text-align: center; }
             @media print { .no-print { display: none; } body { padding: 0; } }
         </style>
     </head>
     <body>
-        <div class="no-print" style="margin-bottom: 20px;">
+        <div class="no-print" style="margin-bottom: 20px; display: flex; justify-content: space-between;">
             <button onclick="window.print()" style="padding: 10px 20px; background: #0284c7; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">🖨️ Print / Save as PDF</button>
+            <span style="color: #64748b; font-size: 13px;">Official Legal Case Hearing Record</span>
         </div>
 
         <div class="header">
             <div>
-                <div class="title">⚖️ Case Hearing Brief</div>
-                <div style="color: #64748b; font-size: 14px;">Official Legal Case Summary & Client Record</div>
+                <div class="firm-name">⚖️ {{ settings.firm_name or 'Law Chambers & Associates' }}</div>
+                <div class="firm-subtitle">{{ settings.lawyer_name or 'Senior Advocate' }} &bull; Office Contact: {{ settings.lawyer_phone or '+919876543210' }}</div>
             </div>
             <span class="badge">{{ case.case_status }}</span>
         </div>
 
         <div class="section">
             <div class="section-title">Case Title & CNR</div>
-            <div style="font-size: 20px; font-weight: 700;">{{ case.case_title }}</div>
-            <div style="font-family: monospace; font-size: 16px; color: #0284c7; margin-top: 4px;">CNR: {{ case.cnr_number }}</div>
+            <div style="font-size: 18px; font-weight: 700;">{{ case.case_title }}</div>
+            <div style="font-family: monospace; font-size: 15px; color: #0284c7; margin-top: 2px;">CNR: {{ case.cnr_number }}</div>
         </div>
 
         <div class="grid section">
@@ -256,7 +316,7 @@ def export_case(cnr):
             </div>
             <div class="card">
                 <div class="section-title">Last Hearing Date</div>
-                <div style="font-size: 20px; font-weight: 600; color: #334155; margin-top: 6px;">{{ case.last_hearing_date or 'N/A' }}</div>
+                <div style="font-size: 18px; font-weight: 600; color: #334155; margin-top: 4px;">{{ case.last_hearing_date or 'N/A' }}</div>
             </div>
         </div>
 
@@ -274,19 +334,26 @@ def export_case(cnr):
 
         <div class="card section">
             <div class="section-title">Parties & Advocates</div>
-            <div style="margin-bottom: 8px;"><strong>Parties:</strong> {{ case.parties or 'N/A' }}</div>
+            <div style="margin-bottom: 6px;"><strong>Parties:</strong> {{ case.parties or 'N/A' }}</div>
             <div><strong>Advocates:</strong> {{ case.advocates or 'N/A' }}</div>
         </div>
 
+        {% if case.notes %}
+        <div class="card section" style="background: #fffbeb; border-color: #fef3c7;">
+            <div class="section-title" style="color: #b45309;">Advocate Confidential Notes</div>
+            <div>{{ case.notes }}</div>
+        </div>
+        {% endif %}
+
         <div class="footer">
-            Generated via LegalCase eCourts Automated Management System &bull; Timestamp: {{ case.last_checked_at }}
+            {{ settings.default_whatsapp_footer }} &bull; Generated on: {{ case.last_checked_at }}
         </div>
     </body>
     </html>
     """
-    return render_template_string(html_template, case=case)
+    return render_template_string(html_template, case=case, settings=settings)
 
 if __name__ == "__main__":
     port = 5000
-    print(f"🚀 LegalCase Automation Web Server starting at http://127.0.0.1:{port}")
+    print(f"🚀 Advocate Case Automation Web Server starting at http://127.0.0.1:{port}")
     app.run(host="127.0.0.1", port=port, debug=False)

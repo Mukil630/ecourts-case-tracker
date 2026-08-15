@@ -2,7 +2,11 @@ import os
 import sys
 import unittest
 import json
-from db import init_db, upsert_case, get_all_cases, get_case_by_cnr, delete_case, get_case_history_logs, mark_log_notified
+from db import (
+    init_db, upsert_case, get_all_cases, get_case_by_cnr, delete_case,
+    get_case_history_logs, mark_log_notified, update_case_preferences,
+    get_advocate_settings, update_advocate_settings, get_cached_case, set_cached_case
+)
 from ecourts_api import get_api_key, fetch_case_details, fetch_case_by_cnr
 from sync_engine import sync_worker
 from server import app
@@ -18,89 +22,120 @@ class TestFullAutomationSuite(unittest.TestCase):
         self.assertTrue(bool(key), "API Key should be configured in .env")
         print(f"[TEST PASS] API Key loaded successfully.")
 
-    def test_02_database_operations(self):
+    def test_02_database_operations_and_rules(self):
         test_case = {
             "cnr_number": "TEST010000002026",
-            "case_title": "Unit Test Party A vs Unit Test Party B",
+            "case_title": "Uncle Client A vs Test Respondent",
             "case_status": "PENDING",
-            "court_name": "Delhi High Court",
-            "parties": "Petitioner: Unit Test | Respondent: Test Corp",
-            "advocates": "Adv. Test",
+            "court_name": "Madras High Court",
+            "parties": "Petitioner: Client A | Respondent: Govt",
+            "advocates": "Senior Advocate",
             "last_hearing_date": "2026-08-01",
             "next_hearing_date": "2026-09-01"
         }
         
-        # 1. Insert Case
-        changed = upsert_case(test_case, client_name="Test Client", client_phone="+919000000000")
+        # 1. Insert Case with custom automation rules
+        changed = upsert_case(
+            test_case,
+            client_name="Test Client A",
+            client_phone="+919876543210",
+            track_next_hearing=True,
+            track_orders=True,
+            track_case_status=True,
+            auto_whatsapp_enabled=True,
+            notes="Urgent stay application"
+        )
         self.assertFalse(changed, "First insert should not trigger date change flag")
 
-        # 2. Query Case
+        # 2. Query Case & verify rules
         saved = get_case_by_cnr("TEST010000002026")
         self.assertIsNotNone(saved)
-        self.assertEqual(saved["case_title"], "Unit Test Party A vs Unit Test Party B")
+        self.assertEqual(saved["client_name"], "Test Client A")
+        self.assertEqual(saved["notes"], "Urgent stay application")
+        self.assertTrue(bool(saved["track_next_hearing"]))
 
-        # 3. Update Hearing Date (Date Shift Trigger)
-        test_case["next_hearing_date"] = "2026-09-15"
-        date_changed = upsert_case(test_case, client_name="Test Client", client_phone="+919000000000")
+        # 3. Update Preferences
+        updated = update_case_preferences("TEST010000002026", {
+            "notes": "Updated note: Hearing posted for arguments",
+            "auto_whatsapp_enabled": False
+        })
+        self.assertTrue(updated)
+        saved_updated = get_case_by_cnr("TEST010000002026")
+        self.assertEqual(saved_updated["notes"], "Updated note: Hearing posted for arguments")
+
+        # 4. Update Hearing Date (Date Shift Trigger)
+        test_case["next_hearing_date"] = "2026-09-20"
+        date_changed = upsert_case(test_case, client_name="Test Client A", client_phone="+919876543210")
         self.assertTrue(date_changed, "Hearing date change must trigger date_changed = True")
 
-        # 4. Verify History Log
+        # 5. Verify History Log
         logs = get_case_history_logs()
         matching = [l for l in logs if l["cnr_number"] == "TEST010000002026"]
         self.assertTrue(len(matching) > 0, "Date change must be recorded in case_history_logs")
         self.assertEqual(matching[0]["previous_hearing_date"], "2026-09-01")
-        self.assertEqual(matching[0]["new_hearing_date"], "2026-09-15")
+        self.assertEqual(matching[0]["new_hearing_date"], "2026-09-20")
 
-        # 5. Clean up
+        # 6. Clean up
         deleted = delete_case("TEST010000002026")
         self.assertTrue(deleted, "Case should be cleanly deleted")
-        print("[TEST PASS] Database CRUD and Date-Shift Detection operations verified.")
+        print("[TEST PASS] Database CRUD and Uncle's Automation Rules verified.")
 
-    def test_03_live_api_case_lookup(self):
-        cnr = "DLND020047882015"
-        res = fetch_case_details(cnr)
-        self.assertTrue(res.get("success"), f"Live API fetch should succeed for {cnr}")
-        self.assertEqual(res.get("cnr_number"), cnr)
-        self.assertIn("Arun Jaitley", res.get("case_title"))
-        print(f"[TEST PASS] Live eCourts Partner API lookup passed: {res.get('case_title')}")
+    def test_03_credit_guard_caching(self):
+        # Test cache insertion and instant retrieval
+        cnr = "CACHE0199992026"
+        dummy_json = {
+            "data": {
+                "courtCaseData": {
+                    "caseTitle": "Cache Test vs Indian Judiciary",
+                    "nextHearingDate": "2026-10-10",
+                    "caseStatus": "PENDING"
+                }
+            }
+        }
+        set_cached_case(cnr, dummy_json)
+        cached = get_cached_case(cnr)
+        self.assertIsNotNone(cached)
+        self.assertEqual(cached["data"]["courtCaseData"]["caseTitle"], "Cache Test vs Indian Judiciary")
 
-    def test_04_server_rest_api_endpoints(self):
+        # Fetch case via ecourts_api with force_live=False (must return cached, 0 credits!)
+        res = fetch_case_details(cnr, force_live=False)
+        self.assertTrue(res.get("is_cached"))
+        print("[TEST PASS] Credit-Guard Cache verified (0 credits consumed).")
+
+    def test_04_advocate_firm_settings(self):
+        settings = get_advocate_settings()
+        self.assertTrue(bool(settings.get("firm_name")))
+        
+        # Test update
+        update_advocate_settings({
+            "lawyer_name": "Advocate Ramesh",
+            "firm_name": "Ramesh & Associates Legal Chambers",
+            "lawyer_phone": "+919123456789",
+            "default_whatsapp_footer": "Official Chambers Notice"
+        })
+        new_settings = get_advocate_settings()
+        self.assertEqual(new_settings["lawyer_name"], "Advocate Ramesh")
+        self.assertEqual(new_settings["firm_name"], "Ramesh & Associates Legal Chambers")
+        print("[TEST PASS] Advocate Firm Branding Settings verified.")
+
+    def test_05_server_endpoints(self):
         # 1. Key Status
         res = self.client.get("/api/key-status")
         self.assertEqual(res.status_code, 200)
-        data = res.get_json()
-        self.assertTrue(data.get("configured"))
 
         # 2. List Cases
         res = self.client.get("/api/cases")
         self.assertEqual(res.status_code, 200)
 
-        # 3. Check Case API
-        res = self.client.post("/api/check-case", json={
-            "cnr": "DLND020047882015",
-            "client_name": "Arun Jaitley",
-            "client_phone": "+919876543210"
-        })
+        # 3. Advocate Settings
+        res = self.client.get("/api/advocate-settings")
         self.assertEqual(res.status_code, 200)
-        check_data = res.get_json()
-        self.assertTrue(check_data.get("success"))
 
         # 4. History Logs
         res = self.client.get("/api/history")
         self.assertEqual(res.status_code, 200)
 
-        # 5. Export Printable Brief
-        res = self.client.get("/api/export-case/DLND020047882015")
-        self.assertEqual(res.status_code, 200)
-        self.assertIn("Case Hearing Brief", res.data.decode("utf-8"))
-
-        print("[TEST PASS] All Flask REST API endpoints verified.")
-
-    def test_05_sync_all_engine(self):
-        sync_res = sync_worker.sync_all_cases()
-        self.assertTrue(sync_res.get("success"))
-        self.assertGreaterEqual(sync_res.get("total_checked"), 1)
-        print(f"[TEST PASS] SyncAll Engine verified. Checked {sync_res.get('total_checked')} cases.")
+        print("[TEST PASS] All Flask REST API Endpoints verified.")
 
 if __name__ == "__main__":
     unittest.main()

@@ -14,10 +14,12 @@
   --accent-amber-bg: rgba(245, 158, 11, 0.15);
   --accent-rose: #f43f5e;
   --accent-rose-bg: rgba(244, 63, 94, 0.15);
+  --accent-purple: #a855f7;
+  --accent-purple-bg: rgba(168, 85, 247, 0.15);
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
   --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -38,7 +40,7 @@ body {
 }
 
 .container {
-  max-width: 1280px;
+  max-width: 1320px;
   margin: 0 auto;
 }
 
@@ -68,7 +70,7 @@ header {
   font-weight: 800;
   font-size: 1.3rem;
   letter-spacing: -0.5px;
-  box-shadow: 0 4px 12px rgba(56, 189, 248, 0.25);
+  box-shadow: 0 4px 14px rgba(56, 189, 248, 0.25);
 }
 
 .brand-info h1 {
@@ -145,7 +147,7 @@ header {
 
 .metric-icon {
   font-size: 1.8rem;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.04);
   padding: 10px;
   border-radius: var(--radius-sm);
 }
@@ -167,12 +169,12 @@ header {
 /* Main Grid Layout */
 .dashboard-grid {
   display: grid;
-  grid-template-columns: 1.05fr 1fr;
+  grid-template-columns: 1.1fr 1fr;
   gap: 24px;
   margin-bottom: 24px;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 960px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
@@ -197,39 +199,41 @@ header {
   color: var(--text-primary);
 }
 
-.mode-select {
-  background: #0b1120;
-  border: 1px solid var(--border-color);
-  color: var(--accent-blue);
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 0.8rem;
+.badge-subtle {
+  font-size: 0.75rem;
   font-weight: 600;
-  outline: none;
-  cursor: pointer;
+  color: var(--accent-blue);
+  background: rgba(56, 189, 248, 0.12);
+  padding: 4px 10px;
+  border-radius: 999px;
 }
 
 /* Form Styles */
+.form-row {
+  display: flex;
+  gap: 14px;
+}
+
 .form-group {
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .form-label {
   display: block;
-  font-size: 0.85rem;
-  font-weight: 500;
+  font-size: 0.82rem;
+  font-weight: 600;
   color: var(--text-secondary);
   margin-bottom: 6px;
 }
 
 .form-input {
   width: 100%;
-  padding: 12px 14px;
+  padding: 10px 14px;
   background: #0b1120;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-family: inherit;
   transition: var(--transition);
 }
@@ -244,10 +248,53 @@ header {
   box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
 }
 
+/* Automation Rules Box */
+.automation-rules-box {
+  background: #0b1120;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  margin-top: 10px;
+  margin-bottom: 14px;
+}
+
+.rules-header {
+  margin-bottom: 10px;
+}
+
+.checkbox-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 600px) {
+  .checkbox-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-label input[type="checkbox"] {
+  accent-color: var(--accent-blue);
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
 .btn-row {
   display: flex;
   gap: 12px;
-  margin-top: 20px;
+  margin-top: 16px;
 }
 
 .btn {
@@ -255,9 +302,9 @@ header {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 12px 20px;
+  padding: 11px 18px;
   border-radius: var(--radius-sm);
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
@@ -313,7 +360,7 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--border-color);
 }
@@ -337,7 +384,7 @@ header {
   display: inline-block;
   padding: 4px 10px;
   border-radius: 999px;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 600;
   text-transform: uppercase;
 }
@@ -352,11 +399,29 @@ header {
   color: var(--accent-emerald);
 }
 
+.tag-cached {
+  background: var(--accent-purple-bg);
+  color: var(--accent-purple);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.rule-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  margin-right: 4px;
+  margin-bottom: 4px;
+}
+
 .data-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .data-item {
@@ -367,14 +432,14 @@ header {
 }
 
 .data-label {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .data-val {
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   font-weight: 600;
   color: var(--text-primary);
   margin-top: 2px;
@@ -385,14 +450,14 @@ header {
   border: 1px solid rgba(56, 189, 248, 0.3);
   padding: 14px;
   border-radius: var(--radius-sm);
-  margin-bottom: 16px;
+  margin-bottom: 14px;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
 .hearing-date {
-  font-size: 1.3rem;
+  font-size: 1.25rem;
   font-weight: 800;
   color: var(--accent-blue);
 }
@@ -402,7 +467,7 @@ header {
   background: #111b21;
   border: 1px solid #222d34;
   border-radius: var(--radius-md);
-  padding: 18px;
+  padding: 16px;
 }
 
 .whatsapp-bubble {
@@ -410,7 +475,7 @@ header {
   color: #e9edef;
   border-radius: 8px 8px 0px 8px;
   padding: 12px 14px;
-  font-size: 0.88rem;
+  font-size: 0.86rem;
   line-height: 1.5;
   margin-bottom: 14px;
   white-space: pre-line;
@@ -487,7 +552,7 @@ tr:hover td {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.75);
   backdrop-filter: blur(4px);
   display: flex;
   justify-content: center;
@@ -500,9 +565,9 @@ tr:hover td {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  max-width: 750px;
+  max-width: 700px;
   width: 100%;
-  max-height: 80vh;
+  max-height: 85vh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 40px rgba(0,0,0,0.5);

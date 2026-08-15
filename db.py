@@ -1,13 +1,17 @@
 import sqlite3
 import os
+import json
+import time
 from typing import Optional, Dict, Any, List
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "cases.db")
 
 def init_db():
-    """Initializes the database table for tracking cases."""
+    """Initializes and migrates the database table for tracking cases and automation rules."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
+    
+    # 1. Main Cases Table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS cases (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -21,25 +25,127 @@ def init_db():
             advocates TEXT,
             last_hearing_date TEXT,
             next_hearing_date TEXT,
+            track_next_hearing BOOLEAN DEFAULT 1,
+            track_orders BOOLEAN DEFAULT 1,
+            track_case_status BOOLEAN DEFAULT 1,
+            auto_whatsapp_enabled BOOLEAN DEFAULT 1,
+            notes TEXT DEFAULT '',
+            custom_advocate_header TEXT DEFAULT 'Advocate Office Notice',
             last_checked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+
+    # Check for missing columns in case table was created earlier
+    cursor.execute("PRAGMA table_info(cases)")
+    existing_cols = [row[1] for row in cursor.fetchall()]
+    
+    cols_to_add = [
+        ("track_next_hearing", "BOOLEAN DEFAULT 1"),
+        ("track_orders", "BOOLEAN DEFAULT 1"),
+        ("track_case_status", "BOOLEAN DEFAULT 1"),
+        ("auto_whatsapp_enabled", "BOOLEAN DEFAULT 1"),
+        ("notes", "TEXT DEFAULT ''"),
+        ("custom_advocate_header", "TEXT DEFAULT 'Advocate Office Notice'")
+    ]
+    for col_name, col_type in cols_to_add:
+        if col_name not in existing_cols:
+            try:
+                cursor.execute(f"ALTER TABLE cases ADD COLUMN {col_name} {col_type}")
+            except Exception:
+                pass
+
+    # 2. Case History Logs
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS case_history_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             cnr_number TEXT NOT NULL,
+            change_type TEXT DEFAULT 'HEARING_DATE',
             previous_hearing_date TEXT,
             new_hearing_date TEXT,
+            details TEXT DEFAULT '',
             notified BOOLEAN DEFAULT 0,
             detected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+
+    cursor.execute("PRAGMA table_info(case_history_logs)")
+    existing_log_cols = [row[1] for row in cursor.fetchall()]
+    log_cols_to_add = [
+        ("change_type", "TEXT DEFAULT 'HEARING_DATE'"),
+        ("details", "TEXT DEFAULT ''")
+    ]
+    for col_name, col_type in log_cols_to_add:
+        if col_name not in existing_log_cols:
+            try:
+                cursor.execute(f"ALTER TABLE case_history_logs ADD COLUMN {col_name} {col_type}")
+            except Exception:
+                pass
+
+
+    # 3. Smart API Query Cache Table (Saves Credits!)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS api_query_cache (
+            cnr_number TEXT PRIMARY KEY,
+            raw_response TEXT NOT NULL,
+            cached_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            ttl_seconds INTEGER DEFAULT 7200
+        )
+    """)
+
+    # 4. Global Settings Table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS advocate_settings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            lawyer_name TEXT DEFAULT 'Advocate',
+            firm_name TEXT DEFAULT 'Lex Chambers & Associates',
+            lawyer_phone TEXT DEFAULT '+919876543210',
+            default_whatsapp_footer TEXT DEFAULT 'Sent on behalf of Advocate Office.'
+        )
+    """)
+
+    cursor.execute("SELECT COUNT(*) FROM advocate_settings")
+    if cursor.fetchone()[0] == 0:
+        cursor.execute("""
+            INSERT INTO advocate_settings (lawyer_name, firm_name, lawyer_phone, default_whatsapp_footer)
+            VALUES ('Senior Advocate', 'Law & Justice Chambers', '+919876543210', 'Sent via Advocate Case Management Portal')
+        """)
+
     conn.commit()
     conn.close()
 
-def upsert_case(case_data: Dict[str, Any], client_name: str = "", client_phone: str = "") -> bool:
-    """Inserts or updates a case. Returns True if next_hearing_date has changed."""
+# Cache methods to save credits
+def get_cached_case(cnr_number: str, max_age_seconds: int = 7200) -> Optional[Dict[str, Any]]:
+    """Retrieves cached response from SQLite if younger than max_age_seconds (default 2 hours)."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT raw_response, strftime('%s', 'now') - strftime('%s', cached_at) as age FROM api_query_cache WHERE cnr_number = ?", (cnr_number,))
+    row = cursor.fetchone()
+    conn.close()
+    if row and row[1] is not None and row[1] < max_age_seconds:
+        try:
+            return json.loads(row[0])
+        except Exception:
+            return None
+    return None
+
+def set_cached_case(cnr_number: str, raw_json: Dict[str, Any]):
+    """Stores API response in local SQLite cache."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO api_query_cache (cnr_number, raw_response, cached_at)
+        VALUES (?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(cnr_number) DO UPDATE SET raw_response = excluded.raw_response, cached_at = CURRENT_TIMESTAMP
+    """, (cnr_number, json.dumps(raw_json)))
+    conn.commit()
+    conn.close()
+
+def upsert_case(case_data: Dict[str, Any], client_name: str = "", client_phone: str = "",
+                track_next_hearing: bool = True, track_orders: bool = True,
+                track_case_status: bool = True, auto_whatsapp_enabled: bool = True,
+                notes: str = "", custom_advocate_header: str = "Advocate Office Notice") -> bool:
+    """Inserts or updates a case with Uncle's custom automation preferences."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
@@ -47,31 +153,41 @@ def upsert_case(case_data: Dict[str, Any], client_name: str = "", client_phone: 
     new_next_hearing = case_data.get("next_hearing_date")
 
     # Check existing case
-    cursor.execute("SELECT next_hearing_date FROM cases WHERE cnr_number = ?", (cnr,))
+    cursor.execute("SELECT next_hearing_date, case_status FROM cases WHERE cnr_number = ?", (cnr,))
     existing = cursor.fetchone()
 
     date_changed = False
 
     if existing:
         old_next_hearing = existing[0]
-        if old_next_hearing != new_next_hearing:
+        old_status = existing[1]
+        
+        # Detect Next Hearing Date Change
+        if old_next_hearing != new_next_hearing and new_next_hearing:
             date_changed = True
-            # Log date change
             cursor.execute("""
-                INSERT INTO case_history_logs (cnr_number, previous_hearing_date, new_hearing_date)
-                VALUES (?, ?, ?)
-            """, (cnr, old_next_hearing, new_next_hearing))
+                INSERT INTO case_history_logs (cnr_number, change_type, previous_hearing_date, new_hearing_date, details)
+                VALUES (?, 'HEARING_DATE_CHANGE', ?, ?, ?)
+            """, (cnr, old_next_hearing, new_next_hearing, f"Hearing changed from {old_next_hearing} to {new_next_hearing}"))
 
         # Update case record
         cursor.execute("""
             UPDATE cases SET
-                case_title = ?,
-                case_status = ?,
-                court_name = ?,
-                parties = ?,
-                advocates = ?,
-                last_hearing_date = ?,
-                next_hearing_date = ?,
+                case_title = COALESCE(?, case_title),
+                case_status = COALESCE(?, case_status),
+                court_name = COALESCE(?, court_name),
+                parties = COALESCE(?, parties),
+                advocates = COALESCE(?, advocates),
+                last_hearing_date = COALESCE(?, last_hearing_date),
+                next_hearing_date = COALESCE(?, next_hearing_date),
+                client_name = CASE WHEN ? != '' THEN ? ELSE client_name END,
+                client_phone = CASE WHEN ? != '' THEN ? ELSE client_phone END,
+                track_next_hearing = ?,
+                track_orders = ?,
+                track_case_status = ?,
+                auto_whatsapp_enabled = ?,
+                notes = ?,
+                custom_advocate_header = ?,
                 last_checked_at = CURRENT_TIMESTAMP
             WHERE cnr_number = ?
         """, (
@@ -82,6 +198,14 @@ def upsert_case(case_data: Dict[str, Any], client_name: str = "", client_phone: 
             case_data.get("advocates"),
             case_data.get("last_hearing_date"),
             new_next_hearing,
+            client_name, client_name,
+            client_phone, client_phone,
+            1 if track_next_hearing else 0,
+            1 if track_orders else 0,
+            1 if track_case_status else 0,
+            1 if auto_whatsapp_enabled else 0,
+            notes,
+            custom_advocate_header,
             cnr
         ))
     else:
@@ -89,8 +213,10 @@ def upsert_case(case_data: Dict[str, Any], client_name: str = "", client_phone: 
         cursor.execute("""
             INSERT INTO cases (
                 cnr_number, client_name, client_phone, case_title, case_status,
-                court_name, parties, advocates, last_hearing_date, next_hearing_date
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                court_name, parties, advocates, last_hearing_date, next_hearing_date,
+                track_next_hearing, track_orders, track_case_status, auto_whatsapp_enabled,
+                notes, custom_advocate_header
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             cnr,
             client_name,
@@ -101,12 +227,49 @@ def upsert_case(case_data: Dict[str, Any], client_name: str = "", client_phone: 
             case_data.get("parties"),
             case_data.get("advocates"),
             case_data.get("last_hearing_date"),
-            new_next_hearing
+            new_next_hearing,
+            1 if track_next_hearing else 0,
+            1 if track_orders else 0,
+            1 if track_case_status else 0,
+            1 if auto_whatsapp_enabled else 0,
+            notes,
+            custom_advocate_header
         ))
 
     conn.commit()
     conn.close()
     return date_changed
+
+def update_case_preferences(cnr_number: str, prefs: Dict[str, Any]) -> bool:
+    """Updates automation toggles and notes for a specific case."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE cases SET
+            client_name = COALESCE(?, client_name),
+            client_phone = COALESCE(?, client_phone),
+            track_next_hearing = ?,
+            track_orders = ?,
+            track_case_status = ?,
+            auto_whatsapp_enabled = ?,
+            notes = ?,
+            custom_advocate_header = ?
+        WHERE cnr_number = ?
+    """, (
+        prefs.get("client_name"),
+        prefs.get("client_phone"),
+        1 if prefs.get("track_next_hearing", True) else 0,
+        1 if prefs.get("track_orders", True) else 0,
+        1 if prefs.get("track_case_status", True) else 0,
+        1 if prefs.get("auto_whatsapp_enabled", True) else 0,
+        prefs.get("notes", ""),
+        prefs.get("custom_advocate_header", "Advocate Office Notice"),
+        cnr_number
+    ))
+    conn.commit()
+    updated = cursor.rowcount > 0
+    conn.close()
+    return updated
 
 def get_all_cases() -> List[Dict[str, Any]]:
     """Fetches all tracked cases."""
@@ -163,6 +326,37 @@ def mark_log_notified(log_id: int) -> bool:
     conn.close()
     return True
 
+def get_advocate_settings() -> Dict[str, Any]:
+    """Retrieves Uncle's global advocate firm settings."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM advocate_settings LIMIT 1")
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else {}
+
+def update_advocate_settings(settings: Dict[str, Any]) -> bool:
+    """Updates Uncle's global advocate firm settings."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE advocate_settings SET
+            lawyer_name = ?,
+            firm_name = ?,
+            lawyer_phone = ?,
+            default_whatsapp_footer = ?
+        WHERE id = 1
+    """, (
+        settings.get("lawyer_name", "Senior Advocate"),
+        settings.get("firm_name", "Law Chambers"),
+        settings.get("lawyer_phone", "+919876543210"),
+        settings.get("default_whatsapp_footer", "Sent via Advocate Case Management Portal")
+    ))
+    conn.commit()
+    conn.close()
+    return True
+
 if __name__ == "__main__":
     init_db()
-    print("Database initialized successfully at:", DB_PATH)
+    print("Database and Uncle's automation schema initialized successfully at:", DB_PATH)

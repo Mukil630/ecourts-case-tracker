@@ -1,9 +1,16 @@
 document.addEventListener("DOMContentLoaded", () => {
+  // Elements
   const caseForm = document.getElementById("case-form");
   const cnrInput = document.getElementById("cnr-input");
   const clientNameInput = document.getElementById("client-name");
   const clientPhoneInput = document.getElementById("client-phone");
-  const engineModeSelect = document.getElementById("engine-mode-select");
+  const caseNotesInput = document.getElementById("case-notes");
+  const ruleTrackHearing = document.getElementById("rule-track-hearing");
+  const ruleTrackOrders = document.getElementById("rule-track-orders");
+  const ruleTrackStatus = document.getElementById("rule-track-status");
+  const ruleAutoWa = document.getElementById("rule-auto-wa");
+  const forceLiveToggle = document.getElementById("force-live-toggle");
+
   const btnFetch = document.getElementById("btn-fetch");
   const btnDemo = document.getElementById("btn-demo");
   const btnSyncAll = document.getElementById("btn-sync-all");
@@ -11,123 +18,188 @@ document.addEventListener("DOMContentLoaded", () => {
   const cardHistoryStat = document.getElementById("card-history-stat");
   const filterInput = document.getElementById("filter-input");
   const caseResultContent = document.getElementById("case-result-content");
+  const cacheBadge = document.getElementById("cache-badge");
   const casesTbody = document.getElementById("cases-tbody");
   const casesCount = document.getElementById("cases-count");
   const historyCount = document.getElementById("history-count");
   const statTotalCases = document.getElementById("stat-total-cases");
   const statPendingCases = document.getElementById("stat-pending-cases");
   const statDateChanges = document.getElementById("stat-date-changes");
-  const apiKeyInput = document.getElementById("api-key-input");
-  const btnSaveKey = document.getElementById("btn-save-key");
-  const btnToggleView = document.getElementById("btn-toggle-view");
-  const currentKeyDisplay = document.getElementById("current-key-display");
+  const statCreditsSaved = document.getElementById("stat-credits-saved");
+  const headerFirmName = document.getElementById("header-firm-name");
   const apiStatusText = document.getElementById("api-status-text");
   const statusDot = document.getElementById("status-dot");
+  const creditGuardText = document.getElementById("credit-guard-text");
+
+  // Modals
+  const settingsModal = document.getElementById("settings-modal");
+  const btnOpenSettings = document.getElementById("btn-open-settings");
+  const btnCloseSettings = document.getElementById("btn-close-settings");
+  const btnCancelSettings = document.getElementById("btn-cancel-settings");
+  const settingsForm = document.getElementById("settings-form");
+  const settingFirmName = document.getElementById("setting-firm-name");
+  const settingLawyerName = document.getElementById("setting-lawyer-name");
+  const settingLawyerPhone = document.getElementById("setting-lawyer-phone");
+  const settingFooter = document.getElementById("setting-footer");
+  const apiKeyInput = document.getElementById("api-key-input");
+
+  const rulesModal = document.getElementById("rules-modal");
+  const btnCloseRules = document.getElementById("btn-close-rules");
+  const btnCancelRules = document.getElementById("btn-cancel-rules");
+  const rulesForm = document.getElementById("rules-form");
+  const editRuleCnr = document.getElementById("edit-rule-cnr");
+  const editClientName = document.getElementById("edit-client-name");
+  const editClientPhone = document.getElementById("edit-client-phone");
+  const editNotes = document.getElementById("edit-notes");
+  const editRuleHearing = document.getElementById("edit-rule-hearing");
+  const editRuleOrders = document.getElementById("edit-rule-orders");
+  const editRuleStatus = document.getElementById("edit-rule-status");
+  const editRuleWa = document.getElementById("edit-rule-wa");
+
   const historyModal = document.getElementById("history-modal");
-  const btnCloseModal = document.getElementById("btn-close-modal");
+  const btnCloseHistory = document.getElementById("btn-close-history");
   const historyLogsContent = document.getElementById("history-logs-content");
 
-  let isKeyVisible = true;
   let allTrackedCases = [];
+  let currentAdvocateSettings = {};
 
-  // Toggle View Button
-  if (btnToggleView) {
-    btnToggleView.addEventListener("click", () => {
-      isKeyVisible = !isKeyVisible;
-      apiKeyInput.type = isKeyVisible ? "text" : "password";
-      btnToggleView.innerText = isKeyVisible ? "👁️ Hide" : "👁️ View";
-    });
-  }
-
-  // Check key & system status on startup
+  // Initialize
   checkKeyStatus();
+  loadAdvocateSettings();
   loadTrackedCases();
   loadHistoryLogsCount();
+  loadSyncStatus();
 
-  // Save Key Handler
-  btnSaveKey.addEventListener("click", async () => {
-    const key = apiKeyInput.value.trim();
-    if (!key) return;
-    btnSaveKey.disabled = true;
-    btnSaveKey.innerText = "Saving...";
+  // Load Advocate Settings
+  async function loadAdvocateSettings() {
+    try {
+      const res = await fetch("/api/advocate-settings");
+      const settings = await res.json();
+      currentAdvocateSettings = settings || {};
+      if (settings.firm_name) {
+        headerFirmName.innerText = `⚖️ ${settings.firm_name}`;
+        settingFirmName.value = settings.firm_name;
+      }
+      settingLawyerName.value = settings.lawyer_name || "";
+      settingLawyerPhone.value = settings.lawyer_phone || "";
+      settingFooter.value = settings.default_whatsapp_footer || "";
+    } catch (e) {}
+  }
+
+  // Save Advocate Settings
+  settingsForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const payload = {
+      firm_name: settingFirmName.value.trim(),
+      lawyer_name: settingLawyerName.value.trim(),
+      lawyer_phone: settingLawyerPhone.value.trim(),
+      default_whatsapp_footer: settingFooter.value.trim()
+    };
+    const newKey = apiKeyInput.value.trim();
 
     try {
-      const res = await fetch("/api/save-key", {
+      await fetch("/api/advocate-settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ api_key: key })
+        body: JSON.stringify(payload)
       });
-      const data = await res.json();
-      if (data.success) {
-        currentKeyDisplay.innerText = key;
-        apiStatusText.innerText = `API Key Active (${data.masked_key})`;
-        statusDot.style.backgroundColor = "var(--accent-emerald)";
-        alert("✅ API Key saved successfully! Live eCourts Partner API is active.");
+
+      if (newKey) {
+        await fetch("/api/save-key", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ api_key: newKey })
+        });
       }
-    } catch (e) {
-      alert("Failed to save key: " + e.message);
-    } finally {
-      btnSaveKey.disabled = false;
-      btnSaveKey.innerText = "💾 Save Key";
+
+      alert("✅ Advocate Firm settings updated successfully!");
+      settingsModal.style.display = "none";
+      loadAdvocateSettings();
+      checkKeyStatus();
+      loadTrackedCases();
+    } catch (err) {
+      alert("Failed to save settings: " + err.message);
     }
   });
 
+  btnOpenSettings.addEventListener("click", () => settingsModal.style.display = "flex");
+  btnCloseSettings.addEventListener("click", () => settingsModal.style.display = "none");
+  btnCancelSettings.addEventListener("click", () => settingsModal.style.display = "none");
+
+  // API Key Check
   async function checkKeyStatus() {
     try {
       const res = await fetch("/api/key-status");
       const data = await res.json();
       if (data.configured) {
         apiStatusText.innerText = `API Active (${data.masked_key})`;
-        currentKeyDisplay.innerText = data.full_key || data.masked_key;
         apiKeyInput.value = data.full_key || "";
         statusDot.style.backgroundColor = "var(--accent-emerald)";
       } else {
         apiStatusText.innerText = "Demo Mode (No API Key)";
-        currentKeyDisplay.innerText = "Not Configured (Demo Mode)";
         statusDot.style.backgroundColor = "var(--accent-amber)";
       }
     } catch (e) {}
   }
 
-  // Handle Form Submit
+  async function loadSyncStatus() {
+    try {
+      const res = await fetch("/api/sync-status");
+      const data = await res.json();
+      statCreditsSaved.innerText = data.total_credits_saved || 0;
+    } catch (e) {}
+  }
+
+  // Handle Form Submit (Add New Case & Client)
   caseForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const cnr = cnrInput.value.trim().toUpperCase();
     const name = clientNameInput.value.trim();
     const phone = clientPhoneInput.value.trim();
-    const mode = engineModeSelect.value;
+    const notes = caseNotesInput.value.trim();
+    const forceLive = forceLiveToggle.checked;
 
     if (!cnr) return;
 
     btnFetch.disabled = true;
-    btnFetch.innerText = mode === "agent" ? "🤖 Vision Agent Solving..." : "⏳ Querying eCourts...";
+    btnFetch.innerText = forceLive ? "⚡ Live Querying eCourts (1.5 credits)..." : "⚡ Loading Case...";
     caseResultContent.innerHTML = `
       <div class="empty-state">
-        <p><strong>[${mode === 'agent' ? 'Autonomous AI Vision Agent' : 'Partner API'}]</strong> Executing case lookup for <code>${cnr}</code>...</p>
+        <p>Fetching case intelligence for CNR <code>${cnr}</code> for client <strong>${escapeHtml(name)}</strong>...</p>
       </div>
     `;
 
     try {
-      const endpoint = mode === "agent" ? "/api/run-agent" : "/api/check-case";
-      const response = await fetch(endpoint, {
+      const response = await fetch("/api/check-case", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cnr, client_name: name, client_phone: phone })
+        body: JSON.stringify({
+          cnr,
+          client_name: name,
+          client_phone: phone,
+          notes: notes,
+          force_live: forceLive,
+          track_next_hearing: ruleTrackHearing.checked,
+          track_orders: ruleTrackOrders.checked,
+          track_case_status: ruleTrackStatus.checked,
+          auto_whatsapp_enabled: ruleAutoWa.checked
+        })
       });
 
       const data = await response.json();
-      renderCaseResult(data, phone);
+      renderCaseResult(data, name, phone, notes);
       loadTrackedCases();
       loadHistoryLogsCount();
+      loadSyncStatus();
     } catch (err) {
       caseResultContent.innerHTML = `
         <div class="empty-state" style="color: var(--accent-rose);">
-          <p>Failed to reach server: ${err.message}</p>
+          <p>Failed to track case: ${err.message}</p>
         </div>
       `;
     } finally {
       btnFetch.disabled = false;
-      btnFetch.innerText = "⚡ Execute Tracking";
+      btnFetch.innerText = "⚡ Fetch & Track Case";
     }
   });
 
@@ -136,19 +208,25 @@ document.addEventListener("DOMContentLoaded", () => {
     cnrInput.value = "DLND020047882015";
     clientNameInput.value = "Arun Jaitley";
     clientPhoneInput.value = "+919876543210";
+    caseNotesInput.value = "Criminal defamation trial & 65B evidence review";
     caseForm.dispatchEvent(new Event("submit"));
   });
 
   // Sync All Cases Button
   btnSyncAll.addEventListener("click", async () => {
     btnSyncAll.disabled = true;
-    btnSyncAll.innerText = "🔄 Syncing Cases...";
+    btnSyncAll.innerText = "🔄 Syncing All Cases...";
     try {
-      const res = await fetch("/api/sync-all", { method: "POST" });
+      const res = await fetch("/api/sync-all", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ force_live: false })
+      });
       const data = await res.json();
-      alert(`✅ Sync Complete!\n• Total Checked: ${data.total_checked}\n• Date Shifts Detected: ${data.date_changes_count}`);
+      alert(`✅ Portfolio Sync Complete!\n• Total Checked: ${data.total_checked}\n• Cached (0 credits): ${data.cached_count}\n• Date Shifts Detected: ${data.date_changes_count}`);
       loadTrackedCases();
       loadHistoryLogsCount();
+      loadSyncStatus();
     } catch (e) {
       alert("Sync failed: " + e.message);
     } finally {
@@ -157,7 +235,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Search Filter Handler
+  // Live Filter Handler
   if (filterInput) {
     filterInput.addEventListener("input", (e) => {
       const term = e.target.value.toLowerCase();
@@ -165,7 +243,8 @@ document.addEventListener("DOMContentLoaded", () => {
         (c.cnr_number || "").toLowerCase().includes(term) ||
         (c.case_title || "").toLowerCase().includes(term) ||
         (c.court_name || "").toLowerCase().includes(term) ||
-        (c.client_name || "").toLowerCase().includes(term)
+        (c.client_name || "").toLowerCase().includes(term) ||
+        (c.notes || "").toLowerCase().includes(term)
       );
       renderTableRows(filtered);
     });
@@ -176,9 +255,11 @@ document.addEventListener("DOMContentLoaded", () => {
   if (cardHistoryStat) {
     cardHistoryStat.addEventListener("click", openHistoryModal);
   }
-  btnCloseModal.addEventListener("click", () => historyModal.style.display = "none");
+  btnCloseHistory.addEventListener("click", () => historyModal.style.display = "none");
   window.addEventListener("click", (e) => {
     if (e.target === historyModal) historyModal.style.display = "none";
+    if (e.target === settingsModal) settingsModal.style.display = "none";
+    if (e.target === rulesModal) rulesModal.style.display = "none";
   });
 
   async function openHistoryModal() {
@@ -226,20 +307,24 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Render Result Function
-  function renderCaseResult(data, phone) {
+  function renderCaseResult(data, clientName, phone, notes) {
     if (!data.success && data.error) {
       caseResultContent.innerHTML = `
         <div class="empty-state" style="color: var(--accent-rose);">
           <p><strong>[${data.error_type || 'API Notice'}]</strong> ${data.error}</p>
         </div>
       `;
+      cacheBadge.style.display = "none";
       return;
     }
 
     const c = data.case_data || data;
+    const isCached = data.is_cached;
+    cacheBadge.style.display = isCached ? "inline-block" : "none";
+
     const statusClass = (c.case_status || "").toLowerCase().includes("dispose") ? "tag-disposed" : "tag-pending";
     const nextDate = c.next_hearing_date || "Not Scheduled / Disposed";
-    const waText = formatWhatsAppText(c);
+    const waText = formatWhatsAppText(c, clientName, notes);
     const cleanPhone = (phone || "").replace(/[^0-9]/g, "");
     const waLink = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(waText)}`;
 
@@ -254,7 +339,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       <div class="hearing-box">
         <div>
-          <div class="data-label">Next Hearing Date</div>
+          <div class="data-label">Next Scheduled Hearing Date</div>
           <div class="hearing-date">${escapeHtml(nextDate)}</div>
         </div>
         <div style="text-align: right;">
@@ -265,23 +350,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
       <div class="data-grid">
         <div class="data-item">
-          <div class="data-label">Court</div>
+          <div class="data-label">Court & District</div>
           <div class="data-val">${escapeHtml(c.court_name || 'Chief Metropolitan Magistrate')}</div>
         </div>
         <div class="data-item">
-          <div class="data-label">State / District</div>
-          <div class="data-val">${escapeHtml(c.state || 'DL')} / ${escapeHtml(c.district || 'New Delhi')}</div>
+          <div class="data-label">Assigned Client</div>
+          <div class="data-val">${escapeHtml(clientName || 'Client')} (${escapeHtml(phone || '-')})</div>
         </div>
       </div>
 
+      ${c.latest_order_date ? `
+      <div class="data-item" style="margin-bottom: 14px; border-color: rgba(56, 189, 248, 0.3);">
+        <div class="data-label">📜 Latest Court Order Passed</div>
+        <div class="data-val" style="color: var(--accent-blue);">Order Date: ${escapeHtml(c.latest_order_date)} ${c.latest_order_pdf ? `&bull; <a href="${c.latest_order_pdf}" target="_blank" style="color: var(--accent-emerald);">Download Order PDF</a>` : ''}</div>
+      </div>
+      ` : ''}
+
       <div class="whatsapp-card">
-        <div style="font-size: 0.8rem; font-weight: 600; color: #8696a0; margin-bottom: 8px;">
-          💬 WhatsApp Notification Preview:
+        <div style="font-size: 0.8rem; font-weight: 600; color: #8696a0; margin-bottom: 8px; display: flex; justify-content: space-between;">
+          <span>💬 Prepared WhatsApp Notice:</span>
+          <span>Client: <strong>${escapeHtml(phone || '')}</strong></span>
         </div>
         <div class="whatsapp-bubble">${escapeHtml(waText)}</div>
-        <div style="display: flex; gap: 8px;">
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
           <a href="${waLink}" target="_blank" class="btn btn-whatsapp" style="flex: 1;">
-            📲 Open in WhatsApp Web
+            📲 Dispatch to Client WhatsApp
           </a>
           <a href="/api/export-case/${encodeURIComponent(c.cnr_number)}" target="_blank" class="btn btn-secondary" style="flex: none; padding: 10px 16px;">
             🖨️ Print Brief
@@ -313,7 +406,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!cases || cases.length === 0) {
       casesTbody.innerHTML = `
         <tr>
-          <td colspan="7" class="empty-state">No matching case records found in database.</td>
+          <td colspan="7" class="empty-state">No matching client cases found in database.</td>
         </tr>
       `;
       return;
@@ -321,16 +414,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
     casesTbody.innerHTML = cases.map(item => `
       <tr>
+        <td>
+          <strong>${escapeHtml(item.client_name || 'Litigant')}</strong>
+          <div style="font-size: 0.8rem; color: var(--text-muted);">${escapeHtml(item.client_phone || '-')}</div>
+        </td>
         <td><code style="color: var(--accent-blue); font-family: var(--font-mono);">${escapeHtml(item.cnr_number)}</code></td>
-        <td><strong>${escapeHtml(item.case_title || 'N/A')}</strong></td>
-        <td style="font-size: 0.85rem; color: var(--text-secondary);">${escapeHtml(item.court_name || 'District Court')}</td>
+        <td>
+          <div style="font-weight: 600;">${escapeHtml(item.case_title || 'N/A')}</div>
+          <div style="font-size: 0.8rem; color: var(--text-secondary);">${escapeHtml(item.court_name || 'District Court')}</div>
+        </td>
         <td><span class="tag ${item.case_status && item.case_status.includes('DISP') ? 'tag-disposed' : 'tag-pending'}">${escapeHtml(item.case_status || 'PENDING')}</span></td>
         <td style="font-weight: 700; color: var(--accent-blue);">${escapeHtml(item.next_hearing_date || 'N/A')}</td>
-        <td>${escapeHtml(item.client_phone || '-')}</td>
+        <td>
+          <div>
+            ${item.track_next_hearing ? '<span class="rule-chip">📅 Date</span>' : ''}
+            ${item.track_orders ? '<span class="rule-chip">📜 Orders</span>' : ''}
+            ${item.auto_whatsapp_enabled ? '<span class="rule-chip" style="color: var(--accent-emerald);">💬 WhatsApp</span>' : ''}
+          </div>
+        </td>
         <td>
           <div class="action-btn-group">
-            <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.75rem;" onclick="recheckCase('${item.cnr_number}')" title="Recheck Case">
+            <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.75rem;" onclick="recheckCase('${item.cnr_number}')" title="Recheck Case (Cached/Free)">
               ⚡ Check
+            </button>
+            <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.75rem;" onclick="openEditRulesModal('${item.cnr_number}')" title="Edit Automation Rules">
+              ⚙️
             </button>
             <a href="/api/export-case/${encodeURIComponent(item.cnr_number)}" target="_blank" class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.75rem;" title="Print / PDF Brief">
               🖨️
@@ -345,9 +453,61 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   window.recheckCase = (cnr) => {
+    const item = allTrackedCases.find(c => c.cnr_number === cnr);
     cnrInput.value = cnr;
+    if (item) {
+      clientNameInput.value = item.client_name || "";
+      clientPhoneInput.value = item.client_phone || "";
+      caseNotesInput.value = item.notes || "";
+    }
     caseForm.dispatchEvent(new Event("submit"));
   };
+
+  // Edit Rules Modal
+  window.openEditRulesModal = (cnr) => {
+    const item = allTrackedCases.find(c => c.cnr_number === cnr);
+    if (!item) return;
+
+    editRuleCnr.value = cnr;
+    editClientName.value = item.client_name || "";
+    editClientPhone.value = item.client_phone || "";
+    editNotes.value = item.notes || "";
+    editRuleHearing.checked = Boolean(item.track_next_hearing);
+    editRuleOrders.checked = Boolean(item.track_orders);
+    editRuleStatus.checked = Boolean(item.track_case_status);
+    editRuleWa.checked = Boolean(item.auto_whatsapp_enabled);
+
+    rulesModal.style.display = "flex";
+  };
+
+  rulesForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const cnr = editRuleCnr.value;
+    const payload = {
+      client_name: editClientName.value.trim(),
+      client_phone: editClientPhone.value.trim(),
+      notes: editNotes.value.trim(),
+      track_next_hearing: editRuleHearing.checked,
+      track_orders: editRuleOrders.checked,
+      track_case_status: editRuleStatus.checked,
+      auto_whatsapp_enabled: editRuleWa.checked
+    };
+
+    try {
+      await fetch(`/api/cases/${encodeURIComponent(cnr)}/preferences`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      rulesModal.style.display = "none";
+      loadTrackedCases();
+    } catch (err) {
+      alert("Failed to update rules: " + err.message);
+    }
+  });
+
+  btnCloseRules.addEventListener("click", () => rulesModal.style.display = "none");
+  btnCancelRules.addEventListener("click", () => rulesModal.style.display = "none");
 
   window.deleteTrackedCase = async (cnr) => {
     if (!confirm(`Are you sure you want to remove CNR: ${cnr} from tracking?`)) return;
@@ -363,16 +523,27 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  function formatWhatsAppText(c) {
-    return `⚖️ *LEGAL CASE HEARING UPDATE*
+  function formatWhatsAppText(c, clientName, notes) {
+    const firm = currentAdvocateSettings.firm_name || "Advocate Chambers";
+    const lawyer = currentAdvocateSettings.lawyer_name || "Senior Advocate";
+    const footer = currentAdvocateSettings.default_whatsapp_footer || "Sent on behalf of Advocate Office.";
+
+    return `⚖️ *${firm.toUpperCase()}*
+*HEARING UPDATE NOTICE*
 ---------------------------------------
-*Case:* ${c.case_title || 'Case'}
-*CNR:* ${c.cnr_number}
-*Status:* ${c.case_status || 'Pending'}
-*Court:* ${c.court_name || 'Court'}
-*Next Hearing Date:* *${c.next_hearing_date || 'Disposed / Awaiting Date'}*
+Dear *${clientName || 'Client'}*,
+
+Your court matter details have been updated:
+• *Case:* ${c.case_title || 'Case Matter'}
+• *CNR:* \`${c.cnr_number}\`
+• *Court:* ${c.court_name || 'Court'}
+• *Status:* ${c.case_status || 'Pending'}
+• *Next Hearing Date:* *${c.next_hearing_date || 'Awaiting Schedule / Disposed'}*
+${c.latest_order_date ? `• *Latest Order Date:* ${c.latest_order_date}` : ''}
+${notes ? `• *Note:* ${notes}` : ''}
 ---------------------------------------
-*Advocate Office Update*`;
+${footer}
+*Advocate:* ${lawyer}`;
   }
 
   function escapeHtml(str) {

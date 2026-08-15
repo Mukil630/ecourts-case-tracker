@@ -25,11 +25,27 @@ def get_api_key() -> str:
                         return key
     return ""
 
-def fetch_case_details(cnr_number: str) -> Dict[str, Any]:
+def fetch_case_details(cnr_number: str, force_live: bool = False, cache_ttl_seconds: int = 7200) -> Dict[str, Any]:
     """
-    Fetches full case details from official eCourtsIndia Partner API.
+    Fetches full case details from official eCourtsIndia Partner API with Credit-Guard caching.
     Endpoint: GET https://webapi.ecourtsindia.com/api/partner/case/{cnr}
     """
+    clean_cnr = cnr_number.strip().upper()
+
+    # 1. Check Local SQLite Cache first to save credits
+    if not force_live:
+        try:
+            from db import get_cached_case
+            cached_json = get_cached_case(clean_cnr, max_age_seconds=cache_ttl_seconds)
+            if cached_json:
+                parsed = parse_ecourts_response(clean_cnr, cached_json)
+                parsed["is_cached"] = True
+                parsed["cache_note"] = "⚡ Loaded instantly from local cache (0 credits used)"
+                return parsed
+        except Exception:
+            pass
+
+    # 2. Check API Key
     api_key = get_api_key()
     if not api_key:
         return {
@@ -38,7 +54,6 @@ def fetch_case_details(cnr_number: str) -> Dict[str, Any]:
             "error": "API Key not configured. Please paste your token in .env file."
         }
 
-    clean_cnr = cnr_number.strip().upper()
     url = f"https://webapi.ecourtsindia.com/api/partner/case/{clean_cnr}"
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -56,7 +71,17 @@ def fetch_case_details(cnr_number: str) -> Dict[str, Any]:
 
     if response.status_code == 200:
         raw_json = response.json()
-        return parse_ecourts_response(clean_cnr, raw_json)
+        
+        # Save to SQLite Cache
+        try:
+            from db import set_cached_case
+            set_cached_case(clean_cnr, raw_json)
+        except Exception:
+            pass
+
+        parsed = parse_ecourts_response(clean_cnr, raw_json)
+        parsed["is_cached"] = False
+        return parsed
     
     elif response.status_code == 401:
         return {
@@ -119,6 +144,10 @@ def parse_ecourts_response(cnr_number: str, raw_json: Dict[str, Any]) -> Dict[st
     if last_hearing and "T" in str(last_hearing):
         last_hearing = last_hearing.split("T")[0]
 
+    # Extract latest order/judgment if present
+    orders = data.get("orders", []) or case_data.get("orders", [])
+    latest_order = orders[-1] if orders else {}
+
     return {
         "success": True,
         "cnr_number": cnr_number,
@@ -138,8 +167,10 @@ def parse_ecourts_response(cnr_number: str, raw_json: Dict[str, Any]) -> Dict[st
         "last_hearing_date": str(last_hearing),
         "next_hearing_date": str(next_hearing),
         "decision_date": case_data.get("decisionDate", ""),
-        "order_count": case_data.get("orderCount", 0),
+        "order_count": case_data.get("orderCount", len(orders)),
         "hearing_count": case_data.get("hearingCount", 0),
+        "latest_order_date": latest_order.get("orderDate", ""),
+        "latest_order_pdf": latest_order.get("pdfFile", ""),
         "purpose": case_data.get("purpose", ""),
         "request_id": raw_json.get("meta", {}).get("request_id") or raw_json.get("meta", {}).get("requestId", ""),
         "raw_response": raw_json
@@ -147,4 +178,3 @@ def parse_ecourts_response(cnr_number: str, raw_json: Dict[str, Any]) -> Dict[st
 
 # Alias for backwards compatibility with tests and scripts
 fetch_case_by_cnr = fetch_case_details
-
