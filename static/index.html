@@ -359,10 +359,10 @@
             </button>
           </div>
           <div class="ui-card-body">
-            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radius-sm); padding: 14px 18px; margin-bottom: 20px;">
-              <strong style="color: #166534; font-size: 0.9rem;">Today's Docket: 14 Aug 2026</strong>
-              <p style="color: #15803d; font-size: 0.8rem; margin-top: 2px;">
-                14 clients have hearings scheduled for today across 6 Karur courts. Individual WhatsApp notices are pre-formatted below.
+            <div id="wa-dockets-banner" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radius-sm); padding: 14px 18px; margin-bottom: 20px;">
+              <strong style="color: #166534; font-size: 0.9rem;" id="wa-banner-title">Today's Client Notices</strong>
+              <p style="color: #15803d; font-size: 0.8rem; margin-top: 2px;" id="wa-banner-desc">
+                Individual WhatsApp notices for your tracked cases are pre-formatted below.
               </p>
             </div>
 
@@ -380,33 +380,23 @@
         <div class="ui-card">
           <div class="ui-card-header">
             <div>
-              <h3 class="ui-card-title">📅 Hearing Calendar • August 2026</h3>
-              <p class="ui-card-subtitle">Monthly hearing schedule for Advocate R. Anbaiya</p>
+              <h3 class="ui-card-title" id="calendar-month-title">📅 Hearing Calendar • August 2026</h3>
+              <p class="ui-card-subtitle">Click any day to view all client hearings scheduled on that date</p>
+            </div>
+            <div class="card-controls">
+              <button class="btn-ui btn-ui-secondary" id="btn-prev-month">◀ Prev</button>
+              <button class="btn-ui btn-ui-secondary" id="btn-next-month">Next ▶</button>
             </div>
           </div>
           <div class="ui-card-body">
-            <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; text-align: center;">
-              <div style="font-weight: 700; color: var(--text-muted); font-size: 0.76rem;">SUN</div>
-              <div style="font-weight: 700; color: var(--text-muted); font-size: 0.76rem;">MON</div>
-              <div style="font-weight: 700; color: var(--text-muted); font-size: 0.76rem;">TUE</div>
-              <div style="font-weight: 700; color: var(--text-muted); font-size: 0.76rem;">WED</div>
-              <div style="font-weight: 700; color: var(--text-muted); font-size: 0.76rem;">THU</div>
-              <div style="font-weight: 700; color: var(--text-muted); font-size: 0.76rem;">FRI</div>
-              <div style="font-weight: 700; color: var(--text-muted); font-size: 0.76rem;">SAT</div>
+            <div id="calendar-grid-container" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; text-align: center;">
+              <!-- Dynamic calendar days rendered via JS -->
+            </div>
 
-              <!-- Sample Calendar Grid -->
-              <div style="padding: 14px; background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: #cbd5e1;">9</div>
-              <div style="padding: 14px; background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">10</div>
-              <div style="padding: 14px; background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">11</div>
-              <div style="padding: 14px; background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">12</div>
-              <div style="padding: 14px; background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">13</div>
-              <div style="padding: 14px; background: var(--primary-light); border: 2px solid var(--primary); border-radius: var(--radius-sm); font-weight: 800;">
-                <div style="color: var(--primary);">14 (Today)</div>
-                <div style="background: var(--primary); color: #fff; font-size: 0.68rem; padding: 2px 4px; border-radius: 4px; margin-top: 4px;">14 Hearings</div>
-              </div>
-              <div style="padding: 14px; background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
-                <div>15</div>
-                <div style="background: #e0e7ff; color: #3730a3; font-size: 0.65rem; padding: 2px; border-radius: 3px; margin-top: 4px;">2 Hearings</div>
+            <div id="calendar-selected-day-details" style="margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--border-color);">
+              <h4 style="font-size: 0.9rem; font-weight: 800; margin-bottom: 12px;" id="calendar-selected-day-heading">Selected Date Hearings</h4>
+              <div id="calendar-selected-day-list">
+                <!-- Populated on click -->
               </div>
             </div>
           </div>
@@ -443,11 +433,10 @@
           </div>
           <div class="ui-card-body">
             <div class="kpi-grid">
-              <div class="kpi-card"><div class="kpi-info"><div class="kpi-label">Active Matters</div><div class="kpi-value">15</div></div></div>
-              <div class="kpi-card"><div class="kpi-info"><div class="kpi-label">Total Hearings</div><div class="kpi-value">14</div></div></div>
-              <div class="kpi-card"><div class="kpi-info"><div class="kpi-label">WhatsApp Dispatched</div><div class="kpi-value">42</div></div></div>
-              <div class="kpi-card"><div class="kpi-info"><div class="kpi-label">Credits Remaining</div><div class="kpi-value" style="color:var(--primary);">176.0</div></div></div>
-            </div>
+              <div class="kpi-card"><div class="kpi-info"><div class="kpi-label">Active Matters</div><div class="kpi-value" id="rep-active-matters">0</div></div></div>
+              <div class="kpi-card"><div class="kpi-info"><div class="kpi-label">Total Hearings</div><div class="kpi-value" id="rep-total-hearings">0</div></div></div>
+              <div class="kpi-card"><div class="kpi-info"><div class="kpi-label">Disposed Rate</div><div class="kpi-value" id="rep-disposed-cases">0</div></div></div>
+              <div class="kpi-card"><div class="kpi-info"><div class="kpi-label">Credits Remaining</div><div class="kpi-value" id="rep-credits-remaining" style="color:var(--primary);">176.0</div></div></div>
           </div>
         </div>
       </section>
@@ -455,6 +444,7 @@
       <!-- ======================================================================
            VIEW 9: SETTINGS
            ====================================================================== -->
+
       <section id="view-settings" class="view-section">
         <div class="ui-card" style="max-width: 700px;">
           <div class="ui-card-header">
