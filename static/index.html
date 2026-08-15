@@ -132,7 +132,7 @@
             <div class="form-row">
               <div class="form-group" style="flex: 1.2;">
                 <label class="form-label" for="client-name">Client Full Name *</label>
-                <input type="text" id="client-name" class="form-input" placeholder="e.g. A Palaniyappan" value="A Palaniyappan" required>
+                <input type="text" id="client-name" class="form-input" placeholder="e.g. Ramesh Kumar / Shobika Impex" required>
               </div>
               <div class="form-group" style="flex: 1;">
                 <label class="form-label" for="litigant-role">Client Role *</label>
@@ -149,7 +149,7 @@
             <div class="form-row">
               <div class="form-group" style="flex: 1;">
                 <label class="form-label" for="client-phone">WhatsApp Contact Number *</label>
-                <input type="text" id="client-phone" class="form-input code-font" placeholder="e.g. +919842555666" value="+919842555666" required>
+                <input type="text" id="client-phone" class="form-input code-font" placeholder="e.g. +919876543210" required>
               </div>
               <div class="form-group" style="flex: 1;">
                 <label class="form-label" for="client-email">Email Address (Optional)</label>
@@ -163,34 +163,34 @@
             </div>
             <div class="form-group">
               <label class="form-label" for="cnr-input">16-Digit CNR Number *</label>
-              <input type="text" id="cnr-input" class="form-input code-font" placeholder="e.g. TNKR050001392021" value="TNKR050001392021" required maxlength="16">
+              <input type="text" id="cnr-input" class="form-input code-font" placeholder="e.g. TNKR050001392021 or DLND020047882015" required maxlength="16">
             </div>
 
             <div class="form-row">
               <div class="form-group" style="flex: 1;">
                 <label class="form-label" for="case-number-input">Case Number (Optional)</label>
-                <input type="text" id="case-number-input" class="form-input" placeholder="e.g. OS/139/2021" value="OS/139/2021">
+                <input type="text" id="case-number-input" class="form-input" placeholder="e.g. OS/139/2021">
               </div>
               <div class="form-group" style="flex: 1;">
                 <label class="form-label" for="case-stage-input">Current Stage</label>
-                <input type="text" id="case-stage-input" class="form-input" placeholder="e.g. Evidence / Trial" value="Trial">
+                <input type="text" id="case-stage-input" class="form-input" placeholder="e.g. Evidence / Trial / IA Pending">
               </div>
             </div>
 
             <div class="form-row">
               <div class="form-group" style="flex: 1;">
                 <label class="form-label" for="court-room-input">Court Room</label>
-                <input type="text" id="court-room-input" class="form-input" placeholder="e.g. Room 5" value="Room 5">
+                <input type="text" id="court-room-input" class="form-input" placeholder="e.g. Room 5">
               </div>
               <div class="form-group" style="flex: 1;">
                 <label class="form-label" for="item-number-input">Item Number</label>
-                <input type="text" id="item-number-input" class="form-input" placeholder="e.g. 23" value="23">
+                <input type="text" id="item-number-input" class="form-input" placeholder="e.g. 23">
               </div>
             </div>
 
             <div class="form-group">
               <label class="form-label" for="case-notes">Advocate Private Notes / Instructions</label>
-              <input type="text" id="case-notes" class="form-input" placeholder="e.g. Cross examination witness 2 / Arguments pending" value="Final trial arguments & document markings">
+              <input type="text" id="case-notes" class="form-input" placeholder="e.g. Cross examination witness 2 / Documents marked">
             </div>
 
             <!-- 3. Automation Rules Selectors -->
@@ -227,10 +227,12 @@
 
             <div class="btn-row">
               <button type="submit" id="btn-fetch" class="btn btn-primary">⚡ Check & Verify Case Now</button>
-              <button type="button" id="btn-demo" class="btn btn-secondary">Load Sample Client</button>
+              <button type="button" id="btn-demo" class="btn btn-secondary" title="Fills sample Karur client for testing">Load Sample</button>
+              <button type="button" id="btn-clear-form" class="btn btn-secondary" style="flex: none; padding: 10px 14px;">🧹 Clear Form</button>
             </div>
           </form>
         </div>
+
 
         <!-- Verification & Intelligence Result Card -->
         <div class="card" id="result-card">
@@ -268,7 +270,11 @@
             <button id="btn-open-history" class="btn btn-secondary" style="padding: 8px 14px; font-size: 0.85rem; flex: none;">
               📜 History Logs (<span id="history-count">0</span>)
             </button>
+            <button id="btn-clear-all" class="btn btn-danger" style="padding: 8px 14px; font-size: 0.85rem; flex: none;" title="Deletes all sample and test cases to start fresh">
+              🗑️ Clear All Cases
+            </button>
           </div>
+
 
         </div>
 

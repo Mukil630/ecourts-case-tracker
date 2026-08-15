@@ -6,11 +6,12 @@ from flask import Flask, request, jsonify, send_from_directory, render_template_
 from flask_cors import CORS
 from ecourts_api import fetch_case_details, get_api_key
 from db import (
-    init_db, upsert_case, get_all_cases, get_case_by_cnr, delete_case,
+    init_db, upsert_case, get_all_cases, get_case_by_cnr, delete_case, clear_all_cases,
     get_case_history_logs, mark_log_notified, update_case_preferences,
     get_advocate_settings, update_advocate_settings, get_daily_cause_list,
     import_karur_sample_data
 )
+
 from sync_engine import sync_worker, evaluate_case_check_need
 
 # Ensure UTF-8 output
@@ -63,8 +64,15 @@ def list_cases():
     cases = get_all_cases()
     return jsonify(cases)
 
+@app.route("/api/cases/clear-all", methods=["DELETE", "POST"])
+def clear_all_endpoint():
+    """Purges all cases and logs for a clean database."""
+    clear_all_cases()
+    return jsonify({"success": True, "message": "All cases and logs cleared."})
+
 @app.route("/api/cases/<cnr>", methods=["GET"])
 def get_case(cnr):
+
     case = get_case_by_cnr(cnr.upper())
     if case:
         return jsonify({"success": True, "case": case})

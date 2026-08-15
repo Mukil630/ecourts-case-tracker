@@ -50,9 +50,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const btnFetch = document.getElementById("btn-fetch");
   const btnDemo = document.getElementById("btn-demo");
+  const btnClearForm = document.getElementById("btn-clear-form");
+  const btnClearAll = document.getElementById("btn-clear-all");
   const btnSmartSync = document.getElementById("btn-smart-sync");
   const btnOpenSchedulerMonitor = document.getElementById("btn-open-scheduler-monitor");
   const btnOpenHistory = document.getElementById("btn-open-history");
+
   const cardHistoryStat = document.getElementById("card-history-stat");
   const filterInput = document.getElementById("filter-input");
   const caseResultContent = document.getElementById("case-result-content");
@@ -394,6 +397,48 @@ document.addEventListener("DOMContentLoaded", () => {
     caseNotesInput.value = "Commercial dispute trial & evidence documents marking";
     caseForm.dispatchEvent(new Event("submit"));
   });
+
+  // Clear Form Handler
+  if (btnClearForm) {
+
+    btnClearForm.addEventListener("click", () => {
+      caseForm.reset();
+      cnrInput.value = "";
+      clientNameInput.value = "";
+      clientPhoneInput.value = "";
+      if (clientEmailInput) clientEmailInput.value = "";
+      if (caseNumberInput) caseNumberInput.value = "";
+      if (caseStageInput) caseStageInput.value = "";
+      if (courtRoomInput) courtRoomInput.value = "";
+      if (itemNumberInput) itemNumberInput.value = "";
+      caseNotesInput.value = "";
+      caseResultContent.innerHTML = `
+        <div class="empty-state">
+          <p>Form cleared. Enter new client details on the left to verify a new case.</p>
+        </div>
+      `;
+    });
+  }
+
+  // Clear All Cases & Reset Database Handler
+  if (btnClearAll) {
+    btnClearAll.addEventListener("click", async () => {
+      if (!confirm("⚠️ Are you sure you want to delete ALL stored cases and history logs? This will reset the database to a clean state.")) {
+        return;
+      }
+      try {
+        const res = await fetch("/api/cases/clear-all", { method: "POST" });
+        const data = await res.json();
+        alert("✅ " + data.message);
+        loadTrackedCases();
+        loadHistoryLogsCount();
+        loadDailyCauseList();
+      } catch (e) {
+        alert("Failed to clear database: " + e.message);
+      }
+    });
+  }
+
 
   // Smart Schedule Sync Button (Hearing-Near vs Hearing-Far Optimizer)
   if (btnSmartSync) {

@@ -343,6 +343,30 @@ def get_case_by_cnr(cnr_number: str) -> Optional[Dict[str, Any]]:
     conn.close()
     return dict(row) if row else None
 
+def delete_case(cnr_number: str) -> bool:
+
+    """Deletes a case and its history logs."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM cases WHERE cnr_number = ?", (cnr_number,))
+    cursor.execute("DELETE FROM case_history_logs WHERE cnr_number = ?", (cnr_number,))
+    conn.commit()
+    deleted = cursor.rowcount > 0
+    conn.close()
+    return deleted
+
+def clear_all_cases() -> bool:
+    """Purges all cases and logs to provide a clean slate."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM cases")
+    cursor.execute("DELETE FROM case_history_logs")
+    cursor.execute("DELETE FROM api_query_cache")
+    conn.commit()
+    conn.close()
+    return True
+
+
 def get_daily_cause_list(target_date: str = "") -> Dict[str, Any]:
     """
     Generates the grouped Daily Cause List & Court Board for a specific hearing date.
