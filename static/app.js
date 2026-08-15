@@ -195,6 +195,23 @@ window.openCaseDrawer = function(cnrNumber) {
         </div>
       </div>
 
+      <!-- 0.5 SMART SLEEP & MONITORING STATUS CARD -->
+      <div class="drawer-section-card" style="background: #f8fafc; border: 1px solid #cbd5e1;">
+        <div class="drawer-section-title">🧠 SMART SLEEP & AUTO-SYNC RADAR</div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:1.1rem;">${c.next_hearing_date === '2026-08-14' ? '🔔' : '😴'}</span>
+          <div>
+            <div style="font-size:0.8rem; font-weight:800; color:var(--text-main);">
+              ${c.next_hearing_date === '2026-08-14' ? 'Active In Court Today (Item #' + (c.item_number || '-') + ')' : 'Smart Sleeping until ' + (c.next_hearing_date || 'Schedule')}
+            </div>
+            <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">
+              ${c.next_hearing_date === '2026-08-14' ? 'Currently listed on today\'s hearing board.' : 'Zero credits wasted daily. System will automatically wake up 2 days before ' + (c.next_hearing_date || 'date') + ' to scan tomorrow\'s cause list!'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+
       <!-- 1. Case Identity Card -->
       <div class="drawer-section-card">
         <div class="drawer-section-title">🏛️ Court & Hearing Identity</div>
@@ -796,8 +813,18 @@ function renderAllCasesTable(cases) {
       <td onclick="openCaseDrawer('${escapeHtml(c.cnr_number)}')"><strong>${escapeHtml(c.case_number_formatted || '-')}</strong></td>
       <td onclick="openCaseDrawer('${escapeHtml(c.cnr_number)}')"><code style="font-family: var(--font-mono); font-size:0.75rem; color:var(--primary);">${escapeHtml(c.cnr_number)}</code></td>
       <td>${escapeHtml(c.court_name || 'District Court')}</td>
-      <td><strong style="color:var(--primary);">${escapeHtml(c.next_hearing_date || 'Awaiting Date')}</strong></td>
+      <td>
+        <strong style="color:var(--primary);">${escapeHtml(c.next_hearing_date || 'Awaiting Date')}</strong>
+        <div style="margin-top:2px;">
+          ${c.next_hearing_date === '2026-08-14' 
+            ? '<span style="background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; padding:1px 6px; border-radius:10px; font-size:0.65rem; font-weight:800;">🔔 Hearing Today</span>'
+            : (c.case_status === 'DISPOSED' 
+                ? '<span style="background:#f1f5f9; color:#64748b; padding:1px 6px; border-radius:10px; font-size:0.65rem;">🏁 Disposed</span>'
+                : '<span style="background:#f8fafc; color:#475569; border:1px solid #cbd5e1; padding:1px 6px; border-radius:10px; font-size:0.65rem;">😴 Sleeping until ' + (c.next_hearing_date || 'date') + '</span>')}
+        </div>
+      </td>
       <td><span class="badge ${c.case_status === 'DISPOSED' ? 'badge-disposed' : 'badge-evidence'}">${escapeHtml(c.case_status || 'PENDING')}</span></td>
+
 
       <td style="text-align: right;">
         <div style="display:flex; gap:4px; justify-content:flex-end;">
