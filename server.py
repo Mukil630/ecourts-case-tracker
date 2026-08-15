@@ -160,8 +160,8 @@ def cause_list_whatsapp():
 
 @app.route("/api/export-cause-list")
 def export_cause_list_print():
-    """Generates an A4 Printable Daily Court Hearing Board for advocates."""
-    target_date = request.args.get("date", "").strip()
+    """Generates an A4 Printable Daily Court Hearing Board for advocates matching exact court docket format."""
+    target_date = request.args.get("date", "2026-08-14").strip()
     cause_list = get_daily_cause_list(target_date)
     settings = get_advocate_settings()
 
@@ -170,71 +170,150 @@ def export_cause_list_print():
     <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <title>Daily Cause List Board - {{ cause_list.target_date }}</title>
+        <title>Daily Court Cause List - {{ cause_list.target_date }} - {{ settings.firm_name }}</title>
         <style>
-            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; color: #0f172a; background: #fff; line-height: 1.5; }
-            .header { border-bottom: 3px solid #0f172a; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-            .firm-name { font-size: 22px; font-weight: 800; }
-            .firm-subtitle { font-size: 13px; color: #475569; }
-            .badge { background: #0f172a; color: white; padding: 4px 12px; border-radius: 6px; font-size: 13px; font-weight: 700; }
-            .court-section { margin-bottom: 24px; break-inside: avoid; }
-            .court-title { font-size: 15px; font-weight: 800; background: #f1f5f9; padding: 8px 12px; border-left: 4px solid #0284c7; margin-bottom: 8px; }
-            table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 12px; }
-            th { background: #e2e8f0; text-align: left; padding: 8px 10px; font-weight: 700; border: 1px solid #cbd5e1; }
-            td { padding: 8px 10px; border: 1px solid #cbd5e1; vertical-align: top; }
-            .stage-tag { background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px; font-weight: 600; font-size: 11px; }
-            @media print { .no-print { display: none; } body { padding: 0; } }
+            @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+            
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            body { font-family: 'Plus Jakarta Sans', sans-serif; padding: 24px 30px; color: #0f172a; background: #fff; line-height: 1.4; }
+            
+            .header-banner { border-bottom: 2.5px solid #0f172a; padding-bottom: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-start; }
+            .firm-title { font-size: 20px; font-weight: 800; color: #0f172a; letter-spacing: -0.3px; }
+            .firm-sub { font-size: 12px; color: #475569; font-weight: 600; margin-top: 2px; }
+            .date-badge { background: #0f172a; color: white; padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 700; text-align: right; }
+            
+            .summary-card { background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 12px 16px; margin-bottom: 20px; }
+            .summary-title { font-size: 12px; font-weight: 800; color: #334155; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; }
+            .summary-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+            .summary-table th { text-align: left; padding: 4px 8px; font-weight: 700; color: #475569; border-bottom: 1px solid #cbd5e1; }
+            .summary-table td { padding: 4px 8px; border-bottom: 1px solid #f1f5f9; }
+            
+            .court-section { margin-bottom: 18px; break-inside: avoid; }
+            .court-header { background: #0f172a; color: #fff; padding: 6px 10px; font-size: 12px; font-weight: 800; border-radius: 4px 4px 0 0; text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; }
+            
+            .hearing-table { width: 100%; border-collapse: collapse; font-size: 11.5px; border: 1px solid #cbd5e1; border-top: none; }
+            .hearing-table th { background: #f1f5f9; text-align: left; padding: 6px 8px; font-weight: 700; border-bottom: 1px solid #cbd5e1; border-right: 1px solid #e2e8f0; font-size: 10.5px; color: #475569; text-transform: uppercase; }
+            .hearing-table td { padding: 8px; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #f1f5f9; vertical-align: middle; }
+            
+            .item-badge { display: inline-flex; align-items: center; justify-content: center; background: #0284c7; color: #fff; font-weight: 800; font-size: 13px; width: 34px; height: 34px; border-radius: 6px; }
+            .case-num { font-weight: 800; font-size: 12px; color: #0f172a; }
+            .cnr-tag { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: #64748b; }
+            .case-title { font-weight: 700; font-size: 12px; color: #0f172a; margin-bottom: 2px; }
+            .stage-pill { display: inline-block; background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 10px; }
+            .status-confirmed { color: #166534; font-weight: 800; font-size: 11px; }
+            
+            .no-print-bar { background: #f8fafc; border: 1px solid #cbd5e1; padding: 10px 16px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+            .btn-action { padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; border: none; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+            .btn-print { background: #0284c7; color: #fff; }
+            .btn-wa { background: #16a34a; color: #fff; }
+
+            @media print {
+                .no-print-bar { display: none !important; }
+                body { padding: 10mm; font-size: 10.5pt; }
+                .court-section { break-inside: avoid; margin-bottom: 14px; }
+                @page { margin: 8mm; size: A4 portrait; }
+            }
         </style>
     </head>
     <body>
-        <div class="no-print" style="margin-bottom: 20px; display: flex; justify-content: space-between;">
-            <button onclick="window.print()" style="padding: 10px 20px; background: #0284c7; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">🖨️ Print Daily A4 Board</button>
-            <span style="color: #64748b; font-size: 13px;">Daily Court Hearing Docket</span>
-        </div>
-
-        <div class="header">
+        <div class="no-print-bar">
             <div>
-                <div class="firm-name">⚖️ {{ settings.firm_name or 'Advocate Chambers' }}</div>
-                <div class="firm-subtitle">{{ settings.lawyer_name or 'Senior Advocate' }} &bull; Daily Court Hearing Docket</div>
+                <strong>🖨️ Daily Court Hearing Board • A4 Docket</strong>
+                <span style="font-size: 12px; color: #64748b; margin-left: 8px;">Date: {{ cause_list.target_date }} &bull; Total Confirmed Hearings: <strong>{{ cause_list.total_hearings }}</strong></span>
             </div>
-            <div style="text-align: right;">
-                <div class="badge">📅 Date: {{ cause_list.target_date }}</div>
-                <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Total Hearings: <strong>{{ cause_list.total_hearings }}</strong></div>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="window.print()" class="btn-action btn-print">🖨️ Print / Save as PDF</button>
             </div>
         </div>
 
-        {% for court in cause_list.court_summaries %}
-        <div class="court-section">
-            <div class="court-title">🏛️ {{ court.court_name }} ({{ court.hearings_count }} Hearings)</div>
-            <table>
+        <div class="header-banner">
+            <div>
+                <div class="firm-title">⚖️ {{ settings.firm_name or 'R. ANBAIYA & ASSOCIATES' }}</div>
+                <div class="firm-sub">{{ settings.lawyer_name or 'Advocate R. Anbaiya' }} &bull; Advocates & Legal Consultants, Karur &bull; Daily Court Hearing Board</div>
+            </div>
+            <div class="date-badge">
+                <div>📅 Hearings for {{ cause_list.target_date }}</div>
+                <div style="font-size: 11px; opacity: 0.85; margin-top: 2px;">{{ cause_list.total_hearings }} Hearings Confirmed</div>
+            </div>
+        </div>
+
+        <!-- 1. SUMMARY BREAKDOWN TABLE -->
+        <div class="summary-card">
+            <div class="summary-title">📊 SUMMARY &bull; COURT COMPLEX BREAKDOWN</div>
+            <table class="summary-table">
                 <thead>
                     <tr>
-                        <th style="width: 60px;">Item</th>
-                        <th style="width: 80px;">Room</th>
-                        <th style="width: 130px;">Case No / CNR</th>
-                        <th>Case Title & Litigant</th>
-                        <th style="width: 140px;">Stage</th>
-                        <th style="width: 180px;">Presiding Judge</th>
+                        <th style="width: 45px;">S.NO</th>
+                        <th>COURT NAME</th>
+                        <th style="width: 100px; text-align: right;">CONFIRMED</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for court in cause_list.court_summaries %}
+                    <tr>
+                        <td><strong>{{ loop.index }}</strong></td>
+                        <td>{{ court.court_name }}</td>
+                        <td style="text-align: right; font-weight: 800; color: #0284c7;">{{ court.hearings_count }}</td>
+                    </tr>
+                    {% endfor %}
+                    <tr style="font-weight: 800; background: #e2e8f0;">
+                        <td colspan="2" style="text-align: right;">TOTAL CONFIRMED HEARINGS:</td>
+                        <td style="text-align: right; color: #0f172a;">{{ cause_list.total_hearings }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 2. DETAILED COURT SECTIONS -->
+        {% for court in cause_list.court_summaries %}
+        <div class="court-section">
+            <div class="court-header">
+                <span>🏛️ {{ court.court_name }}</span>
+                <span>{{ court.hearings_count }} Confirmed Hearing{% if court.hearings_count > 1 %}s{% endif %}</span>
+            </div>
+            <table class="hearing-table">
+                <thead>
+                    <tr>
+                        <th style="width: 50px; text-align: center;">ITEM</th>
+                        <th style="width: 90px;">ROOM</th>
+                        <th style="width: 130px;">FILE NUMBER</th>
+                        <th>CASE TITLE & CLIENT</th>
+                        <th style="width: 150px;">JUDGE</th>
+                        <th style="width: 130px;">STAGE</th>
+                        <th style="width: 75px; text-align: right;">STATUS</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for c in court.cases %}
                     <tr>
-                        <td style="font-weight: 800; font-size: 14px; color: #0284c7; text-align: center;">{{ c.item_number or '-' }}</td>
-                        <td>{{ c.court_room or '-' }}</td>
-                        <td>
-                            <strong>{{ c.case_number_formatted or '-' }}</strong><br>
-                            <span style="font-family: monospace; font-size: 10px; color: #64748b;">{{ c.cnr_number }}</span>
+                        <td style="text-align: center;">
+                            <span class="item-badge">{{ c.item_number or '-' }}</span>
                         </td>
                         <td>
-                            <strong>{{ c.case_title }}</strong><br>
-                            <span style="font-size: 11px; color: #475569;">Client: {{ c.client_name or 'Client' }} ({{ c.client_phone or '-' }})</span>
-                            {% if c.notes %}
-                            <div style="font-size: 10px; color: #b45309; margin-top: 2px;">Note: {{ c.notes }}</div>
-                            {% endif %}
+                            <strong>{{ c.court_room or '-' }}</strong>
                         </td>
-                        <td><span class="stage-tag">{{ c.case_stage or 'Hearing' }}</span></td>
-                        <td style="font-size: 11px;">{{ c.judge_name or '-' }}</td>
+                        <td>
+                            <div class="case-num">{{ c.case_number_formatted or c.cnr_number }}</div>
+                            <div class="cnr-tag">{{ c.cnr_number }}</div>
+                        </td>
+                        <td>
+                            <div class="case-title">{{ c.case_title }}</div>
+                            <div style="font-size: 11px; color: #475569;">
+                                👤 <strong>{{ c.client_name or 'Client' }}</strong> ({{ c.client_phone or '-' }})
+                                {% if c.notes %}
+                                &bull; <span style="color: #b45309; font-weight: 600;">Note: {{ c.notes }}</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td style="font-size: 11px; color: #334155;">
+                            {{ c.judge_name or '-' }}
+                        </td>
+                        <td>
+                            <span class="stage-pill">{{ c.case_stage or 'Evidence' }}</span>
+                        </td>
+                        <td style="text-align: right;">
+                            <span class="status-confirmed">✓ Confirmed</span>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -242,13 +321,15 @@ def export_cause_list_print():
         </div>
         {% endfor %}
 
-        <div style="margin-top: 30px; border-top: 1px solid #cbd5e1; padding-top: 10px; font-size: 11px; color: #94a3b8; text-align: center;">
-            Generated via Advocate Autonomous Case Engine &bull; Timestamp: {{ cause_list.target_date }}
+        <div style="margin-top: 24px; border-top: 1.5px solid #cbd5e1; padding-top: 8px; font-size: 10.5px; color: #64748b; display: flex; justify-content: space-between;">
+            <span>Prepared for: <strong>{{ settings.lawyer_name or 'Advocate R. Anbaiya' }}</strong> (Karur Bar)</span>
+            <span>Generated via Autonomous eCourts Platform &bull; Date: {{ cause_list.target_date }}</span>
         </div>
     </body>
     </html>
     """
     return render_template_string(html_template, cause_list=cause_list, settings=settings)
+
 
 @app.route("/api/check-case", methods=["POST"])
 def check_case():
