@@ -391,12 +391,34 @@ document.addEventListener("DOMContentLoaded", () => {
       const res = await fetch("/api/advocate-settings");
       const data = await res.json();
       currentAdvocateSettings = data || {};
-      if (cfgFirmName) cfgFirmName.value = data.firm_name || "LEX CHAMBERS";
-      if (cfgLawyerName) cfgLawyerName.value = data.lawyer_name || "Advocate R. Anbaiya";
-      if (cfgLawyerPhone) cfgLawyerPhone.value = data.lawyer_phone || "+919842112233";
-      if (cfgFooter) cfgFooter.value = data.default_whatsapp_footer || "";
+      
+      const firm = data.firm_name || "R. ANBAIYA & ASSOCIATES";
+      const lawyer = data.lawyer_name || "Advocate R. Anbaiya";
+      const phone = data.lawyer_phone || "+919842112233";
+
+      if (cfgFirmName) cfgFirmName.value = firm;
+      if (cfgLawyerName) cfgLawyerName.value = lawyer;
+      if (cfgLawyerPhone) cfgLawyerPhone.value = phone;
+      if (cfgFooter) cfgFooter.value = data.default_whatsapp_footer || "Sent on behalf of R. Anbaiya & Associates, Advocates & Legal Consultants, Karur";
+
+
+      const sidebarBrandTitle = document.getElementById("sidebar-brand-title");
+      if (sidebarBrandTitle) sidebarBrandTitle.innerText = firm;
+
+      const sidebarAdvocateName = document.getElementById("sidebar-advocate-name");
+      if (sidebarAdvocateName) sidebarAdvocateName.innerText = lawyer;
+
+      const headerGreeting = document.getElementById("header-advocate-greeting");
+      if (headerGreeting) headerGreeting.innerText = `Good Evening, ${lawyer}`;
+
+      const avatarInitials = document.getElementById("sidebar-avatar-initials");
+      if (avatarInitials) {
+        const initials = lawyer.split(" ").map(w => w[0]).filter(Boolean).slice(-2).join("").toUpperCase();
+        avatarInitials.innerText = initials || "RA";
+      }
     } catch (e) {}
   }
+
 
   // Save Settings
   if (firmSettingsForm) {
@@ -537,8 +559,9 @@ document.addEventListener("DOMContentLoaded", () => {
   function getWhatsAppUrl(c) {
     if (!c) return "#";
     const lawyer = currentAdvocateSettings.lawyer_name || "Advocate R. Anbaiya";
-    const firm = currentAdvocateSettings.firm_name || "LEX CHAMBERS";
-    const footer = currentAdvocateSettings.default_whatsapp_footer || "Sent on behalf of Lex Chambers Karur";
+    const firm = currentAdvocateSettings.firm_name || "R. ANBAIYA & ASSOCIATES";
+    const footer = currentAdvocateSettings.default_whatsapp_footer || "Sent on behalf of R. Anbaiya & Associates, Advocates & Legal Consultants, Karur";
+
 
     const text = `⚖️ *${firm}*
 *HEARING UPDATE NOTICE*
