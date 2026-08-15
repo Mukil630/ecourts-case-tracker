@@ -7,7 +7,7 @@ from typing import Optional, Dict, Any, List
 DB_PATH = os.path.join(os.path.dirname(__file__), "cases.db")
 
 def init_db():
-    """Initializes and migrates the database table for tracking cases and automation rules."""
+    """Initializes and migrates the database table for tracking cases, daily cause lists, and automation rules."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
@@ -16,6 +16,11 @@ def init_db():
         CREATE TABLE IF NOT EXISTS cases (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             cnr_number TEXT UNIQUE NOT NULL,
+            case_number_formatted TEXT DEFAULT '',
+            case_stage TEXT DEFAULT 'Trial / Evidence',
+            court_room TEXT DEFAULT '',
+            item_number TEXT DEFAULT '',
+            judge_name TEXT DEFAULT '',
             client_name TEXT,
             client_phone TEXT,
             case_title TEXT,
@@ -36,11 +41,16 @@ def init_db():
         )
     """)
 
-    # Check for missing columns in case table was created earlier
+    # Dynamic Column Migration for cases
     cursor.execute("PRAGMA table_info(cases)")
     existing_cols = [row[1] for row in cursor.fetchall()]
     
     cols_to_add = [
+        ("case_number_formatted", "TEXT DEFAULT ''"),
+        ("case_stage", "TEXT DEFAULT 'Trial / Evidence'"),
+        ("court_room", "TEXT DEFAULT ''"),
+        ("item_number", "TEXT DEFAULT ''"),
+        ("judge_name", "TEXT DEFAULT ''"),
         ("track_next_hearing", "BOOLEAN DEFAULT 1"),
         ("track_orders", "BOOLEAN DEFAULT 1"),
         ("track_case_status", "BOOLEAN DEFAULT 1"),
@@ -81,7 +91,6 @@ def init_db():
                 cursor.execute(f"ALTER TABLE case_history_logs ADD COLUMN {col_name} {col_type}")
             except Exception:
                 pass
-
 
     # 3. Smart API Query Cache Table (Saves Credits!)
     cursor.execute("""
@@ -144,8 +153,10 @@ def set_cached_case(cnr_number: str, raw_json: Dict[str, Any]):
 def upsert_case(case_data: Dict[str, Any], client_name: str = "", client_phone: str = "",
                 track_next_hearing: bool = True, track_orders: bool = True,
                 track_case_status: bool = True, auto_whatsapp_enabled: bool = True,
-                notes: str = "", custom_advocate_header: str = "Advocate Office Notice") -> bool:
-    """Inserts or updates a case with Uncle's custom automation preferences."""
+                notes: str = "", custom_advocate_header: str = "Advocate Office Notice",
+                case_number_formatted: str = "", case_stage: str = "",
+                court_room: str = "", item_number: str = "", judge_name: str = "") -> bool:
+    """Inserts or updates a case with Uncle's custom automation preferences & cause list fields."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
@@ -160,7 +171,6 @@ def upsert_case(case_data: Dict[str, Any], client_name: str = "", client_phone: 
 
     if existing:
         old_next_hearing = existing[0]
-        old_status = existing[1]
         
         # Detect Next Hearing Date Change
         if old_next_hearing != new_next_hearing and new_next_hearing:
@@ -188,6 +198,11 @@ def upsert_case(case_data: Dict[str, Any], client_name: str = "", client_phone: 
                 auto_whatsapp_enabled = ?,
                 notes = ?,
                 custom_advocate_header = ?,
+                case_number_formatted = CASE WHEN ? != '' THEN ? ELSE case_number_formatted END,
+                case_stage = CASE WHEN ? != '' THEN ? ELSE case_stage END,
+                court_room = CASE WHEN ? != '' THEN ? ELSE court_room END,
+                item_number = CASE WHEN ? != '' THEN ? ELSE item_number END,
+                judge_name = CASE WHEN ? != '' THEN ? ELSE judge_name END,
                 last_checked_at = CURRENT_TIMESTAMP
             WHERE cnr_number = ?
         """, (
@@ -206,6 +221,11 @@ def upsert_case(case_data: Dict[str, Any], client_name: str = "", client_phone: 
             1 if auto_whatsapp_enabled else 0,
             notes,
             custom_advocate_header,
+            case_number_formatted, case_number_formatted,
+            case_stage, case_stage,
+            court_room, court_room,
+            item_number, item_number,
+            judge_name, judge_name,
             cnr
         ))
     else:
@@ -215,8 +235,9 @@ def upsert_case(case_data: Dict[str, Any], client_name: str = "", client_phone: 
                 cnr_number, client_name, client_phone, case_title, case_status,
                 court_name, parties, advocates, last_hearing_date, next_hearing_date,
                 track_next_hearing, track_orders, track_case_status, auto_whatsapp_enabled,
-                notes, custom_advocate_header
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                notes, custom_advocate_header, case_number_formatted, case_stage,
+                court_room, item_number, judge_name
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             cnr,
             client_name,
@@ -233,7 +254,12 @@ def upsert_case(case_data: Dict[str, Any], client_name: str = "", client_phone: 
             1 if track_case_status else 0,
             1 if auto_whatsapp_enabled else 0,
             notes,
-            custom_advocate_header
+            custom_advocate_header,
+            case_number_formatted,
+            case_stage or "Trial / Evidence",
+            court_room,
+            item_number,
+            judge_name
         ))
 
     conn.commit()
@@ -253,7 +279,12 @@ def update_case_preferences(cnr_number: str, prefs: Dict[str, Any]) -> bool:
             track_case_status = ?,
             auto_whatsapp_enabled = ?,
             notes = ?,
-            custom_advocate_header = ?
+            custom_advocate_header = ?,
+            case_number_formatted = COALESCE(?, case_number_formatted),
+            case_stage = COALESCE(?, case_stage),
+            court_room = COALESCE(?, court_room),
+            item_number = COALESCE(?, item_number),
+            judge_name = COALESCE(?, judge_name)
         WHERE cnr_number = ?
     """, (
         prefs.get("client_name"),
@@ -264,6 +295,11 @@ def update_case_preferences(cnr_number: str, prefs: Dict[str, Any]) -> bool:
         1 if prefs.get("auto_whatsapp_enabled", True) else 0,
         prefs.get("notes", ""),
         prefs.get("custom_advocate_header", "Advocate Office Notice"),
+        prefs.get("case_number_formatted"),
+        prefs.get("case_stage"),
+        prefs.get("court_room"),
+        prefs.get("item_number"),
+        prefs.get("judge_name"),
         cnr_number
     ))
     conn.commit()
@@ -290,6 +326,47 @@ def get_case_by_cnr(cnr_number: str) -> Optional[Dict[str, Any]]:
     row = cursor.fetchone()
     conn.close()
     return dict(row) if row else None
+
+def get_daily_cause_list(target_date: str = "") -> Dict[str, Any]:
+    """
+    Generates the grouped Daily Cause List & Court Board for a specific hearing date.
+    Returns summary counters and cases grouped by Court Complex.
+    """
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    if target_date:
+        cursor.execute("SELECT * FROM cases WHERE next_hearing_date = ? ORDER BY court_name, CAST(item_number AS INTEGER)", (target_date,))
+    else:
+        # Get all cases that have a next hearing date
+        cursor.execute("SELECT * FROM cases WHERE next_hearing_date != '' AND next_hearing_date IS NOT NULL ORDER BY next_hearing_date ASC, court_name, CAST(item_number AS INTEGER)")
+
+    cases = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+
+    # Group by Court Complex
+    courts_map = {}
+    for c in cases:
+        cname = c.get("court_name") or "District Court Complex"
+        if cname not in courts_map:
+            courts_map[cname] = []
+        courts_map[cname].append(c)
+
+    court_summaries = []
+    for court_name, items in courts_map.items():
+        court_summaries.append({
+            "court_name": court_name,
+            "hearings_count": len(items),
+            "cases": items
+        })
+
+    return {
+        "target_date": target_date or "All Scheduled Dates",
+        "total_hearings": len(cases),
+        "total_courts": len(courts_map),
+        "court_summaries": court_summaries
+    }
 
 def delete_case(cnr_number: str) -> bool:
     """Deletes a case and its related logs from SQLite."""
@@ -357,6 +434,249 @@ def update_advocate_settings(settings: Dict[str, Any]) -> bool:
     conn.close()
     return True
 
+def import_karur_sample_data():
+    """Pre-populates the exact 14 Karur Court hearings from Uncle's sample."""
+    sample_hearings = [
+        {
+            "cnr_number": "TNKR010010352023",
+            "case_number_formatted": "STC/1035/2023",
+            "case_title": "M Palanisamy vs M Velmurugan",
+            "court_name": "Chief Judicial Magistrate Court, Karur",
+            "court_room": "Room 8",
+            "item_number": "4",
+            "judge_name": "M. CHARLES ALBERT, Judicial Magistrate No.II",
+            "case_stage": "Evidence",
+            "case_status": "PENDING",
+            "next_hearing_date": "2026-08-14",
+            "client_name": "M Palanisamy",
+            "client_phone": "+919443322110",
+            "notes": "Complainant evidence cross examination"
+        },
+        {
+            "cnr_number": "TNKR020003832025",
+            "case_number_formatted": "STC/383/2025",
+            "case_title": "G Eniyavan vs D Jeevanandham",
+            "court_name": "Fast Track Court at Magisterial Level, Karur",
+            "court_room": "Room 10",
+            "item_number": "174",
+            "judge_name": "Thiru R.Mahesh, B.A., LL.B(Hons)., LL.M.",
+            "case_stage": "Service Pending - Warrant",
+            "case_status": "PENDING",
+            "next_hearing_date": "2026-08-14",
+            "client_name": "G Eniyavan",
+            "client_phone": "+919842112233",
+            "notes": "NBW execution pending"
+        },
+        {
+            "cnr_number": "TNKR030000252025",
+            "case_number_formatted": "EP/25/2025",
+            "case_title": "Shalini vs Managing Director TNSTC & 3 Ors",
+            "court_name": "Mahila Court, Karur",
+            "court_room": "Room 9",
+            "item_number": "2",
+            "judge_name": "Thiru P.Thangavel, B.Sc., LL.M., Sessions Judge",
+            "case_stage": "For Attachment / Arrest / Deposit",
+            "case_status": "PENDING",
+            "next_hearing_date": "2026-08-14",
+            "client_name": "Shalini",
+            "client_phone": "+919789012345",
+            "notes": "Execution petition for deposit"
+        },
+        {
+            "cnr_number": "TNKR040003612025",
+            "case_number_formatted": "OS/361/2025",
+            "case_title": "S Nirmala vs C Velusamy & 10 Ors",
+            "court_name": "Principal District Court, Karur",
+            "court_room": "Room 1",
+            "item_number": "108",
+            "judge_name": "Tmt. S.SUMATHY, M.L., District Judge",
+            "case_stage": "IA Pending",
+            "case_status": "PENDING",
+            "next_hearing_date": "2026-08-14",
+            "client_name": "S Nirmala",
+            "client_phone": "+919655443322",
+            "notes": "Injunction application hearing"
+        },
+        {
+            "cnr_number": "TNKR050003592024",
+            "case_number_formatted": "OS/359/2024",
+            "case_title": "State Bank of India vs M/s Kathiravan Tea Stall",
+            "court_name": "Principal District Munsif Court, Karur",
+            "court_room": "Room 5",
+            "item_number": "16",
+            "judge_name": "Thiru. N.Nilaveshwaran, B.A., B.L.",
+            "case_stage": "Evidence",
+            "case_status": "PENDING",
+            "next_hearing_date": "2026-08-14",
+            "client_name": "SBI Vangal Branch",
+            "client_phone": "+919445566778",
+            "notes": "Bank manager witness examination"
+        },
+        {
+            "cnr_number": "TNKR050001392021",
+            "case_number_formatted": "OS/139/2021",
+            "case_title": "A Palaniyappan vs R Manokaran & 5 Ors",
+            "court_name": "Principal District Munsif Court, Karur",
+            "court_room": "Room 5",
+            "item_number": "23",
+            "judge_name": "Thiru. N.Nilaveshwaran, B.A., B.L.",
+            "case_stage": "Trial",
+            "case_status": "PENDING",
+            "next_hearing_date": "2026-08-14",
+            "client_name": "A Palaniyappan",
+            "client_phone": "+919842555666",
+            "notes": "Final trial arguments"
+        },
+        {
+            "cnr_number": "TNKR060000692024",
+            "case_number_formatted": "COS/69/2024",
+            "case_title": "Shobika Impex Private LTD vs Sundar A N Sundarapandiyan",
+            "court_name": "Principal Sub Court, Karur",
+            "court_room": "Room 3",
+            "item_number": "1",
+            "judge_name": "Tmt K.L.Priyanga, B.A., B.L.(Hons)",
+            "case_stage": "Evidence",
+            "case_status": "PENDING",
+            "next_hearing_date": "2026-08-14",
+            "client_name": "Shobika Impex Ltd",
+            "client_phone": "+919843011223",
+            "notes": "Commercial dispute evidence"
+        },
+        {
+            "cnr_number": "TNKR060001392025",
+            "case_number_formatted": "OS/139/2025",
+            "case_title": "Bank of Baroda Karur vs P Kalyani & Anr",
+            "court_name": "Principal Sub Court, Karur",
+            "court_room": "Room 3",
+            "item_number": "31",
+            "judge_name": "Tmt K.L.Priyanga, B.A., B.L.(Hons)",
+            "case_stage": "Ex-parte Evidence",
+            "case_status": "PENDING",
+            "next_hearing_date": "2026-08-14",
+            "client_name": "Bank of Baroda Main",
+            "client_phone": "+919444111222",
+            "notes": "Proof affidavit filing"
+        },
+        {
+            "cnr_number": "TNKR060003952025",
+            "case_number_formatted": "OS/395/2025",
+            "case_title": "Bank of Baroda vs B Priyadharshini & 2 Ors",
+            "court_name": "Principal Sub Court, Karur",
+            "court_room": "Room 3",
+            "item_number": "35",
+            "judge_name": "Tmt K.L.Priyanga, B.A., B.L.(Hons)",
+            "case_stage": "Ex-parte Evidence",
+            "case_status": "PENDING",
+            "next_hearing_date": "2026-08-14",
+            "client_name": "BOB Aravakurichi",
+            "client_phone": "+919444333444",
+            "notes": "Recovery suit exparte"
+        },
+        {
+            "cnr_number": "TNKR060008312025",
+            "case_number_formatted": "OS/831/2025",
+            "case_title": "State Bank of India vs P Arumugam",
+            "court_name": "Principal Sub Court, Karur",
+            "court_room": "Room 3",
+            "item_number": "37",
+            "judge_name": "Tmt K.L.Priyanga, B.A., B.L.(Hons)",
+            "case_stage": "Ex-parte Evidence",
+            "case_status": "PENDING",
+            "next_hearing_date": "2026-08-14",
+            "client_name": "SBI Aravakurichi",
+            "client_phone": "+919445112233",
+            "notes": "Exparte order hearing"
+        },
+        {
+            "cnr_number": "TNKR060005552023",
+            "case_number_formatted": "OS/555/2023",
+            "case_title": "SBI Kovai Road vs D Yasotha",
+            "court_name": "Principal Sub Court, Karur",
+            "court_room": "Room 3",
+            "item_number": "46",
+            "judge_name": "Tmt K.L.Priyanga, B.A., B.L.(Hons)",
+            "case_stage": "Steps",
+            "case_status": "PENDING",
+            "next_hearing_date": "2026-08-14",
+            "client_name": "SBI Kovai Road",
+            "client_phone": "+919445998877",
+            "notes": "Legal heir steps petition"
+        },
+        {
+            "cnr_number": "TNKR060000942025",
+            "case_number_formatted": "OS/94/2025",
+            "case_title": "Bank of Baroda vs V Kumar",
+            "court_name": "Principal Sub Court, Karur",
+            "court_room": "Room 4",
+            "item_number": "42",
+            "judge_name": "Thiru. BALAMURUGAN V.S., Addl Subordinate Judge",
+            "case_stage": "Ex-parte Evidence",
+            "case_status": "PENDING",
+            "next_hearing_date": "2026-08-14",
+            "client_name": "BOB Karur Main",
+            "client_phone": "+919444111222",
+            "notes": "Proof affidavit"
+        },
+        {
+            "cnr_number": "TNKR060004662025",
+            "case_number_formatted": "OS/466/2025",
+            "case_title": "T Shankar vs A A Thangavelu & 10 Ors",
+            "court_name": "Principal Sub Court, Karur",
+            "court_room": "Room 4",
+            "item_number": "43",
+            "judge_name": "Thiru. BALAMURUGAN V.S., Addl Subordinate Judge",
+            "case_stage": "Ex-parte Evidence",
+            "case_status": "PENDING",
+            "next_hearing_date": "2026-08-14",
+            "client_name": "T Shankar",
+            "client_phone": "+919842199887",
+            "notes": "Partition suit exparte"
+        },
+        {
+            "cnr_number": "TNKR060000722021",
+            "case_number_formatted": "OS/72/2021",
+            "case_title": "K Lakshmi vs V Vadivel",
+            "court_name": "Principal Sub Court, Karur",
+            "court_room": "Room 4",
+            "item_number": "106",
+            "judge_name": "Thiru. BALAMURUGAN V.S., Addl Subordinate Judge",
+            "case_stage": "IA Pending",
+            "case_status": "PENDING",
+            "next_hearing_date": "2026-08-14",
+            "client_name": "K Lakshmi",
+            "client_phone": "+919842333221",
+            "notes": "Commissioner report objection"
+        }
+    ]
+
+    for h in sample_hearings:
+        db_payload = {
+            "cnr_number": h["cnr_number"],
+            "case_title": h["case_title"],
+            "case_status": h["case_status"],
+            "court_name": h["court_name"],
+            "parties": h["case_title"].replace(" vs ", " | "),
+            "advocates": "Senior Advocate",
+            "last_hearing_date": "2026-07-15",
+            "next_hearing_date": h["next_hearing_date"]
+        }
+        upsert_case(
+            db_payload,
+            client_name=h["client_name"],
+            client_phone=h["client_phone"],
+            track_next_hearing=True,
+            track_orders=True,
+            track_case_status=True,
+            auto_whatsapp_enabled=True,
+            notes=h["notes"],
+            case_number_formatted=h["case_number_formatted"],
+            case_stage=h["case_stage"],
+            court_room=h["court_room"],
+            item_number=h["item_number"],
+            judge_name=h["judge_name"]
+        )
+
 if __name__ == "__main__":
     init_db()
-    print("Database and Uncle's automation schema initialized successfully at:", DB_PATH)
+    import_karur_sample_data()
+    print("Database and Karur Cause List pre-loaded successfully at:", DB_PATH)

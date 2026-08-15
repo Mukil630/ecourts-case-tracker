@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Advocate Case Engine - eCourts Client Automation</title>
+  <title>Advocate Cause List & Case Engine - Free Alternative to ₹4000/mo Apps</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -17,7 +17,7 @@
         <div class="logo-badge">⚖️ LEX</div>
         <div class="brand-info">
           <h1 id="header-firm-name">Law Chambers & Advocate Office</h1>
-          <p>Autonomous eCourts Client Tracking & WhatsApp Automation Portal</p>
+          <p>Autonomous eCourts Daily Cause List & Client WhatsApp Automation</p>
         </div>
       </div>
       <div class="header-actions">
@@ -38,17 +38,17 @@
     <!-- Metrics Bar -->
     <div class="metrics-grid">
       <div class="metric-card">
-        <div class="metric-icon">👥</div>
+        <div class="metric-icon">🏛️</div>
         <div>
-          <div class="metric-label">Active Client Cases</div>
-          <div class="metric-value" id="stat-total-cases">0</div>
+          <div class="metric-label">Hearings on Board</div>
+          <div class="metric-value" id="stat-board-count" style="color: var(--accent-blue);">14</div>
         </div>
       </div>
       <div class="metric-card">
-        <div class="metric-icon">📅</div>
+        <div class="metric-icon">👥</div>
         <div>
-          <div class="metric-label">Pending Hearings</div>
-          <div class="metric-value" id="stat-pending-cases" style="color: var(--accent-blue);">0</div>
+          <div class="metric-label">Active Clients</div>
+          <div class="metric-value" id="stat-total-cases">14</div>
         </div>
       </div>
       <div class="metric-card" id="card-history-stat" style="cursor: pointer;" title="Click to view change audit history">
@@ -59,137 +59,184 @@
         </div>
       </div>
       <div class="metric-card">
-        <div class="metric-icon">🛡️</div>
+        <div class="metric-icon">💰</div>
         <div>
-          <div class="metric-label">Credits Saved (Cache)</div>
-          <div class="metric-value" id="stat-credits-saved" style="color: var(--accent-emerald);">0</div>
+          <div class="metric-label">Subscription Cost</div>
+          <div class="metric-value" style="color: var(--accent-emerald);">₹0 / Free</div>
         </div>
       </div>
     </div>
 
-    <!-- Main Grid -->
-    <div class="dashboard-grid">
-      <!-- Add New Client Case & Custom Automation Rules -->
+    <!-- Navigation Tabs -->
+    <div class="nav-tabs-bar">
+      <button class="nav-tab active" data-tab="tab-cause-list">📋 Daily Court Board & Cause List</button>
+      <button class="nav-tab" data-tab="tab-add-client">➕ Add Client & Automation Rules</button>
+      <button class="nav-tab" data-tab="tab-portfolio">📁 Tracked Case Portfolio</button>
+    </div>
+
+    <!-- TAB 1: DAILY CAUSE LIST & COURT BOARD (THE ₹4000/MO KILLER FEATURE) -->
+    <div id="tab-cause-list" class="tab-pane active">
+      <div class="card" style="margin-bottom: 24px;">
+        <div class="cause-list-header">
+          <div>
+            <h2 class="card-title" style="margin: 0;">📅 Daily Court Hearing Board</h2>
+            <span style="font-size: 0.85rem; color: var(--text-secondary);">
+              Grouped by Court Complex, Presiding Judge, Court Room & Item Number
+            </span>
+          </div>
+          <div class="cause-list-controls">
+            <input type="date" id="cause-list-date-picker" class="form-input" style="width: auto; padding: 6px 12px; font-size: 0.85rem;" value="2026-08-14">
+            <button id="btn-load-karur-sample" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.82rem; flex: none;" title="Pre-load Karur Court 14 Hearings">
+              📥 Load Karur Board (14)
+            </button>
+            <a id="btn-print-board" href="/api/export-cause-list?date=2026-08-14" target="_blank" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.82rem; flex: none;">
+              🖨️ Print A4 Sheet
+            </a>
+            <button id="btn-send-morning-docket" class="btn btn-whatsapp" style="padding: 6px 14px; font-size: 0.82rem; flex: none;">
+              📲 WhatsApp Daily Docket
+            </button>
+          </div>
+        </div>
+
+        <!-- Court Summary Pills Banner -->
+        <div id="court-summary-chips" class="court-chips-grid">
+          <!-- Populated via JS -->
+        </div>
+
+        <!-- Grouped Courts List -->
+        <div id="cause-list-container" style="margin-top: 20px;">
+          <p class="empty-state">Loading court hearing board...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: ADD CLIENT & AUTOMATION RULES -->
+    <div id="tab-add-client" class="tab-pane">
+      <div class="dashboard-grid">
+        <!-- Add Form -->
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h2 class="card-title" style="margin: 0;">➕ Add New Client & Case</h2>
+            <span class="badge-subtle">Auto-Monitored</span>
+          </div>
+
+          <form id="case-form">
+            <div class="form-group">
+              <label class="form-label" for="cnr-input">16-Digit CNR Number *</label>
+              <input type="text" id="cnr-input" class="form-input code-font" placeholder="e.g. DLND020047882015" value="DLND020047882015" required maxlength="16">
+            </div>
+
+            <div class="form-row">
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" for="client-name">Client Name *</label>
+                <input type="text" id="client-name" class="form-input" placeholder="e.g. Rajesh Kumar" value="Arun Jaitley" required>
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" for="client-phone">Client WhatsApp Number *</label>
+                <input type="text" id="client-phone" class="form-input code-font" placeholder="e.g. +919876543210" value="+919876543210" required>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="case-notes">Advocate Notes / Subject</label>
+              <input type="text" id="case-notes" class="form-input" placeholder="e.g. Complainant evidence / Bail review" value="Criminal defamation evidence review">
+            </div>
+
+            <!-- Automation Rules Selectors -->
+            <div class="automation-rules-box">
+              <div class="rules-header">
+                <span style="font-size: 0.85rem; font-weight: 700; color: var(--accent-blue);">⚙️ Select What to Fetch & Send Automatically:</span>
+              </div>
+              <div class="checkbox-grid">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="rule-track-hearing" checked>
+                  <span>📅 Next Hearing Date Changes</span>
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="rule-track-orders" checked>
+                  <span>📜 Court Orders & Judgments</span>
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="rule-track-status" checked>
+                  <span>⚖️ Case Status (Disposed/Pending)</span>
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="rule-auto-wa" checked>
+                  <span>💬 Enable WhatsApp Client Alerts</span>
+                </label>
+              </div>
+
+              <div style="margin-top: 10px; display: flex; align-items: center; gap: 8px;">
+                <label class="checkbox-label" style="font-size: 0.8rem; color: var(--text-muted);">
+                  <input type="checkbox" id="force-live-toggle">
+                  <span>Force Live eCourts Query (Bypass Cache - Uses 1.5 credits)</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="btn-row">
+              <button type="submit" id="btn-fetch" class="btn btn-primary">⚡ Fetch & Track Case</button>
+              <button type="button" id="btn-demo" class="btn btn-secondary">Load Sample CNR</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Result Preview -->
+        <div class="card" id="result-card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h2 class="card-title" style="margin: 0;">📊 Case Intelligence & Dispatch</h2>
+            <span id="cache-badge" class="tag tag-cached" style="display: none;">⚡ Cached (0 credits)</span>
+          </div>
+          
+          <div id="case-result-content">
+            <div class="empty-state">
+              <p>Add a client case on the left to inspect court details, check upcoming hearing dates, and preview automated WhatsApp alerts.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: CASE PORTFOLIO & CLIENT DIRECTORY -->
+    <div id="tab-portfolio" class="tab-pane">
       <div class="card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-          <h2 class="card-title" style="margin: 0;">➕ Add New Client & Case</h2>
-          <span class="badge-subtle">Auto-Monitored</span>
-        </div>
-
-        <form id="case-form">
-          <!-- Client & CNR info -->
-          <div class="form-group">
-            <label class="form-label" for="cnr-input">16-Digit CNR Number *</label>
-            <input type="text" id="cnr-input" class="form-input code-font" placeholder="e.g. DLND020047882015" value="DLND020047882015" required maxlength="16">
+        <div class="table-header-row">
+          <div>
+            <h2 class="card-title" style="margin: 0;">📋 Advocate Case Portfolio (<span id="cases-count">0</span>)</h2>
+            <span style="font-size: 0.8rem; color: var(--text-muted);">All active clients, automation rules, and hearing dates</span>
           </div>
-
-          <div class="form-row">
-            <div class="form-group" style="flex: 1;">
-              <label class="form-label" for="client-name">Client Name *</label>
-              <input type="text" id="client-name" class="form-input" placeholder="e.g. Rajesh Kumar" value="Arun Jaitley" required>
-            </div>
-            <div class="form-group" style="flex: 1;">
-              <label class="form-label" for="client-phone">Client WhatsApp Number *</label>
-              <input type="text" id="client-phone" class="form-input code-font" placeholder="e.g. +919876543210" value="+919876543210" required>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="case-notes">Advocate Private Notes / Case Subject</label>
-            <input type="text" id="case-notes" class="form-input" placeholder="e.g. Defamation hearing evidence stage / Bail review" value="Criminal complaint matter">
-          </div>
-
-          <!-- Uncle's Automation Rules Selectors -->
-          <div class="automation-rules-box">
-            <div class="rules-header">
-              <span style="font-size: 0.85rem; font-weight: 700; color: var(--accent-blue);">⚙️ Select What to Fetch & Notify Automatically:</span>
-            </div>
-            <div class="checkbox-grid">
-              <label class="checkbox-label">
-                <input type="checkbox" id="rule-track-hearing" checked>
-                <span>📅 Next Hearing Date Changes</span>
-              </label>
-              <label class="checkbox-label">
-                <input type="checkbox" id="rule-track-orders" checked>
-                <span>📜 Court Orders & Judgments</span>
-              </label>
-              <label class="checkbox-label">
-                <input type="checkbox" id="rule-track-status" checked>
-                <span>⚖️ Case Status (Disposed/Pending)</span>
-              </label>
-              <label class="checkbox-label">
-                <input type="checkbox" id="rule-auto-wa" checked>
-                <span>💬 Enable WhatsApp Client Alerts</span>
-              </label>
-            </div>
-
-            <div style="margin-top: 10px; display: flex; align-items: center; gap: 8px;">
-              <label class="checkbox-label" style="font-size: 0.8rem; color: var(--text-muted);">
-                <input type="checkbox" id="force-live-toggle">
-                <span>Force Live eCourts Query (Bypass Cache - Uses 1.5 credits)</span>
-              </label>
-            </div>
-          </div>
-
-          <div class="btn-row">
-            <button type="submit" id="btn-fetch" class="btn btn-primary">⚡ Fetch & Track Case</button>
-            <button type="button" id="btn-demo" class="btn btn-secondary">Load Sample CNR</button>
-          </div>
-        </form>
-      </div>
-
-      <!-- Case Result & WhatsApp Preview -->
-      <div class="card" id="result-card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-          <h2 class="card-title" style="margin: 0;">📊 Case Intelligence & Dispatch</h2>
-          <span id="cache-badge" class="tag tag-cached" style="display: none;">⚡ Cached (0 credits)</span>
-        </div>
-        
-        <div id="case-result-content">
-          <div class="empty-state">
-            <p>Add a client case on the left to inspect court details, check upcoming hearing dates, and preview automated WhatsApp alerts.</p>
+          <div class="table-actions">
+            <input type="text" id="filter-input" class="form-input search-input" placeholder="🔍 Search Client, CNR, Title...">
+            <button id="btn-sync-all" class="btn btn-primary" style="padding: 8px 16px; font-size: 0.85rem; flex: none;">
+              🔄 Sync All Cases Now
+            </button>
+            <button id="btn-open-history" class="btn btn-secondary" style="padding: 8px 16px; font-size: 0.85rem; flex: none;">
+              📜 History Logs (<span id="history-count">0</span>)
+            </button>
           </div>
         </div>
-      </div>
-    </div>
 
-    <!-- Tracked Cases Table -->
-    <div class="card">
-      <div class="table-header-row">
-        <div>
-          <h2 class="card-title" style="margin: 0;">📋 Advocate Case Portfolio (<span id="cases-count">0</span>)</h2>
-          <span style="font-size: 0.8rem; color: var(--text-muted);">Configured client automation rules & active tracking</span>
+        <div class="table-container">
+          <table id="cases-table">
+            <thead>
+              <tr>
+                <th>Client & Contact</th>
+                <th>Item / Room</th>
+                <th>CNR & Case No</th>
+                <th>Case Title & Court</th>
+                <th>Stage</th>
+                <th>Next Hearing</th>
+                <th>Automation</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="cases-tbody">
+              <tr>
+                <td colspan="8" class="empty-state">No cases stored yet. Add a client case above to start tracking!</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-        <div class="table-actions">
-          <input type="text" id="filter-input" class="form-input search-input" placeholder="🔍 Search Client, CNR, Title...">
-          <button id="btn-sync-all" class="btn btn-primary" style="padding: 8px 16px; font-size: 0.85rem; flex: none;">
-            🔄 Sync All Cases Now
-          </button>
-          <button id="btn-open-history" class="btn btn-secondary" style="padding: 8px 16px; font-size: 0.85rem; flex: none;">
-            📜 History Logs (<span id="history-count">0</span>)
-          </button>
-        </div>
-      </div>
-
-      <div class="table-container">
-        <table id="cases-table">
-          <thead>
-            <tr>
-              <th>Client & Contact</th>
-              <th>CNR Number</th>
-              <th>Case Title</th>
-              <th>Status</th>
-              <th>Next Hearing</th>
-              <th>Automation Rules</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="cases-tbody">
-            <tr>
-              <td colspan="7" class="empty-state">No cases stored yet. Add a client case above to start tracking!</td>
-            </tr>
-          </tbody>
-        </table>
       </div>
     </div>
   </div>
@@ -244,13 +291,33 @@
       <div class="modal-body">
         <form id="rules-form">
           <input type="hidden" id="edit-rule-cnr">
-          <div class="form-group">
-            <label class="form-label">Client Name</label>
-            <input type="text" id="edit-client-name" class="form-input">
+          <div class="form-row">
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label">Client Name</label>
+              <input type="text" id="edit-client-name" class="form-input">
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label">Client WhatsApp Number</label>
+              <input type="text" id="edit-client-phone" class="form-input code-font">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label">Court Room</label>
+              <input type="text" id="edit-room" class="form-input" placeholder="e.g. Room 3">
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label">Item Number</label>
+              <input type="text" id="edit-item" class="form-input" placeholder="e.g. 4">
+            </div>
           </div>
           <div class="form-group">
-            <label class="form-label">Client WhatsApp Number</label>
-            <input type="text" id="edit-client-phone" class="form-input code-font">
+            <label class="form-label">Case Stage</label>
+            <input type="text" id="edit-stage" class="form-input" placeholder="e.g. Evidence / Trial / IA Pending">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Presiding Judge</label>
+            <input type="text" id="edit-judge" class="form-input" placeholder="e.g. District Judge">
           </div>
           <div class="form-group">
             <label class="form-label">Private Advocate Notes</label>

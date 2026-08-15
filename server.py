@@ -8,7 +8,8 @@ from ecourts_api import fetch_case_details, get_api_key
 from db import (
     init_db, upsert_case, get_all_cases, get_case_by_cnr, delete_case,
     get_case_history_logs, mark_log_notified, update_case_preferences,
-    get_advocate_settings, update_advocate_settings
+    get_advocate_settings, update_advocate_settings, get_daily_cause_list,
+    import_karur_sample_data
 )
 from sync_engine import sync_worker
 
@@ -88,6 +89,159 @@ def advocate_settings_route():
         return jsonify({"success": True, "settings": get_advocate_settings()})
     return jsonify(get_advocate_settings())
 
+@app.route("/api/cause-list", methods=["GET"])
+def cause_list_endpoint():
+    """Returns the grouped Daily Cause List & Court Hearing Board."""
+    target_date = request.args.get("date", "").strip()
+    cause_list = get_daily_cause_list(target_date)
+    return jsonify(cause_list)
+
+@app.route("/api/cause-list/import-karur", methods=["POST"])
+def import_karur_endpoint():
+    """Imports Uncle's 14 Karur Court hearings sample data."""
+    import_karur_sample_data()
+    return jsonify({"success": True, "message": "14 Karur Court hearings loaded successfully!"})
+
+@app.route("/api/cause-list/generate-whatsapp", methods=["POST"])
+def cause_list_whatsapp():
+    """Generates formatted WhatsApp Morning Docket for the advocate."""
+    data = request.get_json() or {}
+    target_date = data.get("date", "").strip()
+    cause_list = get_daily_cause_list(target_date)
+    settings = get_advocate_settings()
+
+    firm_name = settings.get("firm_name", "Advocate Chambers").upper()
+    lawyer_name = settings.get("lawyer_name", "Senior Advocate")
+
+    msg_lines = [
+        f"⚖️ *{firm_name}*",
+        f"📋 *DAILY CAUSE LIST & HEARING BOARD*",
+        f"📅 *Date:* {cause_list.get('target_date')}",
+        f"⚡ *Total Hearings:* {cause_list.get('total_hearings')} across {cause_list.get('total_courts')} Courts",
+        "---------------------------------------"
+    ]
+
+    for summary in cause_list.get("court_summaries", []):
+        msg_lines.append(f"\n🏛️ *{summary.get('court_name').upper()}* ({summary.get('hearings_count')} Cases)")
+        for c in summary.get("cases", []):
+            item_no = c.get("item_number") or "-"
+            room = c.get("court_room") or "-"
+            case_no = c.get("case_number_formatted") or c.get("cnr_number")
+            stage = c.get("case_stage") or "Hearing"
+            judge = c.get("judge_name") or ""
+
+            msg_lines.append(f"• *Item {item_no}* ({room}): {c.get('case_title')}")
+            msg_lines.append(f"  └ [{case_no}] Stage: *{stage}*")
+            if judge:
+                msg_lines.append(f"  └ Judge: {judge}")
+
+    msg_lines.append("\n---------------------------------------")
+    msg_lines.append(f"Prepared for: *{lawyer_name}*")
+
+    full_text = "\n".join(msg_lines)
+    raw_phone = settings.get("lawyer_phone", "")
+    clean_phone = "".join(c for c in raw_phone if c.isdigit())
+    wa_link = f"https://wa.me/{clean_phone}?text={full_text}"
+
+
+    return jsonify({
+        "success": True,
+        "text": full_text,
+        "wa_link": wa_link
+    })
+
+@app.route("/api/export-cause-list")
+def export_cause_list_print():
+    """Generates an A4 Printable Daily Court Hearing Board for advocates."""
+    target_date = request.args.get("date", "").strip()
+    cause_list = get_daily_cause_list(target_date)
+    settings = get_advocate_settings()
+
+    html_template = """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Daily Cause List Board - {{ cause_list.target_date }}</title>
+        <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; color: #0f172a; background: #fff; line-height: 1.5; }
+            .header { border-bottom: 3px solid #0f172a; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+            .firm-name { font-size: 22px; font-weight: 800; }
+            .firm-subtitle { font-size: 13px; color: #475569; }
+            .badge { background: #0f172a; color: white; padding: 4px 12px; border-radius: 6px; font-size: 13px; font-weight: 700; }
+            .court-section { margin-bottom: 24px; break-inside: avoid; }
+            .court-title { font-size: 15px; font-weight: 800; background: #f1f5f9; padding: 8px 12px; border-left: 4px solid #0284c7; margin-bottom: 8px; }
+            table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 12px; }
+            th { background: #e2e8f0; text-align: left; padding: 8px 10px; font-weight: 700; border: 1px solid #cbd5e1; }
+            td { padding: 8px 10px; border: 1px solid #cbd5e1; vertical-align: top; }
+            .stage-tag { background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px; font-weight: 600; font-size: 11px; }
+            @media print { .no-print { display: none; } body { padding: 0; } }
+        </style>
+    </head>
+    <body>
+        <div class="no-print" style="margin-bottom: 20px; display: flex; justify-content: space-between;">
+            <button onclick="window.print()" style="padding: 10px 20px; background: #0284c7; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">🖨️ Print Daily A4 Board</button>
+            <span style="color: #64748b; font-size: 13px;">Daily Court Hearing Docket</span>
+        </div>
+
+        <div class="header">
+            <div>
+                <div class="firm-name">⚖️ {{ settings.firm_name or 'Advocate Chambers' }}</div>
+                <div class="firm-subtitle">{{ settings.lawyer_name or 'Senior Advocate' }} &bull; Daily Court Hearing Docket</div>
+            </div>
+            <div style="text-align: right;">
+                <div class="badge">📅 Date: {{ cause_list.target_date }}</div>
+                <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Total Hearings: <strong>{{ cause_list.total_hearings }}</strong></div>
+            </div>
+        </div>
+
+        {% for court in cause_list.court_summaries %}
+        <div class="court-section">
+            <div class="court-title">🏛️ {{ court.court_name }} ({{ court.hearings_count }} Hearings)</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 60px;">Item</th>
+                        <th style="width: 80px;">Room</th>
+                        <th style="width: 130px;">Case No / CNR</th>
+                        <th>Case Title & Litigant</th>
+                        <th style="width: 140px;">Stage</th>
+                        <th style="width: 180px;">Presiding Judge</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in court.cases %}
+                    <tr>
+                        <td style="font-weight: 800; font-size: 14px; color: #0284c7; text-align: center;">{{ c.item_number or '-' }}</td>
+                        <td>{{ c.court_room or '-' }}</td>
+                        <td>
+                            <strong>{{ c.case_number_formatted or '-' }}</strong><br>
+                            <span style="font-family: monospace; font-size: 10px; color: #64748b;">{{ c.cnr_number }}</span>
+                        </td>
+                        <td>
+                            <strong>{{ c.case_title }}</strong><br>
+                            <span style="font-size: 11px; color: #475569;">Client: {{ c.client_name or 'Client' }} ({{ c.client_phone or '-' }})</span>
+                            {% if c.notes %}
+                            <div style="font-size: 10px; color: #b45309; margin-top: 2px;">Note: {{ c.notes }}</div>
+                            {% endif %}
+                        </td>
+                        <td><span class="stage-tag">{{ c.case_stage or 'Hearing' }}</span></td>
+                        <td style="font-size: 11px;">{{ c.judge_name or '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endfor %}
+
+        <div style="margin-top: 30px; border-top: 1px solid #cbd5e1; padding-top: 10px; font-size: 11px; color: #94a3b8; text-align: center;">
+            Generated via Advocate Autonomous Case Engine &bull; Timestamp: {{ cause_list.target_date }}
+        </div>
+    </body>
+    </html>
+    """
+    return render_template_string(html_template, cause_list=cause_list, settings=settings)
+
 @app.route("/api/check-case", methods=["POST"])
 def check_case():
     """
@@ -100,7 +254,6 @@ def check_case():
     client_phone = data.get("client_phone", "+919876543210")
     force_live = bool(data.get("force_live", False))
     
-    # Uncle's automation preferences
     track_hearing = bool(data.get("track_next_hearing", True))
     track_orders = bool(data.get("track_orders", True))
     track_status = bool(data.get("track_case_status", True))
@@ -235,28 +388,6 @@ def dispatch_alert():
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
         "channel": "WhatsApp"
     })
-
-@app.route("/api/run-agent", methods=["POST"])
-def trigger_agent():
-    """Runs LangGraph Autonomous Vision Agent."""
-    data = request.get_json() or {}
-    cnr = (data.get("cnr") or "DLND020047882015").strip().upper()
-    try:
-        from ecourts_agent_graph import run_agent
-        result = run_agent(cnr)
-        return jsonify({
-            "success": result.get("status") in ["SUCCESS", "COMPLETED"],
-            "status": result.get("status"),
-            "agent_state": {
-                "cnr": cnr,
-                "attempt": result.get("attempt"),
-                "status": result.get("status"),
-                "captcha_text": result.get("captcha_text"),
-                "screenshot": "/static/case_result_full.png" if os.path.exists("C:/Users/mukil/ecourts_automation/case_result_full.png") else None
-            }
-        })
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route("/api/export-case/<cnr>")
 def export_case(cnr):
