@@ -33,12 +33,12 @@
       <button class="nav-item" data-view="view-hearings">
         <span class="nav-item-icon">📋</span>
         <span>Today's Hearings</span>
-        <span class="nav-badge" id="badge-today-hearings">14</span>
+        <span class="nav-badge" id="badge-today-hearings">0</span>
       </button>
       <button class="nav-item" data-view="view-cases">
         <span class="nav-item-icon">📁</span>
         <span>All Cases</span>
-        <span class="nav-badge" id="badge-total-cases">15</span>
+        <span class="nav-badge" id="badge-total-cases">0</span>
       </button>
       <button class="nav-item" data-view="view-clients">
         <span class="nav-item-icon">👥</span>
@@ -51,7 +51,7 @@
       <button class="nav-item" data-view="view-alerts">
         <span class="nav-item-icon">🔔</span>
         <span>Alerts</span>
-        <span class="nav-badge" style="background:#fee2e2; color:#b91c1c;">2</span>
+        <span class="nav-badge" id="badge-alerts-count" style="background:#fee2e2; color:#b91c1c;">0</span>
       </button>
 
       <div class="nav-section-label">MANAGEMENT</div>
@@ -114,8 +114,8 @@
           <strong id="credits-balance-label" style="color:var(--text-main);">176.0</strong>
         </div>
         <div class="header-date">
-          <div class="header-date-day">14 Aug 2026</div>
-          <div class="header-date-sub">Friday</div>
+          <div class="header-date-day" id="header-current-date-day">14 Aug 2026</div>
+          <div class="header-date-sub" id="header-current-date-sub">Friday</div>
         </div>
       </div>
     </header>
@@ -132,8 +132,8 @@
             <div class="kpi-icon-box kpi-icon-blue">🏛️</div>
             <div class="kpi-info">
               <div class="kpi-label">Today's Hearings</div>
-              <div class="kpi-value" id="kpi-today-hearings">14</div>
-              <div class="kpi-sub">Across 6 Courts in Karur</div>
+              <div class="kpi-value" id="kpi-today-hearings">0</div>
+              <div class="kpi-sub" id="kpi-today-hearings-sub">No hearings today</div>
             </div>
           </div>
 
@@ -141,7 +141,7 @@
             <div class="kpi-icon-box kpi-icon-green">👥</div>
             <div class="kpi-info">
               <div class="kpi-label">Active Cases</div>
-              <div class="kpi-value" id="kpi-active-cases">15</div>
+              <div class="kpi-value" id="kpi-active-cases">0</div>
               <div class="kpi-sub">Total Active Monitored Cases</div>
             </div>
           </div>
@@ -150,7 +150,7 @@
             <div class="kpi-icon-box kpi-icon-purple">📅</div>
             <div class="kpi-info">
               <div class="kpi-label">Next 7 Days</div>
-              <div class="kpi-value">7</div>
+              <div class="kpi-value" id="kpi-upcoming-7d">0</div>
               <div class="kpi-sub">Upcoming Hearings</div>
             </div>
           </div>
@@ -159,7 +159,7 @@
             <div class="kpi-icon-box kpi-icon-orange">📁</div>
             <div class="kpi-info">
               <div class="kpi-label">Disposed Cases</div>
-              <div class="kpi-value">6</div>
+              <div class="kpi-value" id="kpi-disposed-cases">0</div>
               <div class="kpi-sub">Total Completed & Closed</div>
             </div>
           </div>
@@ -188,13 +188,7 @@
 
               <!-- Court Filter Chips -->
               <div class="court-chips-row" id="court-chips-row">
-                <button class="court-chip-btn active" data-court="ALL">All Courts <span class="chip-count">14</span></button>
-                <button class="court-chip-btn" data-court="Chief Judicial Magistrate Court, Karur">CJM Karur <span class="chip-count">1</span></button>
-                <button class="court-chip-btn" data-court="Fast Track Court at Magisterial Level, Karur">FTC ML Karur <span class="chip-count">1</span></button>
-                <button class="court-chip-btn" data-court="Mahila Court, Karur">Mahila Court <span class="chip-count">1</span></button>
-                <button class="court-chip-btn" data-court="Principal District Court, Karur">Principal District Court <span class="chip-count">1</span></button>
-                <button class="court-chip-btn" data-court="Principal District Munsif Court, Karur">District Munsif Court <span class="chip-count">2</span></button>
-                <button class="court-chip-btn" data-court="Principal Sub Court, Karur">Principal Sub Court <span class="chip-count">8</span></button>
+                <button class="court-chip-btn active" data-court="ALL">All Courts <span class="chip-count">0</span></button>
               </div>
 
               <!-- Grouped Hearing Board List -->
@@ -216,43 +210,10 @@
                   Calendar →
                 </button>
               </div>
-              <div class="ui-card-body" style="padding: 12px 16px;">
-                <div class="upcoming-item">
-                  <div class="date-badge-box">
-                    <div class="date-badge-day">15</div>
-                    <div class="date-badge-month">AUG</div>
-                  </div>
-                  <div class="upcoming-info">
-                    <h4>Karthik vs Rajesh Kumar</h4>
-                    <p><span class="case-no-pill">OS/842/2024</span> • Arguments</p>
-                    <p style="font-size:0.7rem; color:var(--text-muted);">Principal District Court, Karur • Court Hall II</p>
-                  </div>
+              <div class="ui-card-body" style="padding: 12px 16px;" id="upcoming-hearings-widget-container">
+                <div id="upcoming-hearings-widget-list">
+                  <!-- Populated dynamically via JS -->
                 </div>
-
-                <div class="upcoming-item">
-                  <div class="date-badge-box">
-                    <div class="date-badge-day">15</div>
-                    <div class="date-badge-month">AUG</div>
-                  </div>
-                  <div class="upcoming-info">
-                    <h4>Sangeetha vs Suresh</h4>
-                    <p><span class="case-no-pill">HMA/245/2024</span> • Final Hearing</p>
-                    <p style="font-size:0.7rem; color:var(--text-muted);">Family Court, Karur • Room 3</p>
-                  </div>
-                </div>
-
-                <div class="upcoming-item">
-                  <div class="date-badge-box">
-                    <div class="date-badge-day">16</div>
-                    <div class="date-badge-month">AUG</div>
-                  </div>
-                  <div class="upcoming-info">
-                    <h4>Venkatesh vs State</h4>
-                    <p><span class="case-no-pill">CRP/156/2025</span> • Bail Hearing</p>
-                    <p style="font-size:0.7rem; color:var(--text-muted);">Principal Sub Court, Karur • Room 2</p>
-                  </div>
-                </div>
-
                 <div style="margin-top: 14px; text-align: center;">
                   <button class="btn-ui btn-ui-secondary" style="width: 100%; font-size: 0.76rem;" onclick="switchView('view-calendar')">
                     View Full Calendar Schedule →
@@ -271,33 +232,16 @@
                   View All →
                 </button>
               </div>
-              <div class="ui-card-body" style="padding: 12px 16px;">
-                <div class="alert-card-item alert-red">
-                  <div class="alert-icon">⚠️</div>
-                  <div>
-                    <strong>2 Cases require immediate attention</strong><br>
-                    Service pending / NBW pending in STC/383/2025<br>
-                    <span style="font-size:0.68rem; color:#b91c1c;">2 hours ago</span>
-                  </div>
+              <div class="ui-card-body" style="padding: 12px 16px;" id="alerts-widget-container">
+                <div id="alerts-widget-list">
+                  <!-- Populated dynamically via JS -->
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-                <div class="alert-card-item alert-orange">
-                  <div class="alert-icon">📅</div>
-                  <div>
-                    <strong>Hearing date updated</strong><br>
-                    STC/1035/2023 posted for Evidence on 14 Aug<br>
-                    <span style="font-size:0.68rem; color:#92400e;">4 hours ago</span>
-                  </div>
-                </div>
-
-                <div class="alert-card-item alert-blue">
-                  <div class="alert-icon">💬</div>
-                  <div>
-                    <strong>Daily docket generated</strong><br>
-                    WhatsApp notifications prepared for 14 clients<br>
-                    <span style="font-size:0.68rem; color:#1e40af;">Today morning</span>
-                  </div>
-                </div>
               </div>
             </div>
           </div>

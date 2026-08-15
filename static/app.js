@@ -259,9 +259,24 @@ document.addEventListener("DOMContentLoaded", () => {
       const data = await res.json();
       allCases = data || [];
 
-      if (kpiActiveCases) kpiActiveCases.innerText = allCases.length;
+      // Update KPIs dynamically
+      const activeCasesCount = allCases.filter(c => (c.case_status || "").toUpperCase() !== "DISPOSED").length;
+      const disposedCasesCount = allCases.filter(c => (c.case_status || "").toUpperCase() === "DISPOSED").length;
+
+      if (kpiActiveCases) kpiActiveCases.innerText = activeCasesCount;
       if (badgeTotalCases) badgeTotalCases.innerText = allCases.length;
 
+      const kpiDisposed = document.getElementById("kpi-disposed-cases");
+      if (kpiDisposed) kpiDisposed.innerText = disposedCasesCount;
+
+      const kpi7d = document.getElementById("kpi-upcoming-7d");
+      const todayStr = new Date().toISOString().split("T")[0];
+      const future7d = new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0];
+      const upcoming7dCount = allCases.filter(c => c.next_hearing_date && c.next_hearing_date >= todayStr && c.next_hearing_date <= future7d).length;
+      if (kpi7d) kpi7d.innerText = upcoming7dCount;
+
+      renderUpcomingHearingsWidget(allCases);
+      renderAlertsWidget(allCases);
       renderAllCasesTable(allCases);
       renderClientsTable(allCases);
       renderWhatsAppDockets(allCases);
@@ -269,6 +284,110 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error(e);
     }
   }
+
+  // Render Right Rail: Upcoming Hearings Widget
+  function renderUpcomingHearingsWidget(cases) {
+    const listEl = document.getElementById("upcoming-hearings-widget-list");
+    if (!listEl) return;
+
+    const todayStr = new Date().toISOString().split("T")[0];
+    const upcoming = cases
+      .filter(c => c.next_hearing_date && c.next_hearing_date >= todayStr)
+      .sort((a, b) => a.next_hearing_date.localeCompare(b.next_hearing_date))
+      .slice(0, 4);
+
+    if (upcoming.length === 0) {
+      listEl.innerHTML = `
+        <div style="text-align: center; padding: 18px 8px; color: var(--text-muted); font-size: 0.78rem;">
+          <p>No upcoming hearings scheduled.</p>
+          <p style="font-size: 0.72rem; margin-top: 4px;">Enroll new matters using <strong>"+ Case Intake"</strong>.</p>
+        </div>
+      `;
+      return;
+    }
+
+    listEl.innerHTML = upcoming.map(c => {
+      const parts = (c.next_hearing_date || "").split("-");
+      const day = parts[2] || "15";
+      const monthNum = parseInt(parts[1] || "8", 10);
+      const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+      const month = months[monthNum - 1] || "AUG";
+
+      return `
+        <div class="upcoming-item">
+          <div class="date-badge-box">
+            <div class="date-badge-day">${escapeHtml(day)}</div>
+            <div class="date-badge-month">${escapeHtml(month)}</div>
+          </div>
+          <div class="upcoming-info">
+            <h4>${escapeHtml(c.case_title)}</h4>
+            <p><span class="case-no-pill">${escapeHtml(c.case_number_formatted || c.cnr_number)}</span> &bull; ${escapeHtml(c.case_stage || 'Hearing')}</p>
+            <p style="font-size:0.7rem; color:var(--text-muted);">${escapeHtml(c.court_name || 'District Court')} &bull; ${escapeHtml(c.court_room || '-')}</p>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  // Render Right Rail: Alerts Widget
+  async function renderAlertsWidget(cases) {
+    const listEl = document.getElementById("alerts-widget-list");
+    const badgeAlerts = document.getElementById("badge-alerts-count");
+    if (!listEl) return;
+
+    let alertItems = [];
+
+    // Check for urgent stages like warrants / IA
+    const urgentCases = cases.filter(c => (c.case_stage || "").toLowerCase().includes("warrant") || (c.case_stage || "").toLowerCase().includes("arrest"));
+    if (urgentCases.length > 0) {
+      alertItems.push({
+        type: "red",
+        icon: "⚠️",
+        title: `${urgentCases.length} Matter${urgentCases.length > 1 ? 's' : ''} require immediate attention`,
+        desc: `Service / NBW execution pending`,
+        time: "Active"
+      });
+    }
+
+    // Check recent history logs
+    try {
+      const res = await fetch("/api/history");
+      const logs = await res.json();
+      if (logs && logs.length > 0) {
+        alertItems.push({
+          type: "orange",
+          icon: "📅",
+          title: "Hearing date updated",
+          desc: `${logs[0].cnr_number} shifted to ${logs[0].new_hearing_date}`,
+          time: logs[0].detected_at || "Recent"
+        });
+      }
+    } catch (e) {}
+
+    if (badgeAlerts) badgeAlerts.innerText = alertItems.length;
+
+    if (alertItems.length === 0) {
+      listEl.innerHTML = `
+        <div style="text-align: center; padding: 18px 8px; color: var(--text-muted); font-size: 0.78rem;">
+          <p style="color: var(--success); font-weight: 700;">✓ No active judicial alerts.</p>
+          <p style="font-size: 0.72rem; margin-top: 4px;">System automatically alerts when date shifts occur.</p>
+        </div>
+      `;
+      return;
+    }
+
+    listEl.innerHTML = alertItems.map(a => `
+      <div class="alert-card-item alert-${a.type}">
+        <div class="alert-icon">${a.icon}</div>
+        <div>
+          <strong>${escapeHtml(a.title)}</strong><br>
+          ${escapeHtml(a.desc)}<br>
+          <span style="font-size:0.68rem; opacity: 0.85;">${escapeHtml(a.time)}</span>
+        </div>
+      </div>
+    `).join("");
+  }
+
 
   // Render All Cases Table
   function renderAllCasesTable(cases) {
@@ -320,6 +439,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     const clientList = Object.values(clientMap);
+    if (clientList.length === 0) {
+      clientsTbody.innerHTML = `<tr><td colspan="7" style="padding: 24px; text-align: center; color: var(--text-muted);">No clients registered yet. Use "+ Add Client" to enroll a client.</td></tr>`;
+      return;
+    }
+
     clientsTbody.innerHTML = clientList.map(cl => `
       <tr>
         <td><strong>${escapeHtml(cl.name)}</strong></td>
@@ -340,6 +464,16 @@ document.addEventListener("DOMContentLoaded", () => {
   // Render WhatsApp Dockets Page
   function renderWhatsAppDockets(cases) {
     if (!whatsappDocketsList) return;
+    if (!cases || cases.length === 0) {
+      whatsappDocketsList.innerHTML = `
+        <div style="text-align: center; padding: 30px; color: var(--text-muted); background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+          <p style="font-weight: 700; font-size: 0.9rem;">No WhatsApp notices pending today.</p>
+          <p style="font-size: 0.76rem; margin-top: 4px;">When you add client cases with hearing dates, individual WhatsApp dispatch cards will appear here.</p>
+        </div>
+      `;
+      return;
+    }
+
     whatsappDocketsList.innerHTML = cases.map(c => `
       <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px 18px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; gap: 14px;">
         <div>
@@ -348,7 +482,7 @@ document.addEventListener("DOMContentLoaded", () => {
             Case: <strong>${escapeHtml(c.case_title)}</strong> &bull; Item: <strong>#${escapeHtml(c.item_number || '-')}</strong> (${escapeHtml(c.court_room || '-')}) &bull; Stage: <strong>${escapeHtml(c.case_stage || 'Evidence')}</strong>
           </div>
           <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 2px;">
-            🏛️ ${escapeHtml(c.court_name || '')} &bull; Next Hearing: <strong style="color: var(--primary);">${escapeHtml(c.next_hearing_date || '14-08-2026')}</strong>
+            🏛️ ${escapeHtml(c.court_name || '')} &bull; Next Hearing: <strong style="color: var(--primary);">${escapeHtml(c.next_hearing_date || 'Awaiting Schedule')}</strong>
           </div>
         </div>
         <a href="${getWhatsAppUrl(c)}" target="_blank" class="btn-ui btn-ui-wa" style="flex-shrink: 0;">
@@ -357,6 +491,7 @@ document.addEventListener("DOMContentLoaded", () => {
       </div>
     `).join("");
   }
+
 
   // Full Hearings View
   function renderFullHearingsView() {
