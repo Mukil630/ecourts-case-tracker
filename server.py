@@ -211,7 +211,7 @@ def cause_list_whatsapp():
 def whatsapp_config_route():
     """Manages Meta WhatsApp Cloud API credentials."""
     if request.method == "POST":
-        data = request.get_json() or {}
+        data = request.get_json(silent=True) or {}
         settings = get_advocate_settings()
         settings["meta_phone_number_id"] = data.get("phone_number_id", "").strip()
         settings["meta_access_token"] = data.get("access_token", "").strip()
@@ -232,7 +232,7 @@ def whatsapp_config_route():
 @app.route("/api/whatsapp/test-send", methods=["POST"])
 def test_whatsapp_send_route():
     """Sends a verified test message to verify Meta WhatsApp credentials."""
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     phone = data.get("phone", "").strip()
     msg = data.get("message") or "⚖️ *Official Test Message from R. Anbaiya & Associates Legal Management System.* Your Official Meta WhatsApp Cloud API integration is active and verified!"
     res = send_meta_whatsapp_message(phone, msg)
@@ -241,7 +241,7 @@ def test_whatsapp_send_route():
 @app.route("/api/whatsapp/dispatch-single", methods=["POST"])
 def dispatch_single_whatsapp_route():
     """Dispatches a single client notice via Official Meta WhatsApp Cloud API."""
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     cnr = data.get("cnr_number", "").strip()
     case = get_case_by_cnr(cnr)
     if not case:
@@ -257,7 +257,7 @@ def dispatch_single_whatsapp_route():
 @app.route("/api/whatsapp/dispatch-all", methods=["POST"])
 def dispatch_all_whatsapp_route():
     """Dispatches official notices to all cases scheduled for target_date via Official Meta Cloud API."""
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     target_date = data.get("date", "2026-08-14").strip()
     cause_list = get_daily_cause_list(target_date)
     settings = get_advocate_settings()
