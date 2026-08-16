@@ -1182,9 +1182,41 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Meta WhatsApp Form Listener
+  const metaWaForm = document.getElementById("meta-wa-form");
+  if (metaWaForm) {
+    metaWaForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const phoneIdInput = document.getElementById("meta-phone-id");
+      const tokenInput = document.getElementById("meta-access-token");
+      const wabaIdInput = document.getElementById("meta-waba-id");
+
+      try {
+        const res = await fetch("/api/whatsapp/config", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            phone_number_id: phoneIdInput ? phoneIdInput.value.trim() : "",
+            access_token: tokenInput ? tokenInput.value.trim() : "",
+            waba_id: wabaIdInput ? wabaIdInput.value.trim() : "",
+            auto_dispatch: true
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert("✅ Official Meta WhatsApp Cloud API Credentials Saved Successfully!");
+          loadMetaConfig();
+        }
+      } catch (err) {
+        alert("Failed to save Meta WhatsApp credentials: " + err.message);
+      }
+    });
+  }
+
   // Initial Loads & Start Live Sync Loop
   async function initApp() {
     await loadAdvocateSettings();
+    await loadMetaConfig();
     await loadTrackedCases();
     await loadDailyCauseList("2026-08-14");
     await loadLeads();
@@ -1193,3 +1225,108 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   initApp();
 });
+
+// =========================================================================
+// 7. OFFICIAL META WHATSAPP CLOUD API INTEGRATION
+// =========================================================================
+async function loadMetaConfig() {
+  try {
+    const res = await fetch("/api/whatsapp/config");
+    const data = await res.json();
+    
+    const phoneInput = document.getElementById("meta-phone-id");
+    const tokenInput = document.getElementById("meta-access-token");
+    const wabaInput = document.getElementById("meta-waba-id");
+    const badge = document.getElementById("meta-status-badge");
+
+    if (phoneInput && data.phone_number_id) phoneInput.value = data.phone_number_id;
+    if (wabaInput && data.waba_id) wabaInput.value = data.waba_id;
+    if (tokenInput && data.masked_token) tokenInput.placeholder = `Saved: ${data.masked_token}`;
+
+    if (badge) {
+      if (data.configured) {
+        badge.innerText = "✓ Meta API Active";
+        badge.style.background = "#ecfdf5";
+        badge.style.color = "#065f46";
+      } else {
+        badge.innerText = "Unconfigured";
+        badge.style.background = "#f1f5f9";
+        badge.style.color = "#64748b";
+      }
+    }
+  } catch (e) {}
+}
+
+window.testMetaWhatsApp = async function() {
+  const phone = prompt("Enter your 10-digit WhatsApp phone number to receive the test notice (e.g. 9842112233):");
+  if (!phone) return;
+
+  try {
+    const res = await fetch("/api/whatsapp/test-send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: phone.trim() })
+    });
+    const result = await res.json();
+
+    if (result.success) {
+      alert(`✅ Official Meta WhatsApp Message Sent Successfully to +${result.recipient}!\nMessage ID: ${result.message_id}`);
+    } else {
+      alert(`❌ Meta WhatsApp Send Failed:\n${result.error}`);
+    }
+  } catch (err) {
+    alert("Test failed: " + err.message);
+  }
+};
+
+window.dispatchAllViaMetaCloud = async function() {
+  const btn = document.getElementById("btn-meta-dispatch-all");
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = "⏳ Dispatching via Meta Cloud API...";
+  }
+
+  try {
+    const res = await fetch("/api/whatsapp/dispatch-all", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ date: "2026-08-14" })
+    });
+    const result = await res.json();
+
+    if (result.success) {
+      alert(`✅ Official Meta WhatsApp Dispatch Complete!\n\n• Successfully Sent: ${result.sent} Notices\n• Failed: ${result.failed}\n• Total: ${result.total}`);
+      const modal = document.getElementById("bulk-whatsapp-modal");
+      if (modal) modal.style.display = "none";
+    } else {
+      alert(`❌ Dispatch Failed:\n${result.error || 'Check Meta Cloud API configuration in Settings.'}`);
+    }
+  } catch (err) {
+    alert("Dispatch error: " + err.message);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = "🛡️ Official Meta Cloud Auto-Dispatch (All 14)";
+    }
+  }
+};
+
+window.dispatchSingleViaMeta = async function(cnr) {
+  try {
+    const res = await fetch("/api/whatsapp/dispatch-single", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cnr_number: cnr })
+    });
+    const result = await res.json();
+
+    if (result.success) {
+      alert(`✅ Official Meta Notice sent to client (+${result.recipient})!`);
+    } else {
+      alert(`❌ Failed to send via Meta Cloud API: ${result.error}\nFalling back to 1-Click WhatsApp link.`);
+    }
+  } catch (err) {
+    alert("Error: " + err.message);
+  }
+};
+

@@ -402,6 +402,48 @@
             </form>
           </div>
         </div>
+
+        <!-- Official Meta WhatsApp Business Cloud API Card -->
+        <div class="main-card" style="max-width: 600px; margin-top: 20px;">
+          <div class="main-card-header" style="background: #f8fafc;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 1.2rem;">🛡️</span>
+                <h3 class="main-card-title">Official Meta WhatsApp Cloud API (1,000 Free Msgs/Mo)</h3>
+              </div>
+              <p class="main-card-sub">100% Ban-Safe Official Business WhatsApp Integration directly from Meta</p>
+            </div>
+            <span id="meta-status-badge" style="background: #f1f5f9; color: #64748b; font-size: 0.68rem; font-weight: 800; padding: 2px 8px; border-radius: 12px;">Unconfigured</span>
+          </div>
+
+          <div style="padding: 18px;">
+            <form id="meta-wa-form">
+              <div class="form-group-ui">
+                <label class="form-label-ui">Meta Phone Number ID *</label>
+                <input type="text" id="meta-phone-id" class="form-input-ui" placeholder="e.g. 104829104829104">
+              </div>
+
+              <div class="form-group-ui">
+                <label class="form-label-ui">Permanent Access Token (System User / User Token) *</label>
+                <input type="password" id="meta-access-token" class="form-input-ui" placeholder="EAABwz...">
+              </div>
+
+              <div class="form-group-ui">
+                <label class="form-label-ui">WhatsApp Business Account ID (Optional)</label>
+                <input type="text" id="meta-waba-id" class="form-input-ui" placeholder="e.g. 293810293810293">
+              </div>
+
+              <div style="display: flex; gap: 10px; align-items: center; margin-top: 14px;">
+                <button type="submit" class="btn-ui btn-ui-primary" style="padding: 8px 18px;">
+                  💾 Save Meta API Credentials
+                </button>
+                <button type="button" onclick="testMetaWhatsApp()" class="btn-ui btn-ui-secondary" style="padding: 8px 14px;">
+                  ⚡ Send Test WhatsApp Notice
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       </section>
 
     </main>
@@ -612,11 +654,16 @@
           </table>
         </div>
 
-        <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
           <span style="font-size: 0.75rem; color: var(--text-muted);">14 Notices Ready for Instant Send</span>
-          <button onclick="sendAllQueuedNotices()" class="btn-ui btn-ui-wa" style="padding: 8px 16px; font-weight: 800;">
-            🚀 Open First 3 Notices in WhatsApp
-          </button>
+          <div style="display: flex; gap: 8px;">
+            <button onclick="dispatchAllViaMetaCloud()" id="btn-meta-dispatch-all" class="btn-ui btn-ui-primary" style="padding: 8px 16px; font-weight: 800; background: #0284c7;">
+              🛡️ Official Meta Cloud Auto-Dispatch (All 14)
+            </button>
+            <button onclick="sendAllQueuedNotices()" class="btn-ui btn-ui-wa" style="padding: 8px 14px; font-weight: 800;">
+              🚀 Open in WhatsApp Web
+            </button>
+          </div>
         </div>
       </div>
     </div>

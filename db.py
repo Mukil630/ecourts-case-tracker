@@ -119,24 +119,45 @@ def init_db():
             lawyer_name TEXT DEFAULT 'Advocate R. Anbaiya',
             firm_name TEXT DEFAULT 'R. ANBAIYA & ASSOCIATES',
             lawyer_phone TEXT DEFAULT '+919842112233',
-            default_whatsapp_footer TEXT DEFAULT 'Sent on behalf of R. Anbaiya & Associates, Advocates & Legal Consultants, Karur'
+            default_whatsapp_footer TEXT DEFAULT 'Sent on behalf of R. Anbaiya & Associates, Advocates & Legal Consultants, Karur',
+            meta_phone_number_id TEXT DEFAULT '',
+            meta_access_token TEXT DEFAULT '',
+            meta_waba_id TEXT DEFAULT '',
+            auto_dispatch_meta BOOLEAN DEFAULT 0
         )
     """)
+
+    # Dynamic Column Migration for advocate_settings
+    cursor.execute("PRAGMA table_info(advocate_settings)")
+    existing_adv_cols = [row[1] for row in cursor.fetchall()]
+    adv_cols_to_add = [
+        ("meta_phone_number_id", "TEXT DEFAULT ''"),
+        ("meta_access_token", "TEXT DEFAULT ''"),
+        ("meta_waba_id", "TEXT DEFAULT ''"),
+        ("auto_dispatch_meta", "BOOLEAN DEFAULT 0")
+    ]
+    for col_name, col_type in adv_cols_to_add:
+        if col_name not in existing_adv_cols:
+            try:
+                cursor.execute(f"ALTER TABLE advocate_settings ADD COLUMN {col_name} {col_type}")
+            except Exception:
+                pass
 
     cursor.execute("SELECT COUNT(*) FROM advocate_settings")
     if cursor.fetchone()[0] == 0:
         cursor.execute("""
-            INSERT INTO advocate_settings (lawyer_name, firm_name, lawyer_phone, default_whatsapp_footer)
-            VALUES ('Advocate R. Anbaiya', 'R. ANBAIYA & ASSOCIATES', '+919842112233', 'Sent on behalf of R. Anbaiya & Associates, Advocates & Legal Consultants, Karur')
+            INSERT INTO advocate_settings (lawyer_name, firm_name, lawyer_phone, default_whatsapp_footer, meta_phone_number_id, meta_access_token, meta_waba_id, auto_dispatch_meta)
+            VALUES ('Advocate R. Anbaiya', 'R. ANBAIYA & ASSOCIATES', '+919842112233', 'Sent on behalf of R. Anbaiya & Associates, Advocates & Legal Consultants, Karur', '', '', '', 0)
         """)
     else:
         cursor.execute("""
             UPDATE advocate_settings SET
-                lawyer_name = 'Advocate R. Anbaiya',
-                firm_name = 'R. ANBAIYA & ASSOCIATES',
-                default_whatsapp_footer = 'Sent on behalf of R. Anbaiya & Associates, Advocates & Legal Consultants, Karur'
+                lawyer_name = COALESCE(lawyer_name, 'Advocate R. Anbaiya'),
+                firm_name = COALESCE(firm_name, 'R. ANBAIYA & ASSOCIATES'),
+                default_whatsapp_footer = COALESCE(default_whatsapp_footer, 'Sent on behalf of R. Anbaiya & Associates, Advocates & Legal Consultants, Karur')
             WHERE id = 1
         """)
+
 
     # 5. Case Leads & Inquiries Table
     cursor.execute("""
@@ -527,21 +548,29 @@ def get_advocate_settings() -> Dict[str, Any]:
     return dict(row) if row else {}
 
 def update_advocate_settings(settings: Dict[str, Any]) -> bool:
-    """Updates Uncle's global advocate firm settings."""
-    conn = sqlite3.connect(DB_PATH)
+    """Updates Uncle's global advocate firm settings and Meta WhatsApp credentials."""
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
         UPDATE advocate_settings SET
             lawyer_name = ?,
             firm_name = ?,
             lawyer_phone = ?,
-            default_whatsapp_footer = ?
+            default_whatsapp_footer = ?,
+            meta_phone_number_id = COALESCE(?, meta_phone_number_id),
+            meta_access_token = COALESCE(?, meta_access_token),
+            meta_waba_id = COALESCE(?, meta_waba_id),
+            auto_dispatch_meta = COALESCE(?, auto_dispatch_meta)
         WHERE id = 1
     """, (
-        settings.get("lawyer_name", "Senior Advocate"),
-        settings.get("firm_name", "Law Chambers"),
-        settings.get("lawyer_phone", "+919876543210"),
-        settings.get("default_whatsapp_footer", "Sent via Advocate Case Management Portal")
+        settings.get("lawyer_name", "Advocate R. Anbaiya"),
+        settings.get("firm_name", "R. ANBAIYA & ASSOCIATES"),
+        settings.get("lawyer_phone", "+919842112233"),
+        settings.get("default_whatsapp_footer", "Sent on behalf of R. Anbaiya & Associates, Advocates & Legal Consultants, Karur"),
+        settings.get("meta_phone_number_id"),
+        settings.get("meta_access_token"),
+        settings.get("meta_waba_id"),
+        1 if settings.get("auto_dispatch_meta") else 0
     ))
     conn.commit()
     conn.close()
