@@ -458,7 +458,7 @@
 
         <!-- Official Meta WhatsApp Business Cloud API Card -->
         <div class="main-card" style="max-width: 600px; margin-top: 20px;">
-          <div class="main-card-header" style="background: #f8fafc;">
+          <div class="main-card-header">
             <div>
               <div style="display: flex; align-items: center; gap: 8px;">
                 <span style="font-size: 1.2rem;">🛡️</span>
@@ -466,10 +466,10 @@
               </div>
               <p class="main-card-sub">100% Ban-Safe Official Business WhatsApp Integration directly from Meta</p>
             </div>
-            <span id="meta-status-badge" style="background: #f1f5f9; color: #64748b; font-size: 0.68rem; font-weight: 800; padding: 2px 8px; border-radius: 12px;">Unconfigured</span>
+            <span id="meta-status-badge" style="background: #131d33; color: var(--text-gold); border: 1px solid rgba(245, 158, 11, 0.3); font-size: 0.72rem; font-weight: 800; padding: 3px 10px; border-radius: 12px;">Unconfigured</span>
           </div>
 
-          <div style="padding: 18px;">
+          <div style="padding: 22px;">
             <form id="meta-wa-form">
               <div class="form-group-ui">
                 <label class="form-label-ui">Meta Phone Number ID *</label>
@@ -585,12 +585,12 @@
   <div id="advocate-search-modal" class="modal-overlay" style="display: none;">
     <div class="modal-card" style="max-width: 650px;">
       <div class="modal-header">
-        <h3 style="font-size: 0.96rem; font-weight: 800;">🔍 Search Cases by Advocate Name</h3>
-        <button class="btn-ui btn-ui-secondary" style="padding: 2px 8px; color: #fff; background: transparent; border-color: #334155;" onclick="document.getElementById('advocate-search-modal').style.display='none'">✕</button>
+        <h3 style="font-size: 0.96rem; font-weight: 800; color: #ffffff;">🔍 Search Cases by Advocate Name</h3>
+        <button class="btn-ui btn-ui-secondary" style="padding: 2px 8px; color: #fff; background: transparent; border-color: rgba(255,255,255,0.15);" onclick="document.getElementById('advocate-search-modal').style.display='none'">✕</button>
       </div>
 
       <div class="modal-body">
-        <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 14px;">
+        <div style="background: #080c15; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 16px; margin-bottom: 16px;">
           <div class="form-row-ui">
             <div class="form-group-ui" style="flex: 1.4;">
               <label class="form-label-ui">Advocate Name</label>
@@ -605,7 +605,7 @@
               </select>
             </div>
             <div class="form-group-ui" style="flex: 0.8; display: flex; align-items: flex-end;">
-              <button type="button" class="btn-ui btn-ui-primary" onclick="performAdvocateSearch()" style="width: 100%; padding: 8px 12px;">
+              <button type="button" class="btn-ui btn-ui-primary" onclick="performAdvocateSearch()" style="width: 100%; padding: 10px 12px;">
                 ⚡ Search
               </button>
             </div>
@@ -613,7 +613,7 @@
         </div>
 
         <div id="adv-search-results-container">
-          <p style="text-align: center; color: var(--text-muted); font-size: 0.78rem; padding: 16px 0;">
+          <p style="text-align: center; color: var(--text-muted); font-size: 0.82rem; padding: 16px 0;">
             Click <strong>"Search"</strong> to query cases registered under Advocate R. Anbaiya.
           </p>
         </div>
@@ -622,39 +622,39 @@
   </div>
 
   <!-- ==========================================================================
-       5. JARVIS AGENTIC LEGAL AI SLIDE-OUT DRAWER
+       5. JARVIS AGENTIC LEGAL AI SLIDE-OUT DRAWER (HIGH CONTRAST ONYX THEME)
        ========================================================================== -->
-  <div id="jarvis-ai-drawer" style="position: fixed; right: -420px; top: 0; width: 400px; height: 100vh; background: #ffffff; border-left: 2px solid var(--border-color); box-shadow: -10px 0 25px rgba(0,0,0,0.15); z-index: 120; display: flex; flex-direction: column; transition: right 0.25s ease-in-out;">
-    <div style="padding: 14px 16px; background: #0f172a; color: #ffffff; display: flex; justify-content: space-between; align-items: center;">
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <span style="font-size: 1.2rem;">🤖</span>
+  <div id="jarvis-ai-drawer" style="position: fixed; right: -460px; top: 0; width: 440px; max-width: 95vw; height: 100vh; background: #080c15; border-left: 2px solid var(--border-gold); box-shadow: -20px 0 50px rgba(0,0,0,0.7); z-index: 120; display: flex; flex-direction: column; transition: right 0.28s cubic-bezier(0.16, 1, 0.3, 1);">
+    <div style="padding: 16px 20px; background: #04070e; border-bottom: 1px solid var(--border-color); color: #ffffff; display: flex; justify-content: space-between; align-items: center;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 1.3rem;">🤖</span>
         <div>
-          <h4 style="font-size: 0.9rem; font-weight: 800;">JARVIS Legal AI Assistant</h4>
-          <span style="font-size: 0.68rem; color: #38bdf8;">Autonomous Chamber Co-Pilot</span>
+          <h4 style="font-size: 0.95rem; font-weight: 800; color: #ffffff;">JARVIS Legal AI Assistant</h4>
+          <span style="font-size: 0.72rem; color: #38bdf8; font-weight: 600;">Autonomous Chamber Co-Pilot</span>
         </div>
       </div>
-      <button onclick="toggleJarvisDrawer()" style="background: transparent; border: none; color: #ffffff; font-size: 1.1rem; cursor: pointer;">✕</button>
+      <button onclick="toggleJarvisDrawer()" style="background: transparent; border: none; color: #ffffff; font-size: 1.2rem; cursor: pointer; padding: 4px;">✕</button>
     </div>
 
     <!-- Quick Action Chips -->
-    <div style="padding: 10px 14px; background: #f8fafc; border-bottom: 1px solid var(--border-color); display: flex; gap: 6px; overflow-x: auto; white-space: nowrap;">
-      <button onclick="sendAiPrompt('Show urgent priority cases today')" style="padding: 4px 8px; font-size: 0.7rem; border: 1px solid var(--border-color); border-radius: 12px; background: #fff; cursor: pointer;">🚨 Urgent Cases</button>
-      <button onclick="sendAiPrompt('List Bank of Baroda suits')" style="padding: 4px 8px; font-size: 0.7rem; border: 1px solid var(--border-color); border-radius: 12px; background: #fff; cursor: pointer;">🏦 Bank Cases</button>
-      <button onclick="sendAiPrompt('Which court room should I visit first?')" style="padding: 4px 8px; font-size: 0.7rem; border: 1px solid var(--border-color); border-radius: 12px; background: #fff; cursor: pointer;">🏛️ Court Strategy</button>
-      <button onclick="sendAiPrompt('Show all client inquiries')" style="padding: 4px 8px; font-size: 0.7rem; border: 1px solid var(--border-color); border-radius: 12px; background: #fff; cursor: pointer;">👥 Leads</button>
+    <div style="padding: 12px 16px; background: #0b1120; border-bottom: 1px solid var(--border-color); display: flex; gap: 8px; overflow-x: auto; white-space: nowrap;">
+      <button onclick="sendAiPrompt('Show urgent priority cases today')" class="btn-ui btn-ui-secondary" style="padding: 5px 10px; font-size: 0.72rem; border-radius: 14px; font-weight: 700;">🚨 Urgent Cases</button>
+      <button onclick="sendAiPrompt('List Bank of Baroda suits')" class="btn-ui btn-ui-secondary" style="padding: 5px 10px; font-size: 0.72rem; border-radius: 14px; font-weight: 700;">🏦 Bank Cases</button>
+      <button onclick="sendAiPrompt('Which court room should I visit first?')" class="btn-ui btn-ui-secondary" style="padding: 5px 10px; font-size: 0.72rem; border-radius: 14px; font-weight: 700;">🏛️ Court Strategy</button>
+      <button onclick="sendAiPrompt('Show all client inquiries')" class="btn-ui btn-ui-secondary" style="padding: 5px 10px; font-size: 0.72rem; border-radius: 14px; font-weight: 700;">👥 Leads</button>
     </div>
 
     <!-- Chat History Stream -->
-    <div id="ai-chat-history" style="flex: 1; padding: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; font-size: 0.82rem;">
-      <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: var(--radius-sm); padding: 10px 12px; color: #0369a1;" id="jarvis-initial-greeting">
-        <strong>⚡ JARVIS AI Online:</strong> Ready to assist, Advocate R. Anbaiya! Live access to your cases vault, cause list, and client WhatsApp contacts.
+    <div id="ai-chat-history" style="flex: 1; padding: 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; font-size: 0.85rem;">
+      <div style="background: rgba(14, 165, 233, 0.12); border: 1px solid rgba(14, 165, 233, 0.35); border-radius: var(--radius-sm); padding: 12px 14px; color: #38bdf8; line-height: 1.5;" id="jarvis-initial-greeting">
+        <strong style="color: #ffffff;">⚡ JARVIS AI Online:</strong> Ready to assist, Advocate R. Anbaiya! Live access to your cases vault, cause list, and client WhatsApp contacts.
       </div>
     </div>
 
     <!-- Input Bar -->
-    <div style="padding: 12px; border-top: 1px solid var(--border-color); background: #ffffff; display: flex; gap: 6px;">
+    <div style="padding: 14px 16px; border-top: 1px solid var(--border-color); background: #04070e; display: flex; gap: 8px;">
       <input type="text" id="ai-prompt-input" class="form-input-ui" placeholder="Ask JARVIS (e.g. Show urgent cases today)..." onkeypress="if(event.key==='Enter') sendAiMessage()">
-      <button onclick="sendAiMessage()" class="btn-ui btn-ui-primary" style="padding: 6px 12px;">➤</button>
+      <button onclick="sendAiMessage()" class="btn-ui btn-ui-primary" style="padding: 8px 16px;">➤</button>
     </div>
   </div>
 
@@ -665,8 +665,8 @@
   <div id="case-detail-drawer" class="case-drawer-panel">
     <div class="case-drawer-header">
       <div>
-        <span id="drawer-case-no-badge" style="background: #0284c7; color: #fff; font-size: 0.72rem; padding: 2px 8px; border-radius: 4px; font-weight: 800;">Case Info</span>
-        <h4 id="drawer-case-header-title" style="font-size: 0.95rem; font-weight: 800; margin-top: 4px; color: #fff;">Case Details Inspector</h4>
+        <span id="drawer-case-no-badge" style="background: linear-gradient(135deg, #fbbf24, #d97706); color: #090d16; font-size: 0.74rem; padding: 3px 10px; border-radius: 4px; font-weight: 800;">Case Info</span>
+        <h4 id="drawer-case-header-title" style="font-size: 1.05rem; font-weight: 800; margin-top: 4px; color: #ffffff;">Case Details Inspector</h4>
       </div>
       <button onclick="closeCaseDrawer()" style="background: transparent; border: none; color: #ffffff; font-size: 1.2rem; cursor: pointer;">✕</button>
     </div>
@@ -680,25 +680,25 @@
        7. BULK WHATSAPP DISPATCH MODAL
        ========================================================================== -->
   <div id="bulk-whatsapp-modal" class="modal-overlay" style="display: none;">
-    <div class="modal-card" style="max-width: 650px;">
+    <div class="modal-card" style="max-width: 680px;">
       <div class="modal-header">
-        <h3 id="bulk-wa-modal-title" style="font-size: 0.96rem; font-weight: 800;">📲 Dispatch WhatsApp Notices to Clients</h3>
-        <button class="btn-ui btn-ui-secondary" style="padding: 2px 8px; color: #fff; background: transparent; border-color: #334155;" onclick="document.getElementById('bulk-whatsapp-modal').style.display='none'">✕</button>
+        <h3 id="bulk-wa-modal-title" style="font-size: 1rem; font-weight: 800; color: #ffffff;">📲 Dispatch WhatsApp Notices to Clients</h3>
+        <button class="btn-ui btn-ui-secondary" style="padding: 2px 8px; color: #fff; background: transparent; border-color: rgba(255,255,255,0.15);" onclick="document.getElementById('bulk-whatsapp-modal').style.display='none'">✕</button>
       </div>
 
       <div class="modal-body">
-        <p id="bulk-wa-modal-subtitle" style="font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 12px;">
+        <p id="bulk-wa-modal-subtitle" style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 14px;">
           Send personalized hearing docket notices to all clients scheduled for this hearing date.
         </p>
 
-        <div style="max-height: 280px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm); margin-bottom: 14px;">
-          <table class="hearing-table" style="font-size: 0.78rem;">
+        <div style="max-height: 320px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm); margin-bottom: 16px; background: #080c15;">
+          <table class="hearing-table" style="font-size: 0.84rem;">
             <thead>
-              <tr style="background: #f1f5f9;">
-                <th style="width: 40px; text-align: center;">Item</th>
-                <th>Client Name & Phone</th>
-                <th>Case & Room</th>
-                <th style="text-align: right;">Action</th>
+              <tr style="background: #04070e; border-bottom: 1px solid var(--border-color);">
+                <th style="width: 50px; text-align: center; color: var(--text-gold);">Item</th>
+                <th style="color: var(--text-gold);">Client Name & Phone</th>
+                <th style="color: var(--text-gold);">Case & Room</th>
+                <th style="text-align: right; color: var(--text-gold);">Action</th>
               </tr>
             </thead>
             <tbody id="bulk-wa-tbody">
@@ -707,13 +707,13 @@
           </table>
         </div>
 
-        <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
-          <span id="bulk-wa-notices-ready-label" style="font-size: 0.75rem; color: var(--text-muted);">Notices Ready for Instant Send</span>
-          <div style="display: flex; gap: 8px;">
-            <button onclick="dispatchAllViaMetaCloud()" id="btn-meta-dispatch-all" class="btn-ui btn-ui-primary" style="padding: 8px 16px; font-weight: 800; background: #0284c7;">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <span id="bulk-wa-notices-ready-label" style="font-size: 0.78rem; color: var(--text-muted); font-weight: 600;">Notices Ready for Instant Send</span>
+          <div style="display: flex; gap: 10px;">
+            <button onclick="dispatchAllViaMetaCloud()" id="btn-meta-dispatch-all" class="btn-ui btn-ui-primary" style="padding: 9px 18px; font-weight: 800;">
               🛡️ Official Meta Cloud Auto-Dispatch
             </button>
-            <button onclick="sendAllQueuedNotices()" class="btn-ui btn-ui-wa" style="padding: 8px 14px; font-weight: 800;">
+            <button onclick="sendAllQueuedNotices()" class="btn-ui btn-ui-wa" style="padding: 9px 16px; font-weight: 800;">
               🚀 Open in WhatsApp Web
             </button>
           </div>
@@ -722,7 +722,7 @@
     </div>
   </div>
 
-  <script src="/static/app.js?v=12.0"></script>
+  <script src="/static/app.js?v=13.0"></script>
 </body>
 </html>
 

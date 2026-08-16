@@ -233,32 +233,32 @@ window.openCaseDrawer = function(cnrNumber) {
   if (bodyContent) {
     bodyContent.innerHTML = `
       <!-- 0. SIMPLE CASE MEANING & TODAY'S COURT ACTION (Plain Language) -->
-      <div class="drawer-section-card" style="background: #f0fdf4; border: 1.5px solid #86efac; border-left: 4px solid #16a34a;">
-        <div class="drawer-section-title" style="color: #166534; border-color: #bbf7d0; display:flex; justify-content:space-between; align-items:center;">
+      <div class="drawer-section-card" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.35); border-left: 4px solid var(--success);">
+        <div class="drawer-section-title" style="color: #34d399; border-color: rgba(16, 185, 129, 0.2); display:flex; justify-content:space-between; align-items:center;">
           <span>💡 SIMPLE CASE EXPLANATION & ACTION</span>
-          <span style="font-size:0.65rem; background:#dcfce7; color:#15803d; padding:1px 6px; border-radius:4px; font-weight:800;">PLAIN TAMIL/ENG</span>
+          <span style="font-size:0.68rem; background:rgba(16, 185, 129, 0.2); color:#34d399; padding:2px 8px; border-radius:4px; font-weight:800;">PLAIN TAMIL/ENG</span>
         </div>
-        <div style="font-size: 0.82rem; font-weight: 800; color: #14532d; margin-bottom: 5px;">
+        <div style="font-size: 0.88rem; font-weight: 800; color: #ffffff; margin-bottom: 6px;">
           ${escapeHtml(plainInfo.category)}
         </div>
-        <div style="font-size: 0.77rem; color: #166534; line-height: 1.45; margin-bottom: 8px;">
-          <strong>📖 Case Summary:</strong> ${escapeHtml(plainInfo.meaning)}
+        <div style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 10px;">
+          <strong style="color: #ffffff;">📖 Case Summary:</strong> ${escapeHtml(plainInfo.meaning)}
         </div>
-        <div style="font-size: 0.77rem; color: #065f46; line-height: 1.45; background: #ffffff; border: 1px solid #bbf7d0; border-radius: 4px; padding: 6px 8px;">
-          ⚡ <strong>Today's Court Action:</strong> ${escapeHtml(plainInfo.todayAction)}
+        <div style="font-size: 0.82rem; color: #34d399; line-height: 1.5; background: #04070e; border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 6px; padding: 10px 12px;">
+          ⚡ <strong style="color: #ffffff;">Today's Court Action:</strong> ${escapeHtml(plainInfo.todayAction)}
         </div>
       </div>
 
       <!-- 0.5 SMART SLEEP & MONITORING STATUS CARD -->
-      <div class="drawer-section-card" style="background: #f8fafc; border: 1px solid #cbd5e1;">
+      <div class="drawer-section-card" style="background: #080c15; border: 1px solid var(--border-gold);">
         <div class="drawer-section-title">🧠 SMART SLEEP & AUTO-SYNC RADAR</div>
-        <div style="display:flex; align-items:center; gap:8px;">
-          <span style="font-size:1.1rem;">${c.next_hearing_date === getSelectedOrTodayDate() ? '🔔' : '😴'}</span>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span style="font-size:1.4rem;">${c.next_hearing_date === getSelectedOrTodayDate() ? '🔔' : '😴'}</span>
           <div>
-            <div style="font-size:0.8rem; font-weight:800; color:var(--text-main);">
+            <div style="font-size:0.88rem; font-weight:800; color:#ffffff;">
               ${c.next_hearing_date === getSelectedOrTodayDate() ? 'Active In Court Today (Item #' + (c.item_number || '-') + ')' : 'Smart Sleeping until ' + (c.next_hearing_date || 'Schedule')}
             </div>
-            <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">
+            <div style="font-size:0.78rem; color:var(--text-muted); margin-top:3px; line-height:1.4;">
               ${c.next_hearing_date === getSelectedOrTodayDate() ? 'Currently listed on today\'s hearing board.' : 'Zero credits wasted daily. System will automatically wake up 2 days before ' + (c.next_hearing_date || 'date') + ' to scan tomorrow\'s cause list!'}
             </div>
           </div>
@@ -275,11 +275,11 @@ window.openCaseDrawer = function(cnrNumber) {
         </div>
         <div class="drawer-field-row">
           <span class="drawer-field-label">Court Room:</span>
-          <span class="drawer-field-val" style="color:var(--primary); font-weight:800;">${escapeHtml(c.court_room || '-')}</span>
+          <span class="drawer-field-val" style="color:var(--text-gold); font-weight:800;">${escapeHtml(c.court_room || '-')}</span>
         </div>
         <div class="drawer-field-row">
           <span class="drawer-field-label">Item Number:</span>
-          <span class="drawer-field-val" style="font-size:0.95rem; color:#0284c7; font-weight:800;">#${escapeHtml(c.item_number || '-')}</span>
+          <span class="drawer-field-val" style="font-size:0.95rem; color:#38bdf8; font-weight:800;">#${escapeHtml(c.item_number || '-')}</span>
         </div>
         <div class="drawer-field-row">
           <span class="drawer-field-label">Presiding Judge:</span>
@@ -287,7 +287,7 @@ window.openCaseDrawer = function(cnrNumber) {
         </div>
         <div class="drawer-field-row">
           <span class="drawer-field-label">16-Digit CNR:</span>
-          <span class="drawer-field-val"><code style="font-family:var(--font-mono); font-size:0.75rem;">${escapeHtml(c.cnr_number)}</code></span>
+          <span class="drawer-field-val"><code style="font-family:var(--font-mono); font-size:0.75rem; color:var(--text-gold); background:rgba(245,158,11,0.1); padding:2px 6px; border-radius:4px; border:1px solid rgba(245,158,11,0.25);">${escapeHtml(c.cnr_number)}</code></span>
         </div>
       </div>
 
@@ -297,7 +297,7 @@ window.openCaseDrawer = function(cnrNumber) {
         <div class="drawer-section-title">👤 Client Contact & Role</div>
         <div class="drawer-field-row">
           <span class="drawer-field-label">Client Name:</span>
-          <span class="drawer-field-val">${escapeHtml(c.client_name || 'Client')}</span>
+          <span class="drawer-field-val" style="color:#ffffff; font-weight:700;">${escapeHtml(c.client_name || 'Client')}</span>
         </div>
         <div class="drawer-field-row">
           <span class="drawer-field-label">Litigant Role:</span>
@@ -305,11 +305,11 @@ window.openCaseDrawer = function(cnrNumber) {
         </div>
         <div class="drawer-field-row">
           <span class="drawer-field-label">WhatsApp Phone:</span>
-          <span class="drawer-field-val"><strong>${escapeHtml(c.client_phone || '-')}</strong></span>
+          <span class="drawer-field-val"><strong style="color:var(--text-gold);">${escapeHtml(c.client_phone || '-')}</strong></span>
         </div>
         <div class="drawer-field-row">
           <span class="drawer-field-label">Parties:</span>
-          <span class="drawer-field-val" style="font-size:0.75rem;">${escapeHtml(c.parties || c.case_title)}</span>
+          <span class="drawer-field-val" style="font-size:0.78rem; color:var(--text-secondary);">${escapeHtml(c.parties || c.case_title)}</span>
         </div>
       </div>
 
@@ -318,7 +318,7 @@ window.openCaseDrawer = function(cnrNumber) {
         <div class="drawer-section-title">📅 Hearing Status & Stage</div>
         <div class="drawer-field-row">
           <span class="drawer-field-label">Next Hearing Date:</span>
-          <span class="drawer-field-val" style="color:var(--primary); font-size:0.9rem;">${escapeHtml(c.next_hearing_date || 'Awaiting Date')}</span>
+          <span class="drawer-field-val" style="color:var(--text-gold); font-size:0.92rem; font-weight:800;">${escapeHtml(c.next_hearing_date || 'Awaiting Date')}</span>
         </div>
         <div class="drawer-field-row">
           <span class="drawer-field-label">Hearing Stage:</span>
@@ -326,7 +326,7 @@ window.openCaseDrawer = function(cnrNumber) {
         </div>
         <div class="drawer-field-row">
           <span class="drawer-field-label">Advocate Notes:</span>
-          <span class="drawer-field-val" style="color:#b45309;">${escapeHtml(c.notes || 'None')}</span>
+          <span class="drawer-field-val" style="color:var(--text-gold); font-weight:600;">${escapeHtml(c.notes || 'None')}</span>
         </div>
       </div>
 
@@ -818,25 +818,25 @@ function renderHearingBoard(data, filterCourt = "ALL") {
                   <div class="item-badge-cell" style="cursor: pointer;">${escapeHtml(c.item_number || '-')}</div>
                 </td>
                 <td class="clickable-case-cell" onclick="openCaseDrawer('${escapeHtml(c.cnr_number)}')" style="max-width: 400px;">
-                  <div class="case-title-text" style="font-size: 0.92rem; margin-bottom: 4px;">${escapeHtml(c.case_title)}</div>
-                  <div class="case-sub-text" style="font-size: 0.78rem;">
-                    <strong style="color: #0f172a; font-family: var(--font-mono); font-weight: 700;">${escapeHtml(c.case_number_formatted || c.cnr_number)}</strong>
-                    ${c.notes ? ` &bull; <span style="color: #b45309; font-weight: 600; background: #fef3c7; padding: 2px 6px; border-radius: 4px;">Note: ${escapeHtml(c.notes)}</span>` : ''}
+                  <div class="case-title-text" style="font-size: 0.95rem; margin-bottom: 4px; color: #ffffff;">${escapeHtml(c.case_title)}</div>
+                  <div class="case-sub-text" style="font-size: 0.8rem;">
+                    <strong style="color: var(--text-gold); font-family: var(--font-mono); font-weight: 800; font-size: 0.88rem;">${escapeHtml(c.case_number_formatted || c.cnr_number)}</strong>
+                    ${c.notes ? ` &bull; <span style="color: #fef08a; font-weight: 600; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); padding: 2px 8px; border-radius: 4px; font-size: 0.72rem;">Note: ${escapeHtml(c.notes)}</span>` : ''}
                   </div>
                 </td>
                 <td style="min-width: 140px;">
-                  <strong style="color: var(--text-main); font-size: 0.88rem; display: block; margin-bottom: 2px;">${escapeHtml(c.client_name || 'Client')}</strong>
-                  <div style="font-size: 0.76rem; color: var(--text-muted); font-family: var(--font-mono);">${escapeHtml(c.client_phone || '-')}</div>
+                  <strong style="color: #ffffff; font-size: 0.9rem; display: block; margin-bottom: 2px;">${escapeHtml(c.client_name || 'Client')}</strong>
+                  <div style="font-size: 0.78rem; color: var(--text-gold); font-family: var(--font-mono); font-weight: 600;">${escapeHtml(c.client_phone || '-')}</div>
                 </td>
                 <td>
                   <span class="badge ${getBadgeClass(c.case_stage)}">${escapeHtml(c.case_stage || 'Evidence')}</span>
                 </td>
                 <td style="min-width: 160px;">
-                  <div class="room-badge">${escapeHtml(c.court_room || '-')}</div>
-                  <div style="font-size: 0.74rem; color: var(--text-muted); line-height: 1.35;">${escapeHtml(c.judge_name || '-')}</div>
+                  <div class="room-badge" style="color: #ffffff; font-weight: 800;">${escapeHtml(c.court_room || '-')}</div>
+                  <div style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.35;">${escapeHtml(c.judge_name || '-')}</div>
                 </td>
                 <td style="text-align: right; min-width: 130px;">
-                  <a href="${getWhatsAppUrl(c)}" target="_blank" class="btn-ui btn-ui-wa" style="padding: 6px 12px; font-size: 0.78rem;">
+                  <a href="${getWhatsAppUrl(c)}" target="_blank" class="btn-ui btn-ui-wa" style="padding: 7px 14px; font-size: 0.8rem; font-weight: 800;">
                     📲 Send Notice
                   </a>
                 </td>
@@ -900,32 +900,32 @@ function renderAllCasesTable(cases) {
   tbody.innerHTML = cases.map(c => `
     <tr class="clickable-case-row">
       <td class="clickable-case-cell" onclick="openCaseDrawer('${escapeHtml(c.cnr_number)}')">
-        <strong style="font-size: 0.9rem; color: var(--text-main); display: block; margin-bottom: 2px;">${escapeHtml(c.client_name || 'Client')}</strong>
-        <div style="font-size: 0.75rem; color: var(--text-muted);">${escapeHtml(c.litigant_role || 'Litigant')}</div>
+        <strong style="font-size: 0.92rem; color: #ffffff; display: block; margin-bottom: 2px; font-weight: 700;">${escapeHtml(c.client_name || 'Client')}</strong>
+        <div style="font-size: 0.76rem; color: var(--text-gold); font-weight: 600;">${escapeHtml(c.litigant_role || 'Litigant')}</div>
       </td>
       <td class="clickable-case-cell" onclick="openCaseDrawer('${escapeHtml(c.cnr_number)}')" style="max-width: 320px;">
-        <div class="case-title-text" style="font-size: 0.9rem; margin-bottom: 3px;">${escapeHtml(c.case_title)}</div>
-        <div style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;" title="${escapeHtml(c.parties || '')}">
+        <div class="case-title-text" style="font-size: 0.92rem; margin-bottom: 3px; color: #ffffff;">${escapeHtml(c.case_title)}</div>
+        <div style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;" title="${escapeHtml(c.parties || '')}">
           ${escapeHtml(c.parties || '')}
         </div>
       </td>
       <td onclick="openCaseDrawer('${escapeHtml(c.cnr_number)}')">
-        <strong style="font-size: 0.88rem; color: #0f172a;">${escapeHtml(c.case_number_formatted || '-')}</strong>
+        <strong style="font-size: 0.9rem; color: #ffffff; font-weight: 800;">${escapeHtml(c.case_number_formatted || '-')}</strong>
       </td>
       <td onclick="openCaseDrawer('${escapeHtml(c.cnr_number)}')">
-        <code style="font-family: var(--font-mono); font-size: 0.78rem; color: var(--primary); font-weight: 700; background: #f0f9ff; padding: 3px 6px; border-radius: 4px; border: 1px solid #bae6fd;">${escapeHtml(c.cnr_number)}</code>
+        <code style="font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-gold); font-weight: 700; background: rgba(245,158,11,0.1); padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(245,158,11,0.25);">${escapeHtml(c.cnr_number)}</code>
       </td>
-      <td style="font-size: 0.84rem; color: #334155; max-width: 220px;">
+      <td style="font-size: 0.86rem; color: var(--text-secondary); max-width: 220px;">
         ${escapeHtml(c.court_name || 'District Court')}
       </td>
       <td>
-        <strong style="color: var(--primary); font-size: 0.88rem; display: block;">${escapeHtml(c.next_hearing_date || 'Awaiting Date')}</strong>
+        <strong style="color: var(--text-gold); font-size: 0.9rem; display: block; font-weight: 800;">${escapeHtml(c.next_hearing_date || 'Awaiting Date')}</strong>
         <div style="margin-top: 4px;">
           ${c.next_hearing_date === todayStr 
-            ? '<span style="background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 800; display: inline-block;">🔔 Hearing Today</span>'
+            ? '<span style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35); padding: 3px 10px; border-radius: 12px; font-size: 0.72rem; font-weight: 800; display: inline-block;">🔔 Hearing Today</span>'
             : (c.case_status === 'DISPOSED' 
-                ? '<span style="background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; display: inline-block;">🏁 Disposed</span>'
-                : '<span style="background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; display: inline-block;">😴 Sleeping until ' + (c.next_hearing_date || 'date') + '</span>')}
+                ? '<span style="background: rgba(100, 116, 139, 0.15); color: #94a3b8; border: 1px solid rgba(100, 116, 139, 0.3); padding: 3px 10px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; display: inline-block;">🏁 Disposed</span>'
+                : '<span style="background: rgba(255, 255, 255, 0.04); color: var(--text-muted); border: 1px solid rgba(255, 255, 255, 0.08); padding: 3px 10px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; display: inline-block;">😴 Sleeping until ' + (c.next_hearing_date || 'date') + '</span>')}
         </div>
       </td>
       <td>
@@ -934,10 +934,10 @@ function renderAllCasesTable(cases) {
 
       <td style="text-align: right;">
         <div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center;">
-          <a href="${getWhatsAppUrl(c)}" target="_blank" class="table-action-btn" style="background: #dcfce7; color: #15803d; border-color: #bbf7d0;" title="Send WhatsApp Notice">💬</a>
+          <a href="${getWhatsAppUrl(c)}" target="_blank" class="table-action-btn" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16, 185, 129, 0.3);" title="Send WhatsApp Notice">💬</a>
           <button onclick="syncSingleCase('${escapeHtml(c.cnr_number)}')" class="table-action-btn" title="Check Live eCourts">🔄</button>
           <a href="/api/export-case/${encodeURIComponent(c.cnr_number)}" target="_blank" class="table-action-btn" title="Print Case Sheet">🖨️</a>
-          <button onclick="deleteSingleCase('${escapeHtml(c.cnr_number)}')" class="table-action-btn" style="color: #b91c1c;" title="Remove Case">🗑️</button>
+          <button onclick="deleteSingleCase('${escapeHtml(c.cnr_number)}')" class="table-action-btn" style="color: #f87171;" title="Remove Case">🗑️</button>
         </div>
       </td>
     </tr>
@@ -1110,12 +1110,12 @@ window.selectCalendarDate = function(dateStr) {
   }
 
   list.innerHTML = matched.map(c => `
-    <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 8px 12px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+    <div style="background: #080c15; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px 16px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
       <div>
-        <strong>${escapeHtml(c.case_title)}</strong> (${escapeHtml(c.client_name || 'Client')})<br>
-        <span style="font-size: 0.72rem; color: var(--text-muted);">${escapeHtml(c.court_name || '')} &bull; Item #${escapeHtml(c.item_number || '-')} &bull; ${escapeHtml(c.case_stage || 'Hearing')}</span>
+        <strong style="color: #ffffff; font-size: 0.9rem;">${escapeHtml(c.case_title)}</strong> <span style="color: var(--text-gold); font-weight: 700;">(${escapeHtml(c.client_name || 'Client')})</span><br>
+        <span style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 2px; display: inline-block;">${escapeHtml(c.court_name || '')} &bull; Item #${escapeHtml(c.item_number || '-')} &bull; <span style="color: #38bdf8;">${escapeHtml(c.case_stage || 'Hearing')}</span></span>
       </div>
-      <a href="${getWhatsAppUrl(c)}" target="_blank" class="btn-ui btn-ui-wa" style="padding: 3px 8px; font-size: 0.7rem;">💬 WhatsApp</a>
+      <a href="${getWhatsAppUrl(c)}" target="_blank" class="btn-ui btn-ui-wa" style="padding: 5px 12px; font-size: 0.76rem; font-weight: 800;">💬 WhatsApp</a>
     </div>
   `).join("");
 };

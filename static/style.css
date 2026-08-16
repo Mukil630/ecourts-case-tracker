@@ -816,6 +816,11 @@ body {
   box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
 }
 
+select.form-input-ui option {
+  background: #0e1526;
+  color: #ffffff;
+}
+
 .form-row-ui {
   display: flex;
   gap: 14px;
@@ -827,8 +832,12 @@ body {
 }
 
 .clickable-case-cell:hover .case-title-text {
-  color: var(--text-gold);
+  color: var(--text-gold) !important;
   text-decoration: underline;
+}
+
+.clickable-case-row:hover {
+  background-color: rgba(245, 158, 11, 0.05) !important;
 }
 
 /* ==========================================================================
