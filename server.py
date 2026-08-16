@@ -21,9 +21,27 @@ if hasattr(sys.stdout, 'reconfigure'):
 app = Flask(__name__, static_folder="static")
 CORS(app)
 
+import threading
+import requests
+
 # Initialize DB and start Background Auto-Poller on startup
 init_db()
 sync_worker.start()
+
+def _keep_alive_loop():
+    """Keeps Render Free Tier awake 24/7 by periodically pinging the public URL."""
+    ext_url = os.environ.get("RENDER_EXTERNAL_URL", "https://ecourts-case-tracker.onrender.com")
+    time.sleep(30)
+    while True:
+        try:
+            requests.get(f"{ext_url.rstrip('/')}/api/live-status", timeout=15)
+        except Exception:
+            pass
+        time.sleep(600)  # Ping every 10 minutes
+
+keep_alive_thread = threading.Thread(target=_keep_alive_loop, daemon=True)
+keep_alive_thread.start()
+
 
 @app.route("/")
 def index():
