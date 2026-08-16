@@ -502,16 +502,7 @@ def get_daily_cause_list(target_date: str = "") -> Dict[str, Any]:
         "court_summaries": court_summaries
     }
 
-def delete_case(cnr_number: str) -> bool:
-    """Deletes a case and its related logs from SQLite."""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM cases WHERE cnr_number = ?", (cnr_number,))
-    cursor.execute("DELETE FROM case_history_logs WHERE cnr_number = ?", (cnr_number,))
-    conn.commit()
-    deleted = cursor.rowcount > 0
-    conn.close()
-    return deleted
+
 
 def get_case_history_logs(limit: int = 50) -> List[Dict[str, Any]]:
     """Fetches case hearing change audit logs."""

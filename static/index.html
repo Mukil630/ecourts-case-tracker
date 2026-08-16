@@ -9,11 +9,64 @@
 <body>
 
   <!-- ==========================================================================
+       0. CLEAN & ELEGANT STARTUP SPLASH / VIDEO INTRO CONTAINER
+       ========================================================================== -->
+  <div id="app-startup-splash" class="startup-splash-overlay" onclick="dismissStartupSplash()">
+    <!-- Video Player (Auto-plays if intro.mp4 is provided) -->
+    <video id="splash-video" class="splash-video-element" playsinline muted autoplay style="display: none;">
+      <source src="/static/intro.mp4" type="video/mp4">
+    </video>
+
+    <!-- Clean Gold Emblem Loader -->
+    <div id="splash-simple-content" class="splash-simple-content">
+      <div class="splash-simple-emblem">
+        <svg viewBox="0 0 100 100" class="gold-crest-svg" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#fef08a" />
+              <stop offset="35%" stop-color="#fbbf24" />
+              <stop offset="70%" stop-color="#d97706" />
+              <stop offset="100%" stop-color="#92400e" />
+            </linearGradient>
+          </defs>
+          <path d="M35 22L50 14L65 22L58 26L50 20L42 26L35 22Z" fill="url(#goldGrad)" />
+          <path d="M48 24H52V76H48V24Z" fill="url(#goldGrad)" />
+          <path d="M22 34H78V37H22V34Z" fill="url(#goldGrad)" />
+          <circle cx="50" cy="35.5" r="4.5" fill="url(#goldGrad)" />
+          <path d="M26 37L16 56H36L26 37Z" stroke="url(#goldGrad)" stroke-width="1.8" fill="none" />
+          <path d="M14 56C14 62 38 62 38 56H14Z" fill="url(#goldGrad)" />
+          <path d="M74 37L64 56H84L74 37Z" stroke="url(#goldGrad)" stroke-width="1.8" fill="none" />
+          <path d="M62 56C62 62 86 62 86 56H62Z" fill="url(#goldGrad)" />
+          <path d="M34 76H66V80H34V76Z" fill="url(#goldGrad)" />
+          <path d="M28 80H72V83H28V80Z" fill="url(#goldGrad)" />
+        </svg>
+      </div>
+
+      <h1 class="splash-simple-title">R. ANBAIYA & ASSOCIATES</h1>
+      <p class="splash-simple-sub">Advocates & Legal Consultants &bull; Karur Bar</p>
+      <div class="splash-simple-spinner"></div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
        1. FIXED SIDEBAR
        ========================================================================== -->
   <aside class="sidebar">
     <div class="sidebar-header">
-      <div class="sidebar-logo-icon">⚖️</div>
+      <div class="sidebar-logo-icon" style="padding: 5px;">
+        <svg viewBox="0 0 100 100" style="width: 100%; height: 100%;" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M35 22L50 14L65 22L58 26L50 20L42 26L35 22Z" fill="#0f172a" />
+          <path d="M48 24H52V76H48V24Z" fill="#0f172a" />
+          <path d="M22 34H78V37H22V34Z" fill="#0f172a" />
+          <circle cx="50" cy="35.5" r="4.5" fill="#0f172a" />
+          <path d="M26 37L16 56H36L26 37Z" stroke="#0f172a" stroke-width="2.5" fill="none" />
+          <path d="M14 56C14 62 38 62 38 56H14Z" fill="#0f172a" />
+          <path d="M74 37L64 56H84L74 37Z" stroke="#0f172a" stroke-width="2.5" fill="none" />
+          <path d="M62 56C62 62 86 62 86 56H62Z" fill="#0f172a" />
+          <path d="M34 76H66V80H34V76Z" fill="#0f172a" />
+          <path d="M28 80H72V83H28V80Z" fill="#0f172a" />
+        </svg>
+      </div>
       <div>
         <div class="sidebar-brand-title" id="sidebar-brand-title">R. ANBAIYA & ASSOC.</div>
         <div class="sidebar-brand-sub">Advocates & Legal Consultants</div>
@@ -91,29 +144,29 @@
       <div class="header-title-block">
         <div style="display: flex; align-items: center; gap: 8px;">
           <h2 id="header-advocate-greeting">Good Morning, Advocate R. Anbaiya</h2>
-          <span style="display: inline-flex; align-items: center; gap: 4px; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 2px 8px; border-radius: 12px; font-size: 0.68rem; font-weight: 700; color: #065f46;" id="live-sync-indicator">
-            <span style="width: 6px; height: 6px; border-radius: 50%; background: #10b981;"></span> Live Auto-Sync Active
+          <span style="display: inline-flex; align-items: center; gap: 6px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.35); padding: 3px 10px; border-radius: 12px; font-size: 0.72rem; font-weight: 700; color: #34d399;" id="live-sync-indicator">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981;"></span> Live Auto-Sync Active
           </span>
         </div>
         <p>Karur District Court Complex &bull; Daily Court Hearing Board</p>
       </div>
 
       <div class="header-actions">
-        <button class="btn-ui btn-ui-secondary" onclick="toggleJarvisDrawer()" style="border-color: #38bdf8; color: #0369a1; background: #f0f9ff; font-weight: 800;">
+        <button class="btn-ui btn-ui-secondary" onclick="toggleJarvisDrawer()" style="border-color: var(--border-gold); color: var(--text-gold); background: rgba(245, 158, 11, 0.1); font-weight: 800;">
           🤖 Ask JARVIS AI
         </button>
         <div class="pill-info">
-          <span>⚡ API Balance:</span>
-          <strong id="credits-balance-label" style="color: var(--primary);">176.0</strong>
+          <span>⚡ API Guard:</span>
+          <strong id="credits-balance-label" style="color: var(--primary);">Active</strong>
         </div>
         <div class="pill-info">
           <span>📅 Date:</span>
-          <strong id="header-current-date-day">14 Aug 2026</strong>
+          <strong id="header-current-date-day">Today</strong>
         </div>
         <button class="btn-ui btn-ui-primary" onclick="openCaseIntakeModal()">
           ➕ Add Client
         </button>
-        <a href="/api/export-cause-list?date=2026-08-14" target="_blank" class="btn-ui btn-ui-secondary">
+        <a id="header-export-btn" href="/api/export-cause-list" target="_blank" class="btn-ui btn-ui-secondary">
           🖨️ A4 Cause List
         </a>
       </div>
@@ -131,16 +184,16 @@
           <div class="kpi-box">
             <div class="kpi-icon kpi-icon-blue">🏛️</div>
             <div>
-              <div class="kpi-num" id="kpi-today-hearings">14</div>
+              <div class="kpi-num" id="kpi-today-hearings">-</div>
               <div class="kpi-title">Today's Hearings</div>
-              <div class="kpi-desc" id="kpi-today-hearings-sub">Across 6 Courts in Karur</div>
+              <div class="kpi-desc" id="kpi-today-hearings-sub">Karur District Courts</div>
             </div>
           </div>
 
           <div class="kpi-box">
             <div class="kpi-icon kpi-icon-green">👥</div>
             <div>
-              <div class="kpi-num" id="kpi-active-cases">16</div>
+              <div class="kpi-num" id="kpi-active-cases">-</div>
               <div class="kpi-title">Active Monitored Cases</div>
               <div class="kpi-desc">Private Chamber Vault</div>
             </div>
@@ -149,7 +202,7 @@
           <div class="kpi-box">
             <div class="kpi-icon kpi-icon-purple">📅</div>
             <div>
-              <div class="kpi-num" id="kpi-upcoming-7d">16</div>
+              <div class="kpi-num" id="kpi-upcoming-7d">-</div>
               <div class="kpi-title">Next 7 Days</div>
               <div class="kpi-desc">Upcoming Hearings</div>
             </div>
@@ -158,7 +211,7 @@
           <div class="kpi-box">
             <div class="kpi-icon kpi-icon-orange">📁</div>
             <div>
-              <div class="kpi-num" id="kpi-disposed-cases">1</div>
+              <div class="kpi-num" id="kpi-disposed-cases">-</div>
               <div class="kpi-title">Disposed Cases</div>
               <div class="kpi-desc">Completed Matters</div>
             </div>
@@ -173,11 +226,11 @@
               <p class="main-card-sub">Grouped by Court Complex, Presiding Judge, Court Room & Item Number</p>
             </div>
             <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-              <button onclick="openBulkWhatsAppModal()" class="btn-ui btn-ui-wa" style="font-size: 0.75rem; font-weight: 800; background: #15803d; box-shadow: 0 2px 4px rgba(22, 163, 74, 0.3);">
-                📲 Send Notice to All 14 Clients
+              <button id="btn-bulk-wa-header" onclick="openBulkWhatsAppModal()" class="btn-ui btn-ui-wa" style="font-size: 0.75rem; font-weight: 800; background: #15803d; box-shadow: 0 2px 4px rgba(22, 163, 74, 0.3);">
+                📲 Send Notice to Today's Clients
               </button>
-              <input type="date" id="dashboard-date-picker" class="form-input-ui" style="width: auto; padding: 4px 8px; font-size: 0.75rem;" value="2026-08-14">
-              <a href="/api/export-cause-list?date=2026-08-14" target="_blank" class="btn-ui btn-ui-secondary" style="font-size: 0.75rem;">
+              <input type="date" id="dashboard-date-picker" class="form-input-ui" style="width: auto; padding: 4px 8px; font-size: 0.75rem;">
+              <a id="main-export-btn" href="/api/export-cause-list" target="_blank" class="btn-ui btn-ui-secondary" style="font-size: 0.75rem;">
                 🖨️ Print Board
               </a>
               <button id="btn-generate-morning-docket" class="btn-ui btn-ui-secondary" style="font-size: 0.75rem;">
@@ -188,7 +241,7 @@
 
           <!-- Court Filter Tabs -->
           <div class="court-tabs-bar" id="court-chips-row">
-            <button class="court-tab-btn active" data-court="ALL">All Courts <span class="tab-badge">14</span></button>
+            <button class="court-tab-btn active" data-court="ALL">All Courts <span class="tab-badge" id="all-courts-tab-badge">0</span></button>
           </div>
 
           <!-- Grouped Hearing Board List -->
@@ -491,7 +544,7 @@
             </div>
             <div class="form-group-ui" style="flex: 0.8;">
               <label class="form-label-ui">Next Hearing Date</label>
-              <input type="date" id="wiz-hearing-date" class="form-input-ui" value="2026-08-14">
+              <input type="date" id="wiz-hearing-date" class="form-input-ui">
             </div>
           </div>
 
@@ -593,8 +646,8 @@
 
     <!-- Chat History Stream -->
     <div id="ai-chat-history" style="flex: 1; padding: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; font-size: 0.82rem;">
-      <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: var(--radius-sm); padding: 10px 12px; color: #0369a1;">
-        <strong>⚡ JARVIS AI Online:</strong> Ready to assist, Advocate R. Anbaiya! I have live access to your 14 court hearings, client WhatsApp contacts, and cases vault.
+      <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: var(--radius-sm); padding: 10px 12px; color: #0369a1;" id="jarvis-initial-greeting">
+        <strong>⚡ JARVIS AI Online:</strong> Ready to assist, Advocate R. Anbaiya! Live access to your cases vault, cause list, and client WhatsApp contacts.
       </div>
     </div>
 
@@ -612,7 +665,7 @@
   <div id="case-detail-drawer" class="case-drawer-panel">
     <div class="case-drawer-header">
       <div>
-        <span id="drawer-case-no-badge" style="background: #0284c7; color: #fff; font-size: 0.72rem; padding: 2px 8px; border-radius: 4px; font-weight: 800;">COS/69/2024</span>
+        <span id="drawer-case-no-badge" style="background: #0284c7; color: #fff; font-size: 0.72rem; padding: 2px 8px; border-radius: 4px; font-weight: 800;">Case Info</span>
         <h4 id="drawer-case-header-title" style="font-size: 0.95rem; font-weight: 800; margin-top: 4px; color: #fff;">Case Details Inspector</h4>
       </div>
       <button onclick="closeCaseDrawer()" style="background: transparent; border: none; color: #ffffff; font-size: 1.2rem; cursor: pointer;">✕</button>
@@ -629,13 +682,13 @@
   <div id="bulk-whatsapp-modal" class="modal-overlay" style="display: none;">
     <div class="modal-card" style="max-width: 650px;">
       <div class="modal-header">
-        <h3 style="font-size: 0.96rem; font-weight: 800;">📲 Dispatch WhatsApp Notices to All 14 Clients</h3>
+        <h3 id="bulk-wa-modal-title" style="font-size: 0.96rem; font-weight: 800;">📲 Dispatch WhatsApp Notices to Clients</h3>
         <button class="btn-ui btn-ui-secondary" style="padding: 2px 8px; color: #fff; background: transparent; border-color: #334155;" onclick="document.getElementById('bulk-whatsapp-modal').style.display='none'">✕</button>
       </div>
 
       <div class="modal-body">
-        <p style="font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 12px;">
-          Send personalized hearing docket notices to all clients scheduled for today (14-Aug-2026).
+        <p id="bulk-wa-modal-subtitle" style="font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 12px;">
+          Send personalized hearing docket notices to all clients scheduled for this hearing date.
         </p>
 
         <div style="max-height: 280px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm); margin-bottom: 14px;">
@@ -655,10 +708,10 @@
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
-          <span style="font-size: 0.75rem; color: var(--text-muted);">14 Notices Ready for Instant Send</span>
+          <span id="bulk-wa-notices-ready-label" style="font-size: 0.75rem; color: var(--text-muted);">Notices Ready for Instant Send</span>
           <div style="display: flex; gap: 8px;">
             <button onclick="dispatchAllViaMetaCloud()" id="btn-meta-dispatch-all" class="btn-ui btn-ui-primary" style="padding: 8px 16px; font-weight: 800; background: #0284c7;">
-              🛡️ Official Meta Cloud Auto-Dispatch (All 14)
+              🛡️ Official Meta Cloud Auto-Dispatch
             </button>
             <button onclick="sendAllQueuedNotices()" class="btn-ui btn-ui-wa" style="padding: 8px 14px; font-weight: 800;">
               🚀 Open in WhatsApp Web
@@ -669,7 +722,7 @@
     </div>
   </div>
 
-  <script src="/static/app.js?v=11.0"></script>
+  <script src="/static/app.js?v=12.0"></script>
 </body>
 </html>
 

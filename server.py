@@ -258,7 +258,7 @@ def dispatch_single_whatsapp_route():
 def dispatch_all_whatsapp_route():
     """Dispatches official notices to all cases scheduled for target_date via Official Meta Cloud API."""
     data = request.get_json(silent=True) or {}
-    target_date = data.get("date", "2026-08-14").strip()
+    target_date = (data.get("date") or time.strftime("%Y-%m-%d")).strip()
     cause_list = get_daily_cause_list(target_date)
     settings = get_advocate_settings()
     
@@ -297,7 +297,7 @@ def dispatch_all_whatsapp_route():
 @app.route("/api/export-cause-list")
 def export_cause_list_print():
     """Generates an A4 Printable Daily Court Hearing Board for advocates matching exact court docket format."""
-    target_date = request.args.get("date", "2026-08-14").strip()
+    target_date = (request.args.get("date") or time.strftime("%Y-%m-%d")).strip()
     cause_list = get_daily_cause_list(target_date)
     settings = get_advocate_settings()
 
@@ -503,7 +503,7 @@ def check_case():
     item_number = data.get("item_number") or "1"
     case_stage = data.get("case_stage") or "Evidence"
     notes = data.get("notes") or ""
-    next_hearing_date = data.get("next_hearing_date") or "2026-08-14"
+    next_hearing_date = data.get("next_hearing_date") or time.strftime("%Y-%m-%d")
     force_live = bool(data.get("force_live", False))
 
     api_key = get_api_key()
@@ -604,7 +604,7 @@ def search_advocate_cases_endpoint():
 def ai_briefing_endpoint():
     """Returns AI-generated executive morning briefing for Advocate."""
     from ai_agent import get_ai_daily_briefing
-    date_str = request.args.get("date", "2026-08-14")
+    date_str = request.args.get("date") or time.strftime("%Y-%m-%d")
     return jsonify(get_ai_daily_briefing(date_str))
 
 @app.route("/api/ai-assistant", methods=["POST"])
@@ -636,66 +636,13 @@ def live_status_endpoint():
     """Lightweight endpoint for zero-refresh real-time live sync polling."""
     from db import get_all_cases, get_daily_cause_list
     all_c = get_all_cases()
-    today_data = get_daily_cause_list("2026-08-14")
+    today_date = request.args.get("date") or time.strftime("%Y-%m-%d")
+    today_data = get_daily_cause_list(today_date)
     return jsonify({
         "timestamp": int(time.time()),
         "total_cases": len(all_c),
         "today_hearings": today_data.get("total_hearings", 0),
         "last_updated": time.strftime("%H:%M:%S")
-    })
-
-
-
-
-
-    # Fallback Sample Data for demo mode
-    sample_case = {
-        "success": True,
-        "cnr_number": cnr,
-        "case_title": "Mr. Arun Jaitley vs Mr. Arvind Kejriwal",
-        "case_status": "DISPOSED",
-        "court_name": "Chief Metropolitan Magistrate, New Delhi, PHC",
-        "district": "New Delhi",
-        "state": "DL",
-        "next_hearing_date": "2026-08-28",
-        "last_hearing_date": "2026-07-07",
-        "hearing_count": 25,
-        "order_count": 10,
-        "is_mock": True,
-        "is_cached": True,
-        "cache_note": "Demo Mode (0 credits used)"
-    }
-
-    db_payload = {
-        "cnr_number": cnr,
-        "case_title": sample_case["case_title"],
-        "case_status": sample_case["case_status"],
-        "court_name": sample_case["court_name"],
-        "parties": "Petitioner: Arun Jaitley | Respondent: Arvind Kejriwal",
-        "advocates": "Adv. S. Sharma",
-        "last_hearing_date": sample_case["last_hearing_date"],
-        "next_hearing_date": sample_case["next_hearing_date"]
-    }
-    date_changed = upsert_case(
-        db_payload,
-        client_name=client_name,
-        client_phone=client_phone,
-        client_email=client_email,
-        litigant_role=litigant_role,
-        track_next_hearing=track_hearing,
-        track_orders=track_orders,
-        track_case_status=track_status,
-        auto_whatsapp_enabled=auto_wa,
-        notes=notes,
-        custom_advocate_header=custom_header
-    )
-
-
-    return jsonify({
-        "success": True,
-        "date_changed": date_changed,
-        "is_cached": True,
-        "case_data": sample_case
     })
 
 @app.route("/api/scheduler/evaluation", methods=["GET"])

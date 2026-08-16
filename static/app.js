@@ -13,6 +13,61 @@ let currentCalendarDate = new Date();
 let lastSyncTimestamp = 0;
 let isJarvisOpen = false;
 
+function getSelectedOrTodayDate() {
+  const picker = document.getElementById("dashboard-date-picker");
+  if (picker && picker.value) return picker.value;
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+// =========================================================================
+// 0. SIMPLE & ELEGANT STARTUP SPLASH / VIDEO INTRO CONTROLLER
+// =========================================================================
+let splashDismissed = false;
+
+window.dismissStartupSplash = function() {
+  if (splashDismissed) return;
+  splashDismissed = true;
+  const splash = document.getElementById("app-startup-splash");
+  if (splash) {
+    splash.classList.add("splash-dismissed");
+    setTimeout(() => {
+      splash.style.display = "none";
+    }, 650);
+  }
+};
+
+function runStartupSequence() {
+  const video = document.getElementById("splash-video");
+  const simpleContent = document.getElementById("splash-simple-content");
+
+  // Check if custom video file is available and playable
+  if (video) {
+    video.onloadeddata = function() {
+      video.style.display = "block";
+      if (simpleContent) simpleContent.style.display = "none";
+      video.play().catch(() => {});
+    };
+
+    video.onended = function() {
+      window.dismissStartupSplash();
+    };
+
+    video.onerror = function() {
+      if (video) video.style.display = "none";
+      if (simpleContent) simpleContent.style.display = "flex";
+    };
+  }
+
+  // Smooth fallback dismissal
+  setTimeout(() => {
+    window.dismissStartupSplash();
+  }, 2000);
+}
+
 // =========================================================================
 // 1. GLOBAL NAVIGATION & VIEW SWITCHER
 // =========================================================================
@@ -45,8 +100,7 @@ window.switchView = function(viewId) {
     if (viewId === "view-whatsapp") renderWhatsAppDockets(allCases);
     if (viewId === "view-calendar") renderCalendar(currentCalendarDate);
     if (viewId === "view-dashboard") {
-      const picker = document.getElementById("dashboard-date-picker");
-      loadDailyCauseList(picker ? picker.value : "2026-08-14");
+      loadDailyCauseList(getSelectedOrTodayDate());
     }
   } catch (err) {
     console.error("switchView error:", err);
@@ -199,13 +253,13 @@ window.openCaseDrawer = function(cnrNumber) {
       <div class="drawer-section-card" style="background: #f8fafc; border: 1px solid #cbd5e1;">
         <div class="drawer-section-title">🧠 SMART SLEEP & AUTO-SYNC RADAR</div>
         <div style="display:flex; align-items:center; gap:8px;">
-          <span style="font-size:1.1rem;">${c.next_hearing_date === '2026-08-14' ? '🔔' : '😴'}</span>
+          <span style="font-size:1.1rem;">${c.next_hearing_date === getSelectedOrTodayDate() ? '🔔' : '😴'}</span>
           <div>
             <div style="font-size:0.8rem; font-weight:800; color:var(--text-main);">
-              ${c.next_hearing_date === '2026-08-14' ? 'Active In Court Today (Item #' + (c.item_number || '-') + ')' : 'Smart Sleeping until ' + (c.next_hearing_date || 'Schedule')}
+              ${c.next_hearing_date === getSelectedOrTodayDate() ? 'Active In Court Today (Item #' + (c.item_number || '-') + ')' : 'Smart Sleeping until ' + (c.next_hearing_date || 'Schedule')}
             </div>
             <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">
-              ${c.next_hearing_date === '2026-08-14' ? 'Currently listed on today\'s hearing board.' : 'Zero credits wasted daily. System will automatically wake up 2 days before ' + (c.next_hearing_date || 'date') + ' to scan tomorrow\'s cause list!'}
+              ${c.next_hearing_date === getSelectedOrTodayDate() ? 'Currently listed on today\'s hearing board.' : 'Zero credits wasted daily. System will automatically wake up 2 days before ' + (c.next_hearing_date || 'date') + ' to scan tomorrow\'s cause list!'}
             </div>
           </div>
         </div>
@@ -317,9 +371,21 @@ window.openBulkWhatsAppModal = function() {
   }
 
   if (todayCases.length === 0) {
-    alert("No hearings scheduled for today to dispatch notices.");
+    alert("No hearings scheduled for this date to dispatch notices.");
     return;
   }
+
+  const title = document.getElementById("bulk-wa-modal-title");
+  if (title) title.innerText = `📲 Dispatch WhatsApp Notices (${todayCases.length} Clients)`;
+
+  const subtitle = document.getElementById("bulk-wa-modal-subtitle");
+  if (subtitle) subtitle.innerText = `Send personalized hearing docket notices to all clients scheduled for ${causeListData?.target_date || getSelectedOrTodayDate()}.`;
+
+  const readyLbl = document.getElementById("bulk-wa-notices-ready-label");
+  if (readyLbl) readyLbl.innerText = `${todayCases.length} Notice${todayCases.length > 1 ? 's' : ''} Ready for Instant Send`;
+
+  const metaBtn = document.getElementById("btn-meta-dispatch-all");
+  if (metaBtn) metaBtn.innerText = `🛡️ Official Meta Cloud Auto-Dispatch (${todayCases.length})`;
 
   tbody.innerHTML = todayCases.map(c => `
     <tr>
@@ -351,12 +417,18 @@ window.sendAllQueuedNotices = function() {
     }
   }
 
-  // Open the first 3 clients in separate tabs
-  const top3 = todayCases.slice(0, 3);
-  top3.forEach(c => {
-    window.open(getWhatsAppUrl(c), "_blank");
+  if (todayCases.length === 0) {
+    alert("No hearings scheduled for this date.");
+    return;
+  }
+
+  // Open WhatsApp Web links sequentially with delay to prevent browser popup block
+  todayCases.forEach((c, idx) => {
+    setTimeout(() => {
+      window.open(getWhatsAppUrl(c), "_blank");
+    }, idx * 600);
   });
-  alert(`🚀 Opened WhatsApp notices for the first ${top3.length} clients! Click on remaining rows to send.`);
+  alert(`🚀 Opened WhatsApp notices for ${todayCases.length} scheduled client${todayCases.length > 1 ? 's' : ''}!`);
 };
 
 
@@ -375,7 +447,7 @@ window.autoFillSampleClient = function() {
   if (caseNoInput) caseNoInput.value = "STC/1035/2023";
   if (phoneInput) phoneInput.value = "9443322110";
   if (courtSelect) courtSelect.value = "Chief Judicial Magistrate Court, Karur";
-  if (dateInput) dateInput.value = "2026-08-14";
+  if (dateInput) dateInput.value = getSelectedOrTodayDate();
   if (stageInput) stageInput.value = "Evidence";
   if (roomInput) roomInput.value = "Room 8";
   if (itemInput) itemInput.value = "4";
@@ -475,8 +547,8 @@ window.sendAiMessage = async function() {
 
   // Append user message
   history.innerHTML += `
-    <div style="background: #e2e8f0; border-radius: var(--radius-sm); padding: 8px 12px; align-self: flex-end; max-width: 85%; font-size: 0.8rem;">
-      <strong>You:</strong> ${escapeHtml(text)}
+    <div style="background: #17233f; border: 1px solid var(--border-gold); border-radius: var(--radius-sm); padding: 10px 14px; align-self: flex-end; max-width: 85%; font-size: 0.84rem; color: #ffffff;">
+      <strong style="color: var(--text-gold);">You:</strong> ${escapeHtml(text)}
     </div>
   `;
   input.value = "";
@@ -485,8 +557,8 @@ window.sendAiMessage = async function() {
   // Add Thinking indicator
   const thinkingId = "thinking-" + Date.now();
   history.innerHTML += `
-    <div id="${thinkingId}" style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: var(--radius-sm); padding: 8px 12px; color: var(--primary); font-size: 0.78rem;">
-      🤖 <em>JARVIS is analyzing cases database...</em>
+    <div id="${thinkingId}" style="background: rgba(245, 158, 11, 0.1); border: 1px solid var(--border-gold); border-radius: var(--radius-sm); padding: 10px 14px; color: var(--text-gold); font-size: 0.82rem;">
+      🤖 <em>JARVIS is analyzing cases vault & legal strategies...</em>
     </div>
   `;
   history.scrollTop = history.scrollHeight;
@@ -503,11 +575,11 @@ window.sendAiMessage = async function() {
 
     const formattedReply = (data.reply || "Ready to assist.")
       .replace(/\n/g, "<br>")
-      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*\*(.*?)\*\*/g, "<strong style='color:#ffffff;'>$1</strong>")
       .replace(/\*(.*?)\*/g, "<em>$1</em>");
 
     history.innerHTML += `
-      <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 0.8rem; line-height: 1.4;">
+      <div style="background: #080c15; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px 16px; font-size: 0.84rem; line-height: 1.5; color: var(--text-secondary);">
         ${formattedReply}
       </div>
     `;
@@ -520,7 +592,7 @@ window.sendAiMessage = async function() {
 
 async function loadAiBriefing() {
   try {
-    const res = await fetch("/api/ai-briefing?date=2026-08-14");
+    const res = await fetch(`/api/ai-briefing?date=${encodeURIComponent(getSelectedOrTodayDate())}`);
     const data = await res.json();
     const history = document.getElementById("ai-chat-history");
     if (!history) return;
@@ -528,10 +600,10 @@ async function loadAiBriefing() {
     if (data.briefing_text && !history.innerHTML.includes("Morning Legal Briefing")) {
       const formatted = data.briefing_text
         .replace(/\n/g, "<br>")
-        .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+        .replace(/\*\*(.*?)\*\*/g, "<strong style='color:#ffffff;'>$1</strong>");
 
       history.innerHTML += `
-        <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: var(--radius-sm); padding: 10px 12px; color: #065f46; font-size: 0.78rem;">
+        <div style="background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: var(--radius-sm); padding: 14px 16px; color: #34d399; font-size: 0.82rem; line-height: 1.5;">
           ${formatted}
         </div>
       `;
@@ -557,8 +629,7 @@ function startLiveSyncLoop() {
       // If case count changed or initial portfolio was empty, sync immediately
       if (status.total_cases !== allCases.length || allCases.length === 0) {
         await loadTrackedCases();
-        const picker = document.getElementById("dashboard-date-picker");
-        await loadDailyCauseList(picker ? picker.value : "2026-08-14");
+        await loadDailyCauseList(getSelectedOrTodayDate());
       }
       lastSyncTimestamp = status.timestamp;
     } catch (e) {}
@@ -568,28 +639,52 @@ function startLiveSyncLoop() {
 // =========================================================================
 // 5. DATA LOADERS & RENDERERS
 // =========================================================================
-async function loadDailyCauseList(targetDate = "2026-08-14") {
+async function loadDailyCauseList(targetDate) {
+  if (!targetDate) {
+    targetDate = getSelectedOrTodayDate();
+  }
+  const picker = document.getElementById("dashboard-date-picker");
+  if (picker && picker.value !== targetDate) {
+    picker.value = targetDate;
+  }
+  const dayLabel = document.getElementById("header-current-date-day");
+  if (dayLabel) {
+    try {
+      dayLabel.innerText = new Date(targetDate + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+    } catch(e) {
+      dayLabel.innerText = targetDate;
+    }
+  }
+  const hExp = document.getElementById("header-export-btn");
+  if (hExp) hExp.href = `/api/export-cause-list?date=${encodeURIComponent(targetDate)}`;
+  const mExp = document.getElementById("main-export-btn");
+  if (mExp) mExp.href = `/api/export-cause-list?date=${encodeURIComponent(targetDate)}`;
+
   const container = document.getElementById("hearing-board-list-container");
   if (container) {
     container.innerHTML = `<p style="padding: 24px; text-align: center; color: var(--text-muted);">Loading Daily Court Hearing Board for ${targetDate}...</p>`;
   }
 
   try {
-    const res = await fetch(`/api/cause-list?date=${targetDate}`);
+    const res = await fetch(`/api/cause-list?date=${encodeURIComponent(targetDate)}`);
     const data = await res.json();
     causeListData = data;
 
     const count = data.total_hearings || 0;
-    const courtsCount = data.total_courts || 0;
+    const courtsCount = data.total_courts || (data.court_summaries ? data.court_summaries.length : 0);
 
     const kpiTodayHearings = document.getElementById("kpi-today-hearings");
     const badgeTodayHearings = document.getElementById("badge-today-hearings");
     const kpiTodayHearingsSub = document.getElementById("kpi-today-hearings-sub");
+    const allCourtsTabBadge = document.getElementById("all-courts-tab-badge");
+    const btnBulkWa = document.getElementById("btn-bulk-wa-header");
 
     if (kpiTodayHearings) kpiTodayHearings.innerText = count;
     if (badgeTodayHearings) badgeTodayHearings.innerText = count;
+    if (allCourtsTabBadge) allCourtsTabBadge.innerText = count;
+    if (btnBulkWa) btnBulkWa.innerText = `📲 Send Notice to All (${count}) Clients`;
     if (kpiTodayHearingsSub) {
-      kpiTodayHearingsSub.innerText = count > 0 ? `Across ${courtsCount} Courts in Karur` : "No hearings today";
+      kpiTodayHearingsSub.innerText = count > 0 ? `Across ${courtsCount} Courts in Karur` : "No hearings scheduled";
     }
 
     renderHearingBoard(data, selectedCourtFilter);
@@ -645,45 +740,46 @@ function renderHearingBoard(data, filterCourt = "ALL") {
 
   let summaryHeaderHtml = "";
   if (filterCourt === "ALL" && data.court_summaries && data.court_summaries.length > 0) {
+    const courtsCount = data.total_courts || data.court_summaries.length;
     summaryHeaderHtml = `
-      <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px 16px; margin: 14px 16px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+      <div style="background: #080c15; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 18px 22px; margin: 18px 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 12px; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
           <div>
-            <span style="background: #0f172a; color: #fff; font-size: 0.68rem; padding: 2px 8px; border-radius: 4px; font-weight: 700; text-transform: uppercase;">Hearings for ${escapeHtml(data.target_date || 'Today')}</span>
-            <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a; margin-top: 4px;">
-              You have ${data.total_hearings} confirmed hearings scheduled across 6 Karur Courts
+            <span style="background: linear-gradient(135deg, #fbbf24, #d97706); color: #090d16; font-size: 0.72rem; padding: 3px 10px; border-radius: 4px; font-weight: 800; text-transform: uppercase;">Hearings for ${escapeHtml(data.target_date || 'Today')}</span>
+            <div style="font-weight: 800; font-size: 1.05rem; color: #ffffff; margin-top: 6px;">
+              You have <span style="color: var(--text-gold);">${data.total_hearings}</span> confirmed hearings scheduled across ${courtsCount} Karur Court${courtsCount > 1 ? 's' : ''}
             </div>
           </div>
-          <div style="display: flex; gap: 8px; align-items: center;">
-            <button onclick="openBulkWhatsAppModal()" class="btn-ui btn-ui-wa" style="font-size: 0.72rem; padding: 5px 12px; font-weight: 800; background: #15803d;">
-              📲 Send Notice to All 14 Clients
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <button onclick="openBulkWhatsAppModal()" class="btn-ui btn-ui-wa" style="font-size: 0.78rem; padding: 6px 14px; font-weight: 800;">
+              📲 Send Notice to All (${data.total_hearings || 0}) Clients
             </button>
-            <a href="/api/export-cause-list?date=${encodeURIComponent(data.target_date || '2026-08-14')}" target="_blank" class="btn-ui btn-ui-secondary" style="font-size: 0.72rem; padding: 5px 10px;">
+            <a href="/api/export-cause-list?date=${encodeURIComponent(data.target_date || getSelectedOrTodayDate())}" target="_blank" class="btn-ui btn-ui-secondary" style="font-size: 0.78rem; padding: 6px 12px;">
               🖨️ A4 Cause List
             </a>
           </div>
         </div>
 
         <div style="overflow-x: auto;">
-          <table style="width: 100%; border-collapse: collapse; font-size: 0.78rem;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 0.84rem;">
             <thead>
-              <tr style="background: #e2e8f0;">
-                <th style="width: 45px; padding: 6px 8px; text-align: left; font-weight: 700; color: #475569;">S.NO</th>
-                <th style="padding: 6px 8px; text-align: left; font-weight: 700; color: #475569;">COURT NAME</th>
-                <th style="width: 100px; padding: 6px 8px; text-align: right; font-weight: 700; color: #475569;">CONFIRMED</th>
+              <tr style="background: #0e1526; border-bottom: 1px solid var(--border-color);">
+                <th style="width: 50px; padding: 8px 12px; text-align: left; font-weight: 700; color: var(--text-gold);">S.NO</th>
+                <th style="padding: 8px 12px; text-align: left; font-weight: 700; color: var(--text-gold);">COURT NAME</th>
+                <th style="width: 120px; padding: 8px 12px; text-align: right; font-weight: 700; color: var(--text-gold);">CONFIRMED</th>
               </tr>
             </thead>
             <tbody>
               ${data.court_summaries.map((c, i) => `
-                <tr style="border-bottom: 1px solid #f1f5f9;">
-                  <td style="padding: 5px 8px; font-weight: 700; color: var(--text-muted);">${i + 1}</td>
-                  <td style="padding: 5px 8px; font-weight: 600; color: #1e293b;">${escapeHtml(c.court_name)}</td>
-                  <td style="padding: 5px 8px; text-align: right; font-weight: 800; color: #0284c7;">${c.hearings_count}</td>
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);">
+                  <td style="padding: 8px 12px; font-weight: 700; color: var(--text-muted);">${i + 1}</td>
+                  <td style="padding: 8px 12px; font-weight: 600; color: var(--text-secondary);">${escapeHtml(c.court_name)}</td>
+                  <td style="padding: 8px 12px; text-align: right; font-weight: 800; color: var(--text-gold);">${c.hearings_count}</td>
                 </tr>
               `).join("")}
-              <tr style="background: #e2e8f0; font-weight: 800;">
-                <td colspan="2" style="padding: 6px 8px; text-align: right;">TOTAL CONFIRMED HEARINGS:</td>
-                <td style="padding: 6px 8px; text-align: right; color: #0f172a;">${data.total_hearings}</td>
+              <tr style="background: #0e1526; font-weight: 800;">
+                <td colspan="2" style="padding: 10px 12px; text-align: right; color: #ffffff;">TOTAL CONFIRMED HEARINGS:</td>
+                <td style="padding: 10px 12px; text-align: right; color: var(--text-gold); font-size: 0.95rem;">${data.total_hearings}</td>
               </tr>
             </tbody>
           </table>
@@ -718,29 +814,29 @@ function renderHearingBoard(data, filterCourt = "ALL") {
           <tbody>
             ${court.cases.map(c => `
               <tr class="clickable-case-row">
-                <td style="text-align: center;" onclick="openCaseDrawer('${escapeHtml(c.cnr_number)}')">
+                <td style="text-align: center; width: 60px;" onclick="openCaseDrawer('${escapeHtml(c.cnr_number)}')">
                   <div class="item-badge-cell" style="cursor: pointer;">${escapeHtml(c.item_number || '-')}</div>
                 </td>
-                <td class="clickable-case-cell" onclick="openCaseDrawer('${escapeHtml(c.cnr_number)}')">
-                  <div class="case-title-text">${escapeHtml(c.case_title)}</div>
-                  <div class="case-sub-text">
-                    <strong>${escapeHtml(c.case_number_formatted || c.cnr_number)}</strong>
-                    ${c.notes ? `&bull; <span style="color: #b45309; font-weight:600;">Note: ${escapeHtml(c.notes)}</span>` : ''}
+                <td class="clickable-case-cell" onclick="openCaseDrawer('${escapeHtml(c.cnr_number)}')" style="max-width: 400px;">
+                  <div class="case-title-text" style="font-size: 0.92rem; margin-bottom: 4px;">${escapeHtml(c.case_title)}</div>
+                  <div class="case-sub-text" style="font-size: 0.78rem;">
+                    <strong style="color: #0f172a; font-family: var(--font-mono); font-weight: 700;">${escapeHtml(c.case_number_formatted || c.cnr_number)}</strong>
+                    ${c.notes ? ` &bull; <span style="color: #b45309; font-weight: 600; background: #fef3c7; padding: 2px 6px; border-radius: 4px;">Note: ${escapeHtml(c.notes)}</span>` : ''}
                   </div>
                 </td>
-                <td>
-                  <strong style="color: var(--text-main); font-size: 0.82rem;">${escapeHtml(c.client_name || 'Client')}</strong>
-                  <div style="font-size: 0.72rem; color: var(--text-muted);">${escapeHtml(c.client_phone || '-')}</div>
+                <td style="min-width: 140px;">
+                  <strong style="color: var(--text-main); font-size: 0.88rem; display: block; margin-bottom: 2px;">${escapeHtml(c.client_name || 'Client')}</strong>
+                  <div style="font-size: 0.76rem; color: var(--text-muted); font-family: var(--font-mono);">${escapeHtml(c.client_phone || '-')}</div>
                 </td>
                 <td>
                   <span class="badge ${getBadgeClass(c.case_stage)}">${escapeHtml(c.case_stage || 'Evidence')}</span>
                 </td>
-                <td>
+                <td style="min-width: 160px;">
                   <div class="room-badge">${escapeHtml(c.court_room || '-')}</div>
-                  <div style="font-size: 0.7rem; color: var(--text-muted);">${escapeHtml(c.judge_name || '-')}</div>
+                  <div style="font-size: 0.74rem; color: var(--text-muted); line-height: 1.35;">${escapeHtml(c.judge_name || '-')}</div>
                 </td>
-                <td style="text-align: right;">
-                  <a href="${getWhatsAppUrl(c)}" target="_blank" class="btn-ui btn-ui-wa" style="padding: 4px 8px; font-size: 0.72rem;">
+                <td style="text-align: right; min-width: 130px;">
+                  <a href="${getWhatsAppUrl(c)}" target="_blank" class="btn-ui btn-ui-wa" style="padding: 6px 12px; font-size: 0.78rem;">
                     📲 Send Notice
                   </a>
                 </td>
@@ -772,7 +868,7 @@ async function loadTrackedCases() {
     if (badgeTotalCases) badgeTotalCases.innerText = allCases.length;
     if (kpiDisposedCases) kpiDisposedCases.innerText = disposedCount;
 
-    const todayStr = "2026-08-14";
+    const todayStr = getSelectedOrTodayDate();
     const futureCasesCount = allCases.filter(c => c.next_hearing_date && c.next_hearing_date >= todayStr).length;
     if (kpiUpcoming7d) kpiUpcoming7d.innerText = futureCasesCount;
 
@@ -800,38 +896,48 @@ function renderAllCasesTable(cases) {
     return;
   }
 
+  const todayStr = getSelectedOrTodayDate();
   tbody.innerHTML = cases.map(c => `
     <tr class="clickable-case-row">
       <td class="clickable-case-cell" onclick="openCaseDrawer('${escapeHtml(c.cnr_number)}')">
-        <strong>${escapeHtml(c.client_name || 'Client')}</strong>
-        <div style="font-size: 0.7rem; color: var(--text-muted);">${escapeHtml(c.litigant_role || 'Litigant')}</div>
+        <strong style="font-size: 0.9rem; color: var(--text-main); display: block; margin-bottom: 2px;">${escapeHtml(c.client_name || 'Client')}</strong>
+        <div style="font-size: 0.75rem; color: var(--text-muted);">${escapeHtml(c.litigant_role || 'Litigant')}</div>
       </td>
-      <td class="clickable-case-cell" onclick="openCaseDrawer('${escapeHtml(c.cnr_number)}')">
-        <div class="case-title-text">${escapeHtml(c.case_title)}</div>
-        <div style="font-size:0.7rem; color:var(--text-muted);">${escapeHtml(c.parties || '')}</div>
-      </td>
-      <td onclick="openCaseDrawer('${escapeHtml(c.cnr_number)}')"><strong>${escapeHtml(c.case_number_formatted || '-')}</strong></td>
-      <td onclick="openCaseDrawer('${escapeHtml(c.cnr_number)}')"><code style="font-family: var(--font-mono); font-size:0.75rem; color:var(--primary);">${escapeHtml(c.cnr_number)}</code></td>
-      <td>${escapeHtml(c.court_name || 'District Court')}</td>
-      <td>
-        <strong style="color:var(--primary);">${escapeHtml(c.next_hearing_date || 'Awaiting Date')}</strong>
-        <div style="margin-top:2px;">
-          ${c.next_hearing_date === '2026-08-14' 
-            ? '<span style="background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; padding:1px 6px; border-radius:10px; font-size:0.65rem; font-weight:800;">🔔 Hearing Today</span>'
-            : (c.case_status === 'DISPOSED' 
-                ? '<span style="background:#f1f5f9; color:#64748b; padding:1px 6px; border-radius:10px; font-size:0.65rem;">🏁 Disposed</span>'
-                : '<span style="background:#f8fafc; color:#475569; border:1px solid #cbd5e1; padding:1px 6px; border-radius:10px; font-size:0.65rem;">😴 Sleeping until ' + (c.next_hearing_date || 'date') + '</span>')}
+      <td class="clickable-case-cell" onclick="openCaseDrawer('${escapeHtml(c.cnr_number)}')" style="max-width: 320px;">
+        <div class="case-title-text" style="font-size: 0.9rem; margin-bottom: 3px;">${escapeHtml(c.case_title)}</div>
+        <div style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;" title="${escapeHtml(c.parties || '')}">
+          ${escapeHtml(c.parties || '')}
         </div>
       </td>
-      <td><span class="badge ${c.case_status === 'DISPOSED' ? 'badge-disposed' : 'badge-evidence'}">${escapeHtml(c.case_status || 'PENDING')}</span></td>
-
+      <td onclick="openCaseDrawer('${escapeHtml(c.cnr_number)}')">
+        <strong style="font-size: 0.88rem; color: #0f172a;">${escapeHtml(c.case_number_formatted || '-')}</strong>
+      </td>
+      <td onclick="openCaseDrawer('${escapeHtml(c.cnr_number)}')">
+        <code style="font-family: var(--font-mono); font-size: 0.78rem; color: var(--primary); font-weight: 700; background: #f0f9ff; padding: 3px 6px; border-radius: 4px; border: 1px solid #bae6fd;">${escapeHtml(c.cnr_number)}</code>
+      </td>
+      <td style="font-size: 0.84rem; color: #334155; max-width: 220px;">
+        ${escapeHtml(c.court_name || 'District Court')}
+      </td>
+      <td>
+        <strong style="color: var(--primary); font-size: 0.88rem; display: block;">${escapeHtml(c.next_hearing_date || 'Awaiting Date')}</strong>
+        <div style="margin-top: 4px;">
+          ${c.next_hearing_date === todayStr 
+            ? '<span style="background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 800; display: inline-block;">🔔 Hearing Today</span>'
+            : (c.case_status === 'DISPOSED' 
+                ? '<span style="background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; display: inline-block;">🏁 Disposed</span>'
+                : '<span style="background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; display: inline-block;">😴 Sleeping until ' + (c.next_hearing_date || 'date') + '</span>')}
+        </div>
+      </td>
+      <td>
+        <span class="badge ${c.case_status === 'DISPOSED' ? 'badge-disposed' : 'badge-evidence'}">${escapeHtml(c.case_status || 'PENDING')}</span>
+      </td>
 
       <td style="text-align: right;">
-        <div style="display:flex; gap:4px; justify-content:flex-end;">
-          <a href="${getWhatsAppUrl(c)}" target="_blank" class="btn-ui btn-ui-wa" style="padding:3px 6px; font-size:0.7rem;">💬</a>
-          <button onclick="syncSingleCase('${escapeHtml(c.cnr_number)}')" class="btn-ui btn-ui-secondary" style="padding:3px 6px; font-size:0.7rem;" title="Check Live eCourts">🔄</button>
-          <a href="/api/export-case/${encodeURIComponent(c.cnr_number)}" target="_blank" class="btn-ui btn-ui-secondary" style="padding:3px 6px; font-size:0.7rem;" title="Print Case Sheet">🖨️</a>
-          <button onclick="deleteSingleCase('${escapeHtml(c.cnr_number)}')" class="btn-ui btn-ui-danger" style="padding:3px 6px; font-size:0.7rem;">🗑️</button>
+        <div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center;">
+          <a href="${getWhatsAppUrl(c)}" target="_blank" class="table-action-btn" style="background: #dcfce7; color: #15803d; border-color: #bbf7d0;" title="Send WhatsApp Notice">💬</a>
+          <button onclick="syncSingleCase('${escapeHtml(c.cnr_number)}')" class="table-action-btn" title="Check Live eCourts">🔄</button>
+          <a href="/api/export-case/${encodeURIComponent(c.cnr_number)}" target="_blank" class="table-action-btn" title="Print Case Sheet">🖨️</a>
+          <button onclick="deleteSingleCase('${escapeHtml(c.cnr_number)}')" class="table-action-btn" style="color: #b91c1c;" title="Remove Case">🗑️</button>
         </div>
       </td>
     </tr>
@@ -922,19 +1028,19 @@ function renderWhatsAppDockets(cases) {
   if (!container) return;
 
   if (!cases || cases.length === 0) {
-    container.innerHTML = `<p style="text-align: center; color: var(--text-muted); padding: 20px;">No notices ready.</p>`;
+    container.innerHTML = `<p style="text-align: center; color: var(--text-muted); padding: 24px;">No notices ready.</p>`;
     return;
   }
 
   container.innerHTML = cases.map(c => `
-    <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+    <div style="background: #0e1526; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px 20px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--shadow-sm);">
       <div>
-        <div style="font-weight: 800; font-size: 0.88rem; color: var(--text-main);">${escapeHtml(c.client_name || 'Client')} (${escapeHtml(c.client_phone || '-')})</div>
-        <div style="font-size: 0.76rem; color: var(--text-secondary); margin-top: 2px;">
-          Case: <strong>${escapeHtml(c.case_title)}</strong> &bull; Item: <strong>#${escapeHtml(c.item_number || '-')}</strong> (${escapeHtml(c.court_room || '-')}) &bull; Stage: <strong>${escapeHtml(c.case_stage || 'Evidence')}</strong>
+        <div style="font-weight: 800; font-size: 0.95rem; color: #ffffff;">${escapeHtml(c.client_name || 'Client')} <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-gold); font-weight: 600;">(${escapeHtml(c.client_phone || '-')})</span></div>
+        <div style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 4px;">
+          Case: <strong style="color: #ffffff;">${escapeHtml(c.case_title)}</strong> &bull; Item: <strong style="color: var(--text-gold);">#${escapeHtml(c.item_number || '-')}</strong> (${escapeHtml(c.court_room || '-')}) &bull; Stage: <strong>${escapeHtml(c.case_stage || 'Evidence')}</strong>
         </div>
       </div>
-      <a href="${getWhatsAppUrl(c)}" target="_blank" class="btn-ui btn-ui-wa">
+      <a href="${getWhatsAppUrl(c)}" target="_blank" class="btn-ui btn-ui-wa" style="padding: 8px 16px;">
         📲 Send WhatsApp
       </a>
     </div>
@@ -958,17 +1064,17 @@ function renderCalendar(dateObj) {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
   let html = `
-    <div style="font-weight: 700; color: var(--text-muted); font-size: 0.72rem; padding: 4px;">SUN</div>
-    <div style="font-weight: 700; color: var(--text-muted); font-size: 0.72rem; padding: 4px;">MON</div>
-    <div style="font-weight: 700; color: var(--text-muted); font-size: 0.72rem; padding: 4px;">TUE</div>
-    <div style="font-weight: 700; color: var(--text-muted); font-size: 0.72rem; padding: 4px;">WED</div>
-    <div style="font-weight: 700; color: var(--text-muted); font-size: 0.72rem; padding: 4px;">THU</div>
-    <div style="font-weight: 700; color: var(--text-muted); font-size: 0.72rem; padding: 4px;">FRI</div>
-    <div style="font-weight: 700; color: var(--text-muted); font-size: 0.72rem; padding: 4px;">SAT</div>
+    <div style="font-weight: 800; color: var(--text-gold); font-size: 0.76rem; padding: 6px;">SUN</div>
+    <div style="font-weight: 800; color: var(--text-gold); font-size: 0.76rem; padding: 6px;">MON</div>
+    <div style="font-weight: 800; color: var(--text-gold); font-size: 0.76rem; padding: 6px;">TUE</div>
+    <div style="font-weight: 800; color: var(--text-gold); font-size: 0.76rem; padding: 6px;">WED</div>
+    <div style="font-weight: 800; color: var(--text-gold); font-size: 0.76rem; padding: 6px;">THU</div>
+    <div style="font-weight: 800; color: var(--text-gold); font-size: 0.76rem; padding: 6px;">FRI</div>
+    <div style="font-weight: 800; color: var(--text-gold); font-size: 0.76rem; padding: 6px;">SAT</div>
   `;
 
   for (let i = 0; i < firstDay; i++) {
-    html += `<div style="padding: 10px; background: #fafafa; border: 1px solid #f1f5f9; border-radius: var(--radius-sm);"></div>`;
+    html += `<div style="padding: 12px; background: rgba(255,255,255,0.01); border: 1px solid var(--border-light); border-radius: var(--radius-sm);"></div>`;
   }
 
   for (let day = 1; day <= daysInMonth; day++) {
@@ -980,9 +1086,9 @@ function renderCalendar(dateObj) {
     const hasHearings = matchedCases.length > 0;
 
     html += `
-      <div onclick="selectCalendarDate('${fullDateStr}')" style="padding: 8px 4px; cursor: pointer; background: ${hasHearings ? 'var(--primary-light)' : '#ffffff'}; border: 1px solid ${hasHearings ? 'var(--primary)' : 'var(--border-color)'}; border-radius: var(--radius-sm);" title="View hearings on ${fullDateStr}">
-        <div style="font-weight: 800; font-size: 0.82rem; color: ${hasHearings ? 'var(--primary)' : 'var(--text-main)'};">${day}</div>
-        ${hasHearings ? `<div style="background: var(--primary); color: #fff; font-size: 0.62rem; padding: 1px 3px; border-radius: 3px; margin-top: 2px; font-weight: 700;">${matchedCases.length} Cases</div>` : ''}
+      <div onclick="selectCalendarDate('${fullDateStr}')" style="padding: 10px 6px; cursor: pointer; background: ${hasHearings ? 'rgba(245, 158, 11, 0.15)' : '#0e1526'}; border: 1px solid ${hasHearings ? 'var(--border-gold)' : 'var(--border-color)'}; border-radius: var(--radius-sm); transition: var(--transition);" title="View hearings on ${fullDateStr}">
+        <div style="font-weight: 800; font-size: 0.88rem; color: ${hasHearings ? 'var(--text-gold)' : '#ffffff'};">${day}</div>
+        ${hasHearings ? `<div style="background: linear-gradient(135deg, #fbbf24, #d97706); color: #090d16; font-size: 0.65rem; padding: 2px 4px; border-radius: 4px; margin-top: 4px; font-weight: 800;">${matchedCases.length} Cases</div>` : ''}
       </div>
     `;
   }
@@ -1154,7 +1260,7 @@ document.addEventListener("DOMContentLoaded", () => {
             cnr: caseNoInput ? caseNoInput.value.trim().toUpperCase() : "",
             client_phone: phoneInput ? phoneInput.value.trim() : "",
             court_name: courtSelect ? courtSelect.value : "Principal Sub Court, Karur",
-            next_hearing_date: dateInput ? dateInput.value : "2026-08-14",
+            next_hearing_date: (dateInput && dateInput.value) ? dateInput.value : getSelectedOrTodayDate(),
             case_stage: stageInput ? stageInput.value.trim() : "Evidence",
             court_room: roomInput ? roomInput.value.trim() : "Room 1",
             item_number: itemInput ? itemInput.value.trim() : "1",
@@ -1169,7 +1275,7 @@ document.addEventListener("DOMContentLoaded", () => {
         alert(`✅ Client "${nameInput ? nameInput.value : 'Client'}" successfully added to tracking!`);
         intakeForm.reset();
         await loadTrackedCases();
-        await loadDailyCauseList("2026-08-14");
+        await loadDailyCauseList(getSelectedOrTodayDate());
         window.switchView("view-cases");
       } catch (err) {
         alert("Failed to add client: " + err.message);
@@ -1213,12 +1319,24 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Date picker change listener
+  const datePicker = document.getElementById("dashboard-date-picker");
+  if (datePicker) {
+    if (!datePicker.value) {
+      datePicker.value = "2026-08-14"; // Default to loaded board date
+    }
+    datePicker.addEventListener("change", () => {
+      loadDailyCauseList(datePicker.value);
+    });
+  }
+
   // Initial Loads & Start Live Sync Loop
   async function initApp() {
+    runStartupSequence();
     await loadAdvocateSettings();
     await loadMetaConfig();
     await loadTrackedCases();
-    await loadDailyCauseList("2026-08-14");
+    await loadDailyCauseList(getSelectedOrTodayDate());
     await loadLeads();
     renderCalendar(currentCalendarDate);
     startLiveSyncLoop();
@@ -1286,11 +1404,12 @@ window.dispatchAllViaMetaCloud = async function() {
     btn.innerText = "⏳ Dispatching via Meta Cloud API...";
   }
 
+  const targetDate = (causeListData && causeListData.target_date) || getSelectedOrTodayDate();
   try {
     const res = await fetch("/api/whatsapp/dispatch-all", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ date: "2026-08-14" })
+      body: JSON.stringify({ date: targetDate })
     });
     const result = await res.json();
 
@@ -1306,7 +1425,8 @@ window.dispatchAllViaMetaCloud = async function() {
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.innerText = "🛡️ Official Meta Cloud Auto-Dispatch (All 14)";
+      const count = (causeListData && causeListData.total_hearings) || '';
+      btn.innerText = `🛡️ Official Meta Cloud Auto-Dispatch${count ? ` (${count})` : ''}`;
     }
   }
 };
