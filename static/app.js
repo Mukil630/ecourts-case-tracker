@@ -554,15 +554,15 @@ function startLiveSyncLoop() {
         liveIndicator.innerHTML = `<span style="width:6px; height:6px; border-radius:50%; background:#10b981;"></span> Live Auto-Sync Active (${status.last_updated})`;
       }
 
-      // If case count changed or date updated, sync smoothly in background
-      if (lastSyncTimestamp !== 0 && (status.total_cases !== allCases.length)) {
+      // If case count changed or initial portfolio was empty, sync immediately
+      if (status.total_cases !== allCases.length || allCases.length === 0) {
         await loadTrackedCases();
         const picker = document.getElementById("dashboard-date-picker");
         await loadDailyCauseList(picker ? picker.value : "2026-08-14");
       }
       lastSyncTimestamp = status.timestamp;
     } catch (e) {}
-  }, 8000);
+  }, 4000);
 }
 
 // =========================================================================
@@ -1183,10 +1183,13 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Initial Loads & Start Live Sync Loop
-  loadAdvocateSettings();
-  loadDailyCauseList("2026-08-14");
-  loadTrackedCases();
-  loadLeads();
-  renderCalendar(currentCalendarDate);
-  startLiveSyncLoop();
+  async function initApp() {
+    await loadAdvocateSettings();
+    await loadTrackedCases();
+    await loadDailyCauseList("2026-08-14");
+    await loadLeads();
+    renderCalendar(currentCalendarDate);
+    startLiveSyncLoop();
+  }
+  initApp();
 });

@@ -6,9 +6,16 @@ from typing import Optional, Dict, Any, List
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "cases.db")
 
+def get_db_connection(timeout: float = 20.0) -> sqlite3.Connection:
+    """Creates a thread-safe, high-concurrency SQLite connection with WAL mode."""
+    conn = sqlite3.connect(DB_PATH, timeout=timeout)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=5000")
+    return conn
+
 def init_db():
     """Initializes and migrates the database table for tracking cases, daily cause lists, and automation rules."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     # 1. Main Cases Table
@@ -145,8 +152,18 @@ def init_db():
         )
     """)
 
+    # Check if database is empty and auto-seed Karur sample dataset
+    cursor.execute("SELECT COUNT(*) FROM cases")
+    case_count = cursor.fetchone()[0]
     conn.commit()
     conn.close()
+
+    if case_count == 0:
+        try:
+            import_karur_sample_data()
+        except Exception:
+            pass
+
 
 def get_all_leads() -> List[Dict[str, Any]]:
     """Returns all prospective client inquiries."""
