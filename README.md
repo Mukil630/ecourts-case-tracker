@@ -74,7 +74,15 @@ ECOURTS_API_KEY=eci_live_your_api_key_here
 
 ---
 
-## 🖥️ Running the Application
+## 🌐 Live Cloud Deployment (24/7 Always Online)
+
+The platform is deployed live on Render with automatic 24/7 background sync:
+* **Live App URL:** [https://ecourts-case-tracker.onrender.com](https://ecourts-case-tracker.onrender.com)
+* **Health Check & Keep-Alive:** [https://ecourts-case-tracker.onrender.com/healthz](https://ecourts-case-tracker.onrender.com/healthz)
+
+---
+
+## 🖥️ Running Locally
 
 ### 🌐 Option A: Start the Interactive Web Dashboard
 ```bash

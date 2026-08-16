@@ -31,16 +31,34 @@ sync_worker.start()
 def _keep_alive_loop():
     """Keeps Render Free Tier awake 24/7 by periodically pinging the public URL."""
     ext_url = os.environ.get("RENDER_EXTERNAL_URL", "https://ecourts-case-tracker.onrender.com")
-    time.sleep(30)
+    time.sleep(20)
     while True:
         try:
-            requests.get(f"{ext_url.rstrip('/')}/api/live-status", timeout=15)
+            target = f"{ext_url.rstrip('/')}/healthz"
+            requests.get(target, timeout=15)
         except Exception:
             pass
-        time.sleep(600)  # Ping every 10 minutes
+        time.sleep(480)  # Ping every 8 minutes to stay well within 15min sleep window
 
 keep_alive_thread = threading.Thread(target=_keep_alive_loop, daemon=True)
 keep_alive_thread.start()
+
+
+@app.route("/healthz")
+@app.route("/api/health")
+def health_check():
+    """200 OK Health Check for UptimeRobot & Render Keep-Alive."""
+    try:
+        cases_count = len(get_all_cases())
+    except Exception:
+        cases_count = 0
+    return jsonify({
+        "status": "healthy",
+        "service": "ecourts-case-tracker",
+        "cases_monitored": cases_count,
+        "auto_sync": "running" if sync_worker.running else "stopped",
+        "server_time": time.strftime("%Y-%m-%d %H:%M:%S")
+    }), 200
 
 
 @app.route("/")
