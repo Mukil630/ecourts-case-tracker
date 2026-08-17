@@ -2,6 +2,7 @@ import sqlite3
 import os
 import json
 import time
+import datetime
 from typing import Optional, Dict, Any, List
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "cases.db")
@@ -569,6 +570,11 @@ def update_advocate_settings(settings: Dict[str, Any]) -> bool:
 
 def import_karur_sample_data():
     """Pre-populates the exact 14 Karur Court hearings from Uncle's sample."""
+    today_str = datetime.date.today().strftime("%Y-%m-%d")
+    tomorrow_str = (datetime.date.today() + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+    in_2d_str = (datetime.date.today() + datetime.timedelta(days=2)).strftime("%Y-%m-%d")
+    past_str = (datetime.date.today() - datetime.timedelta(days=7)).strftime("%Y-%m-%d")
+
     sample_hearings = [
         {
             "cnr_number": "TNKR010010352023",
@@ -580,7 +586,7 @@ def import_karur_sample_data():
             "judge_name": "M. CHARLES ALBERT, Judicial Magistrate No.II",
             "case_stage": "Evidence",
             "case_status": "PENDING",
-            "next_hearing_date": "2026-08-14",
+            "next_hearing_date": today_str,
             "client_name": "M Palanisamy",
             "client_phone": "+919443322110",
             "notes": "Complainant evidence cross examination"
@@ -595,7 +601,7 @@ def import_karur_sample_data():
             "judge_name": "Thiru R.Mahesh, B.A., LL.B(Hons)., LL.M.",
             "case_stage": "Service Pending - Warrant",
             "case_status": "PENDING",
-            "next_hearing_date": "2026-08-14",
+            "next_hearing_date": today_str,
             "client_name": "G Eniyavan",
             "client_phone": "+919842112233",
             "notes": "NBW execution pending"
@@ -610,7 +616,7 @@ def import_karur_sample_data():
             "judge_name": "Thiru P.Thangavel, B.Sc., LL.M., Sessions Judge",
             "case_stage": "For Attachment / Arrest / Deposit",
             "case_status": "PENDING",
-            "next_hearing_date": "2026-08-14",
+            "next_hearing_date": today_str,
             "client_name": "Shalini",
             "client_phone": "+919789012345",
             "notes": "Execution petition for deposit"
@@ -625,7 +631,7 @@ def import_karur_sample_data():
             "judge_name": "Tmt. S.SUMATHY, M.L., District Judge",
             "case_stage": "IA Pending",
             "case_status": "PENDING",
-            "next_hearing_date": "2026-08-14",
+            "next_hearing_date": today_str,
             "client_name": "S Nirmala",
             "client_phone": "+919655443322",
             "notes": "Injunction application hearing"
@@ -640,7 +646,7 @@ def import_karur_sample_data():
             "judge_name": "Thiru. N.Nilaveshwaran, B.A., B.L.",
             "case_stage": "Evidence",
             "case_status": "PENDING",
-            "next_hearing_date": "2026-08-14",
+            "next_hearing_date": today_str,
             "client_name": "SBI Vangal Branch",
             "client_phone": "+919445566778",
             "notes": "Bank manager witness examination"
@@ -655,7 +661,7 @@ def import_karur_sample_data():
             "judge_name": "Thiru. N.Nilaveshwaran, B.A., B.L.",
             "case_stage": "Trial",
             "case_status": "PENDING",
-            "next_hearing_date": "2026-08-14",
+            "next_hearing_date": today_str,
             "client_name": "A Palaniyappan",
             "client_phone": "+919842555666",
             "notes": "Final trial arguments"
@@ -670,7 +676,7 @@ def import_karur_sample_data():
             "judge_name": "Tmt K.L.Priyanga, B.A., B.L.(Hons)",
             "case_stage": "Evidence",
             "case_status": "PENDING",
-            "next_hearing_date": "2026-08-14",
+            "next_hearing_date": today_str,
             "client_name": "Shobika Impex Ltd",
             "client_phone": "+919843011223",
             "notes": "Commercial dispute evidence"
@@ -685,7 +691,7 @@ def import_karur_sample_data():
             "judge_name": "Tmt K.L.Priyanga, B.A., B.L.(Hons)",
             "case_stage": "Ex-parte Evidence",
             "case_status": "PENDING",
-            "next_hearing_date": "2026-08-14",
+            "next_hearing_date": today_str,
             "client_name": "Bank of Baroda Main",
             "client_phone": "+919444111222",
             "notes": "Proof affidavit filing"
@@ -700,7 +706,7 @@ def import_karur_sample_data():
             "judge_name": "Tmt K.L.Priyanga, B.A., B.L.(Hons)",
             "case_stage": "Ex-parte Evidence",
             "case_status": "PENDING",
-            "next_hearing_date": "2026-08-14",
+            "next_hearing_date": today_str,
             "client_name": "BOB Aravakurichi",
             "client_phone": "+919444333444",
             "notes": "Recovery suit exparte"
@@ -715,7 +721,7 @@ def import_karur_sample_data():
             "judge_name": "Tmt K.L.Priyanga, B.A., B.L.(Hons)",
             "case_stage": "Ex-parte Evidence",
             "case_status": "PENDING",
-            "next_hearing_date": "2026-08-14",
+            "next_hearing_date": today_str,
             "client_name": "SBI Aravakurichi",
             "client_phone": "+919445112233",
             "notes": "Exparte order hearing"
@@ -730,7 +736,7 @@ def import_karur_sample_data():
             "judge_name": "Tmt K.L.Priyanga, B.A., B.L.(Hons)",
             "case_stage": "Steps",
             "case_status": "PENDING",
-            "next_hearing_date": "2026-08-14",
+            "next_hearing_date": today_str,
             "client_name": "SBI Kovai Road",
             "client_phone": "+919445998877",
             "notes": "Legal heir steps petition"
@@ -745,7 +751,7 @@ def import_karur_sample_data():
             "judge_name": "Thiru. BALAMURUGAN V.S., Addl Subordinate Judge",
             "case_stage": "Ex-parte Evidence",
             "case_status": "PENDING",
-            "next_hearing_date": "2026-08-14",
+            "next_hearing_date": today_str,
             "client_name": "BOB Karur Main",
             "client_phone": "+919444111222",
             "notes": "Proof affidavit"
@@ -760,7 +766,7 @@ def import_karur_sample_data():
             "judge_name": "Thiru. BALAMURUGAN V.S., Addl Subordinate Judge",
             "case_stage": "Ex-parte Evidence",
             "case_status": "PENDING",
-            "next_hearing_date": "2026-08-14",
+            "next_hearing_date": today_str,
             "client_name": "T Shankar",
             "client_phone": "+919842199887",
             "notes": "Partition suit exparte"
@@ -775,7 +781,7 @@ def import_karur_sample_data():
             "judge_name": "Thiru. BALAMURUGAN V.S., Addl Subordinate Judge",
             "case_stage": "IA Pending",
             "case_status": "PENDING",
-            "next_hearing_date": "2026-08-14",
+            "next_hearing_date": today_str,
             "client_name": "K Lakshmi",
             "client_phone": "+919842333221",
             "notes": "Commissioner report objection"
@@ -790,7 +796,7 @@ def import_karur_sample_data():
             "judge_name": "Tmt. S.SUMATHY, M.L., District Judge",
             "case_stage": "Arguments",
             "case_status": "PENDING",
-            "next_hearing_date": "2026-08-15",
+            "next_hearing_date": in_2d_str,
             "client_name": "Karthik",
             "client_phone": "+919443112233",
             "notes": "Final trial arguments"
@@ -805,7 +811,7 @@ def import_karur_sample_data():
             "judge_name": "Thiru P.Thangavel, B.Sc., LL.M., Sessions Judge",
             "case_stage": "Final Hearing",
             "case_status": "PENDING",
-            "next_hearing_date": "2026-08-16",
+            "next_hearing_date": tomorrow_str,
             "client_name": "Sangeetha",
             "client_phone": "+919789112244",
             "notes": "Maintenance dispute final hearing"
@@ -820,7 +826,7 @@ def import_karur_sample_data():
             "judge_name": "Tmt K.L.Priyanga, B.A., B.L.(Hons)",
             "case_stage": "Judgment Pronounced",
             "case_status": "DISPOSED",
-            "next_hearing_date": "2026-08-10",
+            "next_hearing_date": past_str,
             "client_name": "Venkatesh",
             "client_phone": "+919842778899",
             "notes": "Decree granted in favor of petitioner"

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>R. Anbaiya & Associates • Legal Practice Management & eCourts Automation</title>
-  <link rel="stylesheet" href="/static/style.css?v=8.0">
+  <link rel="stylesheet" href="/static/style.css?v=10.0">
 </head>
 <body>
 
@@ -48,10 +48,13 @@
     </div>
   </div>
 
+  <!-- Mobile Sidebar Backdrop -->
+  <div id="sidebar-backdrop" class="sidebar-backdrop" onclick="toggleMobileSidebar()"></div>
+
   <!-- ==========================================================================
-       1. FIXED SIDEBAR
+       1. FIXED SIDEBAR / MOBILE OFF-CANVAS DRAWER
        ========================================================================== -->
-  <aside class="sidebar">
+  <aside class="sidebar" id="app-sidebar">
     <div class="sidebar-header">
       <div class="sidebar-logo-icon" style="padding: 5px;">
         <svg viewBox="0 0 100 100" style="width: 100%; height: 100%;" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -71,6 +74,7 @@
         <div class="sidebar-brand-title" id="sidebar-brand-title">R. ANBAIYA & ASSOC.</div>
         <div class="sidebar-brand-sub">Advocates & Legal Consultants</div>
       </div>
+      <button class="sidebar-mobile-close" onclick="toggleMobileSidebar()" aria-label="Close Menu">✕</button>
     </div>
 
     <nav class="sidebar-nav">
@@ -141,6 +145,7 @@
     
     <!-- Top Header Bar -->
     <header class="top-header">
+      <button class="mobile-menu-btn" id="btn-mobile-menu" onclick="toggleMobileSidebar()" aria-label="Open Menu">☰</button>
       <div class="header-title-block">
         <div style="display: flex; align-items: center; gap: 8px;">
           <h2 id="header-advocate-greeting">Good Morning, Advocate R. Anbaiya</h2>
@@ -153,7 +158,7 @@
 
       <div class="header-actions">
         <button class="btn-ui btn-ui-secondary" onclick="toggleJarvisDrawer()" style="border-color: var(--border-gold); color: var(--text-gold); background: rgba(245, 158, 11, 0.1); font-weight: 800;">
-          🤖 Ask JARVIS AI
+          🤖 Ask AI
         </button>
         <div class="pill-info">
           <span>⚡ API Guard:</span>
@@ -273,14 +278,11 @@
             <table class="hearing-table">
               <thead>
                 <tr>
-                  <th>Client Name</th>
-                  <th>Case Title & Parties</th>
-                  <th>Case Number</th>
-                  <th>CNR Number</th>
-                  <th>Court Complex</th>
-                  <th>Next Hearing</th>
-                  <th>Status</th>
-                  <th style="text-align: right;">Actions</th>
+                  <th style="width: 22%;">Client & File Number</th>
+                  <th style="width: 32%;">Case Title & Parties</th>
+                  <th style="width: 22%;">Court Complex & Judge</th>
+                  <th style="width: 14%;">Hearing & Stage</th>
+                  <th style="width: 10%; text-align: right;">Actions</th>
                 </tr>
               </thead>
               <tbody id="all-cases-tbody">
@@ -309,13 +311,12 @@
             <table class="hearing-table">
               <thead>
                 <tr>
-                  <th>Client Full Name</th>
-                  <th>WhatsApp Phone</th>
-                  <th>Role</th>
-                  <th>Active Cases</th>
-                  <th>Next Hearing</th>
-                  <th>Alert Status</th>
-                  <th style="text-align: right;">Quick Action</th>
+                  <th style="width: 24%;">Client Full Name</th>
+                  <th style="width: 18%;">WhatsApp Phone</th>
+                  <th style="width: 18%;">Litigant Role</th>
+                  <th style="width: 12%;">Active Matters</th>
+                  <th style="width: 14%;">Next Hearing</th>
+                  <th style="width: 14%; text-align: right;">Action</th>
                 </tr>
               </thead>
               <tbody id="clients-tbody">
@@ -722,7 +723,37 @@
     </div>
   </div>
 
-  <script src="/static/app.js?v=13.0"></script>
+  <!-- ==========================================================================
+       8. MOBILE BOTTOM NAVIGATION (SMARTPHONE 1-THUMB NAVIGATION)
+       ========================================================================== -->
+  <nav class="mobile-bottom-nav" id="mobile-bottom-nav">
+    <button class="mobile-nav-btn active" data-mobile-view="view-dashboard" onclick="switchView('view-dashboard')">
+      <span class="mobile-nav-icon">📊</span>
+      <span>Board</span>
+    </button>
+    <button class="mobile-nav-btn" data-mobile-view="view-cases" onclick="switchView('view-cases')">
+      <span class="mobile-nav-icon">📁</span>
+      <span>Cases</span>
+    </button>
+    <button class="mobile-nav-btn" onclick="openCaseIntakeModal()" style="color: var(--primary);">
+      <span class="mobile-nav-icon">➕</span>
+      <span>Add</span>
+    </button>
+    <button class="mobile-nav-btn" data-mobile-view="view-clients" onclick="switchView('view-clients')">
+      <span class="mobile-nav-icon">👥</span>
+      <span>Clients</span>
+    </button>
+    <button class="mobile-nav-btn" onclick="toggleJarvisDrawer()">
+      <span class="mobile-nav-icon">🤖</span>
+      <span>JARVIS</span>
+    </button>
+    <button class="mobile-nav-btn" onclick="toggleMobileSidebar()">
+      <span class="mobile-nav-icon">☰</span>
+      <span>Menu</span>
+    </button>
+  </nav>
+
+  <script src="/static/app.js?v=14.0"></script>
 </body>
 </html>
 
