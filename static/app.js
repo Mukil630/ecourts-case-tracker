@@ -1200,15 +1200,63 @@ async function loadTrackedCases() {
 
     const targetDate = getSelectedOrTodayDate();
     const futureCasesCount = allCases.filter(c => c.next_hearing_date && c.next_hearing_date > targetDate && (c.case_status || '').toUpperCase() !== 'DISPOSED').length;
+    const awaitingCasesCount = allCases.filter(c => c.next_hearing_date && c.next_hearing_date <= targetDate && (c.case_status || '').toUpperCase() !== 'DISPOSED').length;
     if (kpiUpcoming7d) kpiUpcoming7d.innerText = futureCasesCount;
 
-    renderAllCasesTable(allCases);
+    // Update Filter Tab Badges
+    const bActive = document.getElementById("badge-active-tab-count");
+    const bUpcoming = document.getElementById("badge-upcoming-tab-count");
+    const bAwaiting = document.getElementById("badge-awaiting-tab-count");
+    const bDisposed = document.getElementById("badge-disposed-tab-count");
+    const bAll = document.getElementById("badge-all-tab-count");
+
+    if (bActive) bActive.innerText = activeCount;
+    if (bUpcoming) bUpcoming.innerText = futureCasesCount;
+    if (bAwaiting) bAwaiting.innerText = awaitingCasesCount;
+    if (bDisposed) bDisposed.innerText = disposedCount;
+    if (bAll) bAll.innerText = allCases.length;
+
+    filterAllCasesView(currentCaseFilterTab || "ACTIVE");
     renderClientsTable(allCases);
     renderWhatsAppDockets(allCases);
   } catch (e) {
     console.error("loadTrackedCases error:", e);
   }
 }
+
+let currentCaseFilterTab = "ACTIVE";
+
+window.filterAllCasesView = function(category) {
+  currentCaseFilterTab = category;
+  document.querySelectorAll("#all-cases-filter-tabs .court-tab-btn").forEach(b => b.classList.remove("active"));
+  const activeBtn = document.getElementById(`filter-btn-${category.toLowerCase()}`);
+  if (activeBtn) activeBtn.classList.add("active");
+
+  const todayStr = getSelectedOrTodayDate();
+  let filtered = allCases || [];
+
+  if (category === "ACTIVE") {
+    filtered = filtered.filter(c => (c.case_status || '').toUpperCase() !== 'DISPOSED');
+  } else if (category === "UPCOMING") {
+    filtered = filtered.filter(c => c.next_hearing_date && c.next_hearing_date > todayStr && (c.case_status || '').toUpperCase() !== 'DISPOSED');
+  } else if (category === "AWAITING") {
+    filtered = filtered.filter(c => c.next_hearing_date && c.next_hearing_date <= todayStr && (c.case_status || '').toUpperCase() !== 'DISPOSED');
+  } else if (category === "DISPOSED") {
+    filtered = filtered.filter(c => (c.case_status || '').toUpperCase() === 'DISPOSED');
+  }
+
+  const query = (document.getElementById("all-cases-search")?.value || "").toLowerCase();
+  if (query) {
+    filtered = filtered.filter(c => 
+      (c.case_title || '').toLowerCase().includes(query) ||
+      (c.client_name || '').toLowerCase().includes(query) ||
+      (c.cnr_number || '').toLowerCase().includes(query) ||
+      (c.case_number_formatted || '').toLowerCase().includes(query)
+    );
+  }
+
+  renderAllCasesTable(filtered);
+};
 
 function renderAllCasesTable(cases) {
   const tbody = document.getElementById("all-cases-tbody");
@@ -1219,7 +1267,7 @@ function renderAllCasesTable(cases) {
       <tr>
         <td colspan="8" style="padding: 32px; text-align: center; color: var(--text-muted);">
           <div style="font-size: 1.8rem; margin-bottom: 6px;">📁</div>
-          <strong>No Cases in Portfolio</strong>
+          <strong>No Cases Found in this Category</strong>
         </td>
       </tr>
     `;
@@ -1538,14 +1586,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const allCasesSearch = document.getElementById("all-cases-search");
   if (allCasesSearch) {
     allCasesSearch.addEventListener("input", () => {
-      const q = allCasesSearch.value.trim().toLowerCase();
-      const filtered = allCases.filter(c => 
-        (c.client_name || "").toLowerCase().includes(q) ||
-        (c.case_title || "").toLowerCase().includes(q) ||
-        (c.cnr_number || "").toLowerCase().includes(q) ||
-        (c.case_number_formatted || "").toLowerCase().includes(q)
-      );
-      renderAllCasesTable(filtered);
+      filterAllCasesView(currentCaseFilterTab || "ACTIVE");
     });
   }
 

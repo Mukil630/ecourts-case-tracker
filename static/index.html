@@ -310,10 +310,19 @@
               <h3 class="main-card-title">📁 All Monitored Cases</h3>
               <p class="main-card-sub">Private Chamber Case Registry &bull; Searchable by Client Name or CNR</p>
             </div>
-            <div style="display: flex; gap: 10px;">
-              <input type="text" id="all-cases-search" class="form-input-ui" placeholder="🔍 Search cases, clients, CNR..." style="width: 250px;">
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+              <input type="text" id="all-cases-search" class="form-input-ui" placeholder="🔍 Search cases, clients, CNR..." style="width: 240px;">
               <button class="btn-ui btn-ui-primary" onclick="openCaseIntakeModal()">➕ New Case</button>
             </div>
+          </div>
+
+          <!-- Portfolio Category Filter Tabs -->
+          <div class="court-tabs-bar" id="all-cases-filter-tabs" style="margin-bottom: 16px;">
+            <button class="court-tab-btn active" id="filter-btn-active" onclick="filterAllCasesView('ACTIVE')">🟢 Active 2026 Practice <span class="tab-badge" id="badge-active-tab-count">0</span></button>
+            <button class="court-tab-btn" id="filter-btn-upcoming" onclick="filterAllCasesView('UPCOMING')">📅 Upcoming Hearings <span class="tab-badge" id="badge-upcoming-tab-count">0</span></button>
+            <button class="court-tab-btn" id="filter-btn-awaiting" onclick="filterAllCasesView('AWAITING')">⏳ Awaiting Next Date <span class="tab-badge" id="badge-awaiting-tab-count">0</span></button>
+            <button class="court-tab-btn" id="filter-btn-disposed" onclick="filterAllCasesView('DISPOSED')">🏁 Disposed Archives <span class="tab-badge" id="badge-disposed-tab-count">0</span></button>
+            <button class="court-tab-btn" id="filter-btn-all" onclick="filterAllCasesView('ALL')">📁 All Cases <span class="tab-badge" id="badge-all-tab-count">0</span></button>
           </div>
 
           <div style="overflow-x: auto;">
