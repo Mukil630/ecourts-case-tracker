@@ -779,6 +779,7 @@ async function loadDailyCauseList(targetDate) {
     renderHearingBoard(data, selectedCourtFilter);
     setupCourtChips(data);
     renderUpcomingHearingsPipeline();
+    renderRescheduledHearingsSection();
   } catch (e) {
     if (container) {
       container.innerHTML = `<p style="padding: 24px; color: var(--danger);">Failed to load hearing board: ${e.message}</p>`;
@@ -1076,12 +1077,100 @@ function renderUpcomingHearingsPipeline() {
   `;
 }
 
+async function renderRescheduledHearingsSection() {
+  const container = document.getElementById("rescheduled-table-container");
+  const countBadge = document.getElementById("rescheduled-count-badge");
+  if (!container) return;
+
+  try {
+    const res = await fetch("/api/history");
+    const logs = await res.json();
+
+    if (countBadge) countBadge.innerText = logs.length || 0;
+
+    if (!logs || logs.length === 0) {
+      container.innerHTML = `
+        <div style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 0.82rem;">
+          No recent hearing date changes or adjournments recorded yet.
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = `
+      <table class="hearing-table" style="font-size: 0.84rem;">
+        <thead>
+          <tr>
+            <th style="width: 140px;">Detected Date</th>
+            <th>Case Title / Number</th>
+            <th>Client</th>
+            <th>Previous Date</th>
+            <th>New Rescheduled Date</th>
+            <th style="text-align: right; width: 150px;">WhatsApp Client Alert</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${logs.slice(0, 10).map(log => {
+            const waText = encodeURIComponent(
+              `*LEGAL NOTICE - CASE ADJOURNMENT / RE-SCHEDULING*\n\n` +
+              `Dear ${log.client_name || 'Client'},\n\n` +
+              `This is an official update from Advocate R. Anbaiya & Associates regarding your matter: *${log.case_title || log.cnr_number}*.\n\n` +
+              `• *Previous Hearing:* ${log.previous_hearing_date || 'N/A'}\n` +
+              `• *NEW ADJOURNED DATE:* *${log.new_hearing_date || 'Upcoming'}*\n\n` +
+              `Please take note of the new hearing schedule. For queries, contact our chamber.\n\n` +
+              `*Advocate R. Anbaiya & Associates*\nKarur District Court Complex`
+            );
+            const cleanPhone = (log.client_phone || '9842112233').replace(/[^0-9]/g, '');
+            const waUrl = `https://wa.me/${cleanPhone}?text=${waText}`;
+
+            return `
+              <tr>
+                <td style="font-size: 0.76rem; color: var(--text-muted); font-family: var(--font-mono);">
+                  ${escapeHtml(log.detected_at || '-')}
+                </td>
+                <td class="clickable-case-cell" onclick="openCaseDrawer('${escapeHtml(log.cnr_number)}')">
+                  <strong style="color: #ffffff; font-size: 0.88rem;">${escapeHtml(log.case_title || log.cnr_number)}</strong>
+                  <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">
+                    CNR: ${escapeHtml(log.cnr_number)}
+                  </div>
+                </td>
+                <td>
+                  <span style="font-weight: 700; color: var(--text-main);">${escapeHtml(log.client_name || 'Client')}</span><br>
+                  <span style="font-size: 0.72rem; color: var(--text-muted);">📞 ${escapeHtml(log.client_phone || '-')}</span>
+                </td>
+                <td>
+                  <span style="text-decoration: line-through; color: #ef4444; font-weight: 700; font-size: 0.78rem;">
+                    ${escapeHtml(log.previous_hearing_date || 'None')}
+                  </span>
+                </td>
+                <td>
+                  <span style="background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); font-size: 0.78rem; padding: 3px 8px; border-radius: 6px; font-weight: 800;">
+                    ➔ ${escapeHtml(log.new_hearing_date || '-')}
+                  </span>
+                </td>
+                <td style="text-align: right;">
+                  <a href="${waUrl}" target="_blank" class="btn-ui btn-ui-wa" style="padding: 5px 10px; font-size: 0.74rem; font-weight: 800;">
+                    📲 Send New Date
+                  </a>
+                </td>
+              </tr>
+            `;
+          }).join("")}
+        </tbody>
+      </table>
+    `;
+  } catch(err) {
+    console.error("renderRescheduledHearingsSection error:", err);
+  }
+}
+
 async function loadTrackedCases() {
   try {
     const res = await fetch("/api/cases");
     const data = await res.json();
     allCases = data || [];
     renderUpcomingHearingsPipeline();
+    renderRescheduledHearingsSection();
 
     const kpiActiveCases = document.getElementById("kpi-active-cases");
     const badgeTotalCases = document.getElementById("badge-total-cases");
