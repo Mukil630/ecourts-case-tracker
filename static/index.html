@@ -227,8 +227,8 @@
         <div class="main-card">
           <div class="main-card-header">
             <div>
-              <h3 class="main-card-title">⚖️ Daily Court Hearing Board</h3>
-              <p class="main-card-sub">Grouped by Court Complex, Presiding Judge, Court Room & Item Number</p>
+              <h3 class="main-card-title" id="hearing-board-main-title">⚖️ Daily Court Hearing Board</h3>
+              <p class="main-card-sub" id="hearing-board-main-sub">Grouped by Court Complex, Presiding Judge, Court Room & Item Number</p>
             </div>
             <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
               <button id="btn-bulk-wa-header" onclick="openBulkWhatsAppModal()" class="btn-ui btn-ui-wa" style="font-size: 0.75rem; font-weight: 800; background: #15803d; box-shadow: 0 2px 4px rgba(22, 163, 74, 0.3);">
@@ -252,6 +252,27 @@
           <!-- Grouped Hearing Board List -->
           <div id="hearing-board-list-container">
             <!-- Rendered dynamically by app.js -->
+          </div>
+
+          <!-- ======================================================================
+               UPCOMING HEARINGS PIPELINE (Separate Section on Same Page)
+               ====================================================================== -->
+          <div id="upcoming-hearings-section" style="margin-top: 36px; border-top: 1px solid var(--border-color); padding-top: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+              <div>
+                <h4 style="font-size: 1rem; font-weight: 800; color: #ffffff; display: flex; align-items: center; gap: 8px;">
+                  📅 Upcoming Confirmed Hearings Pipeline (Next 7–14 Days)
+                  <span class="tab-badge" id="upcoming-pipeline-count-badge" style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); font-size: 0.72rem; padding: 2px 8px; border-radius: 10px;">0</span>
+                </h4>
+                <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 2px;">
+                  Upcoming scheduled dates &bull; Advance client notice reminders & strategic preparation
+                </p>
+              </div>
+            </div>
+
+            <div id="upcoming-pipeline-table-container" style="overflow-x: auto;">
+              <!-- Rendered dynamically by app.js -->
+            </div>
           </div>
         </div>
       </section>

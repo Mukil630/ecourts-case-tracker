@@ -17,6 +17,12 @@ function getSelectedOrTodayDate() {
   const picker = document.getElementById("dashboard-date-picker");
   if (picker && picker.value) return picker.value;
   const d = new Date();
+  const hours = d.getHours();
+  const minutes = d.getMinutes();
+  // If after 7:30 PM (19:30), courts for today have concluded. Default to Tomorrow!
+  if (hours > 19 || (hours === 19 && minutes >= 30)) {
+    d.setDate(d.getDate() + 1);
+  }
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
@@ -724,6 +730,19 @@ async function loadDailyCauseList(targetDate) {
   const mExp = document.getElementById("main-export-btn");
   if (mExp) mExp.href = `/api/export-cause-list?date=${encodeURIComponent(targetDate)}`;
 
+  const mainTitle = document.getElementById("hearing-board-main-title");
+  const mainSub = document.getElementById("hearing-board-main-sub");
+  const now = new Date();
+  const isEvening = now.getHours() > 19 || (now.getHours() === 19 && now.getMinutes() >= 30);
+  if (mainTitle) {
+    mainTitle.innerText = isEvening ? "⚖️ Tomorrow's Court Hearing Board" : "⚖️ Daily Court Hearing Board";
+  }
+  if (mainSub) {
+    mainSub.innerHTML = isEvening 
+      ? `🌅 <span style="color:var(--text-gold); font-weight:700;">Evening Session Active:</span> Displaying schedule for ${targetDate} &bull; Grouped by Court, Room & Item Number`
+      : `Grouped by Court Complex, Presiding Judge, Court Room & Item Number`;
+  }
+
   const container = document.getElementById("hearing-board-list-container");
   if (container) {
     container.innerHTML = `<p style="padding: 24px; text-align: center; color: var(--text-muted);">Loading Daily Court Hearing Board for ${targetDate}...</p>`;
@@ -753,6 +772,7 @@ async function loadDailyCauseList(targetDate) {
 
     renderHearingBoard(data, selectedCourtFilter);
     setupCourtChips(data);
+    renderUpcomingHearingsPipeline();
   } catch (e) {
     if (container) {
       container.innerHTML = `<p style="padding: 24px; color: var(--danger);">Failed to load hearing board: ${e.message}</p>`;
@@ -926,12 +946,104 @@ function renderHearingBoard(data, filterCourt = "ALL") {
   `).join("");
 }
 
+function renderUpcomingHearingsPipeline() {
+  const container = document.getElementById("upcoming-pipeline-table-container");
+  const countBadge = document.getElementById("upcoming-pipeline-count-badge");
+  if (!container) return;
+
+  const targetDate = getSelectedOrTodayDate();
+  const todayIso = new Date().toISOString().split("T")[0];
+  
+  // Filter cases with next_hearing_date in future relative to today or scheduled after targetDate
+  const upcomingCases = (allCases || []).filter(c => {
+    const d = c.next_hearing_date;
+    return d && d >= todayIso && d !== targetDate && c.case_status !== "DISPOSED";
+  });
+
+  // Sort chronologically
+  upcomingCases.sort((a, b) => {
+    if (a.next_hearing_date === b.next_hearing_date) {
+      const numA = parseInt(a.item_number) || 999;
+      const numB = parseInt(b.item_number) || 999;
+      return numA - numB;
+    }
+    return (a.next_hearing_date || "").localeCompare(b.next_hearing_date || "");
+  });
+
+  if (countBadge) countBadge.innerText = upcomingCases.length;
+
+  if (upcomingCases.length === 0) {
+    container.innerHTML = `
+      <div style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 0.82rem;">
+        No upcoming scheduled hearings found in the next 14 days.
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = `
+    <table class="hearing-table" style="font-size: 0.84rem;">
+      <thead>
+        <tr>
+          <th style="width: 140px;">Hearing Date</th>
+          <th style="width: 50px; text-align: center;">Item</th>
+          <th>Case Number / Parties</th>
+          <th>Court & Room</th>
+          <th>Stage</th>
+          <th style="text-align: right; width: 140px;">Advance Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${upcomingCases.map(c => {
+          let dateFormatted = c.next_hearing_date || '-';
+          try {
+            const dateObj = new Date(c.next_hearing_date + "T00:00:00");
+            dateFormatted = dateObj.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+          } catch(e) {}
+
+          return `
+            <tr>
+              <td>
+                <span style="display: inline-block; background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); font-size: 0.74rem; padding: 4px 8px; border-radius: 6px; font-weight: 800;">
+                  📅 ${escapeHtml(dateFormatted)}
+                </span>
+              </td>
+              <td style="text-align: center; font-weight: 800; color: var(--primary);">
+                ${escapeHtml(c.item_number || '-')}
+              </td>
+              <td class="clickable-case-cell" onclick="openCaseDrawer('${escapeHtml(c.cnr_number)}')">
+                <strong style="color: #ffffff; font-size: 0.88rem;">${escapeHtml(c.case_title)}</strong>
+                <div style="margin-top: 3px;">
+                  <span class="case-number-pill" style="font-size: 0.72rem;">${escapeHtml(c.case_number_formatted || c.cnr_number)}</span>
+                  ${c.client_name ? `<span style="font-size: 0.72rem; color: var(--text-muted); margin-left: 6px;">Client: ${escapeHtml(c.client_name)}</span>` : ''}
+                </div>
+              </td>
+              <td>
+                <div style="font-weight: 700; color: var(--text-main); font-size: 0.82rem;">${escapeHtml(c.court_name || 'Karur Court')}</div>
+                <div style="font-size: 0.72rem; color: var(--text-muted);">${escapeHtml(c.court_room || '-')} &bull; ${escapeHtml(c.judge_name || '-')}</div>
+              </td>
+              <td>
+                <span class="badge ${getBadgeClass(c.case_stage)}" style="font-size: 0.7rem;">${escapeHtml(c.case_stage || 'Hearing')}</span>
+              </td>
+              <td style="text-align: right;">
+                <a href="${getWhatsAppUrl(c)}" target="_blank" class="btn-ui btn-ui-wa" style="padding: 5px 10px; font-size: 0.74rem; font-weight: 800;">
+                  📲 WhatsApp
+                </a>
+              </td>
+            </tr>
+          `;
+        }).join("")}
+      </tbody>
+    </table>
+  `;
+}
 
 async function loadTrackedCases() {
   try {
     const res = await fetch("/api/cases");
     const data = await res.json();
     allCases = data || [];
+    renderUpcomingHearingsPipeline();
 
     const kpiActiveCases = document.getElementById("kpi-active-cases");
     const badgeTotalCases = document.getElementById("badge-total-cases");
