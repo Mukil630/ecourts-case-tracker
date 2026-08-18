@@ -37,12 +37,13 @@ def delete_case(cnr_number: str, db_path: Optional[str] = None) -> bool:
     return deleted
 
 def clear_all_cases(db_path: Optional[str] = None) -> bool:
-    """Purges all cases and logs to provide a clean slate."""
+    """Purges all cases, logs, cache, and leads to provide a clean slate."""
     conn = get_db_connection(db_path)
     cursor = conn.cursor()
     cursor.execute("DELETE FROM cases")
     cursor.execute("DELETE FROM case_history_logs")
     cursor.execute("DELETE FROM api_query_cache")
+    cursor.execute("DELETE FROM leads")
     conn.commit()
     conn.close()
     return True
