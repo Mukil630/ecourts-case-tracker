@@ -988,11 +988,14 @@ function renderUpcomingHearingsPipeline() {
 
   const targetDate = getSelectedOrTodayDate();
   const todayIso = new Date().toISOString().split("T")[0];
+  const now = new Date();
+  const isEvening = now.getHours() > 19 || (now.getHours() === 19 && now.getMinutes() >= 30);
+  const effectiveBaseDate = isEvening ? targetDate : todayIso;
   
-  // Filter cases with next_hearing_date in future relative to today or scheduled after targetDate
+  // Filter cases with next_hearing_date STRICTLY in future (> effectiveBaseDate)
   const upcomingCases = (allCases || []).filter(c => {
     const d = c.next_hearing_date;
-    return d && d >= todayIso && d !== targetDate && c.case_status !== "DISPOSED";
+    return d && d > effectiveBaseDate && c.case_status !== "DISPOSED";
   });
 
   // Sort chronologically
@@ -1092,8 +1095,8 @@ async function loadTrackedCases() {
     if (badgeTotalCases) badgeTotalCases.innerText = allCases.length;
     if (kpiDisposedCases) kpiDisposedCases.innerText = disposedCount;
 
-    const todayStr = getSelectedOrTodayDate();
-    const futureCasesCount = allCases.filter(c => c.next_hearing_date && c.next_hearing_date >= todayStr).length;
+    const targetDate = getSelectedOrTodayDate();
+    const futureCasesCount = allCases.filter(c => c.next_hearing_date && c.next_hearing_date > targetDate && (c.case_status || '').toUpperCase() !== 'DISPOSED').length;
     if (kpiUpcoming7d) kpiUpcoming7d.innerText = futureCasesCount;
 
     renderAllCasesTable(allCases);
