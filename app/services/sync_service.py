@@ -125,7 +125,8 @@ class AutoSyncWorker:
     def smart_sync_cases(self, force_all: bool = False) -> Dict[str, Any]:
         """
         Runs the smart predictive sync over all monitored cases.
-        Only queries live eCourts API for cases with hearings due soon or post-hearing.
+        Only queries live eCourts API for cases with hearings due soon, post-hearing, or new discoveries.
+        Automatically updates next hearing dates, stages, and courtroom details daily.
         """
         all_cases = get_all_cases()
         today = get_current_ist_date()
@@ -133,6 +134,7 @@ class AutoSyncWorker:
         checked = []
         skipped = []
         updated = []
+        disposed = []
         errors = []
         credits_used = 0
         credits_saved = 0
@@ -141,7 +143,7 @@ class AutoSyncWorker:
             cnr = c.get("cnr_number")
             eval_res = evaluate_case_check_need(c, today)
 
-            # Skip checking if hearing is far away unless force_all is True
+            # Skip checking if hearing is far away or case is disposed
             if not eval_res["should_check"] and not force_all:
                 skipped.append({
                     "cnr": cnr,
@@ -160,30 +162,42 @@ class AutoSyncWorker:
                     if not res.get("is_cached"):
                         credits_used += 1
 
-                    # Check if hearing date changed
+                    # Check if hearing date, stage, or status changed
                     new_date = res.get("next_hearing_date")
                     old_date = c.get("next_hearing_date")
+                    new_stage = res.get("case_stage") or c.get("case_stage")
+                    new_status = (res.get("case_status") or c.get("case_status") or "PENDING").upper()
+                    new_room = res.get("court_room") or c.get("court_room")
+                    new_item = res.get("item_number") or c.get("item_number")
+                    new_judge = res.get("judge_name") or c.get("judge_name")
 
-                    if new_date and new_date != old_date:
+                    # Check if status became Disposed
+                    if "DISPOSE" in new_status or "DECIDED" in new_status or "CLOSED" in new_status:
+                        new_status = "DISPOSED"
+                        disposed.append(cnr)
+
+                    if (new_date and new_date != old_date) or (new_status != c.get("case_status")):
                         upsert_case(
                             res,
                             client_name=c.get("client_name", ""),
                             client_phone=c.get("client_phone", ""),
                             notes=c.get("notes", ""),
-                            case_number_formatted=c.get("case_number_formatted", ""),
-                            case_stage=c.get("case_stage", ""),
-                            court_room=c.get("court_room", ""),
-                            item_number=c.get("item_number", "")
+                            case_number_formatted=res.get("case_number_formatted") or c.get("case_number_formatted", ""),
+                            case_stage=new_stage,
+                            court_room=new_room,
+                            item_number=new_item
                         )
                         updated.append({
                             "cnr": cnr,
                             "case_title": c.get("case_title"),
                             "old_date": old_date,
-                            "new_date": new_date
+                            "new_date": new_date,
+                            "new_stage": new_stage,
+                            "status": new_status
                         })
                 else:
                     if res.get("credit_guard"):
-                        # In credit guard mode, vault serves data without error
+                        # In credit guard mode, vault serves data safely
                         skipped.append({
                             "cnr": cnr,
                             "case_title": c.get("case_title"),
@@ -205,6 +219,7 @@ class AutoSyncWorker:
             "checked_count": len(checked),
             "sleeping_count": len(skipped),
             "updated_count": len(updated),
+            "disposed_count": len(disposed),
             "errors_count": len(errors),
             "credits_used_estimate": credits_used * 1.5,
             "credits_saved_rupees": credits_saved * 1.5,
