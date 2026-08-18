@@ -1,10 +1,42 @@
+# Environment Variables & Secrets
 .env
+.env.local
+
+# SQLite Database Files & Data Artifacts
 *.db
+*.db-journal
+*.db-wal
+*.db-shm
+data/*.db
+data/artifacts/
+case_details.json
+
+# Python Bytecode & Environments
 __pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+dist/
+build/
+*.egg-info/
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Editor & IDE Directories
 .vscode/
 .idea/
+*.swp
+*.swo
+
+# Temporary Screenshots / Scraper Output
 captcha*.png
 page_view*.png
 cnr_home*.png
 solved_result*.png
+case_result*.png
 !assets/*.png

@@ -419,7 +419,91 @@
            VIEW 6: SETTINGS
            ====================================================================== -->
       <section id="view-settings" class="view-section" style="display: none;">
-        <div class="main-card" style="max-width: 600px;">
+        
+        <!-- 1. Official eCourts Partner API Key & Credit Shield Card -->
+        <div class="main-card" style="max-width: 650px; margin-bottom: 20px;">
+          <div class="main-card-header">
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 1.2rem;">🔑</span>
+                <h3 class="main-card-title">Official eCourts Partner API Key</h3>
+              </div>
+              <p class="main-card-sub">High-Speed JSON Integration via webapi.ecourtsindia.com (Zero Credit Burn Guard)</p>
+            </div>
+            <span id="ecourts-api-status-badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35); font-size: 0.72rem; font-weight: 800; padding: 3px 10px; border-radius: 12px;">Active</span>
+          </div>
+
+          <div style="padding: 20px;">
+            <form id="ecourts-api-key-form">
+              <div class="form-group-ui">
+                <label class="form-label-ui">eCourts API Key (Starts with eci_live_...)</label>
+                <div style="display: flex; gap: 8px;">
+                  <input type="password" id="cfg-ecourts-api-key" class="form-input-ui" placeholder="Paste your API key here (e.g. eci_live_...)" style="flex: 1;">
+                  <button type="button" class="btn-ui btn-ui-secondary" onclick="toggleApiKeyVisibility()" style="padding: 6px 12px; font-size: 0.75rem;">👁️ Show</button>
+                </div>
+                <small style="color: var(--text-muted); font-size: 0.75rem; margin-top: 4px; display: block;">
+                  💡 Get ₹200 free API credits at <a href="https://webapi.ecourtsindia.com" target="_blank" style="color: var(--accent-blue); text-decoration: underline;">webapi.ecourtsindia.com</a>.
+                </small>
+              </div>
+
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px;">
+                <div id="credit-guard-label" style="font-size: 0.75rem; color: #34d399; font-weight: 700;">
+                  🛡️ Credit Guard: Zero-Credit Chamber Vault Protection Active
+                </div>
+                <button type="submit" class="btn-ui btn-ui-primary" style="padding: 8px 18px; font-weight: 800;">
+                  💾 Save API Key
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- 2. Smart Predictive Polling & Credit Shield Monitor -->
+        <div class="main-card" style="max-width: 650px; margin-bottom: 20px;">
+          <div class="main-card-header">
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 1.2rem;">⚡</span>
+                <h3 class="main-card-title">Smart Lifecycle Polling & Credit Shield</h3>
+              </div>
+              <p class="main-card-sub">Sleeps far-away hearings, freezes closed cases, and saves 95%+ API credits</p>
+            </div>
+            <button type="button" class="btn-ui btn-ui-secondary" onclick="triggerSmartSyncNow()" style="font-size: 0.75rem; font-weight: 800; border-color: var(--accent-blue); color: var(--accent-blue);">
+              🔄 Run Smart Sync Now
+            </button>
+          </div>
+
+          <div style="padding: 20px;">
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px;">
+              <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 10px; text-align: center;">
+                <div style="font-size: 1.1rem; font-weight: 800; color: #38bdf8;" id="shield-total-cases">-</div>
+                <div style="font-size: 0.68rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Monitored</div>
+              </div>
+              <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 10px; text-align: center;">
+                <div style="font-size: 1.1rem; font-weight: 800; color: #94a3b8;" id="shield-sleeping-cases">-</div>
+                <div style="font-size: 0.68rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">💤 Sleeping (0 credits)</div>
+              </div>
+              <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 10px; text-align: center;">
+                <div style="font-size: 1.1rem; font-weight: 800; color: #cbd5e1;" id="shield-disposed-cases">-</div>
+                <div style="font-size: 0.68rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">❄️ Closed (Frozen)</div>
+              </div>
+              <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: var(--radius-sm); padding: 10px; text-align: center;">
+                <div style="font-size: 1.1rem; font-weight: 800; color: #34d399;" id="shield-saved-amount">₹0.00</div>
+                <div style="font-size: 0.68rem; color: #34d399; font-weight: 700; text-transform: uppercase;">💰 Rupee Savings</div>
+              </div>
+            </div>
+
+            <p style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.5;">
+              ✓ <strong>Phase 1:</strong> Daily evening check fetches newly listed next-day cases.<br>
+              ✓ <strong>Phase 2:</strong> Attended cases today are refreshed to capture new hearing dates.<br>
+              ✓ <strong>Phase 3:</strong> Closed cases are permanently frozen in Chamber Vault (0 API calls).<br>
+              ✓ <strong>Phase 4:</strong> Future hearings sleep until 2 days before court date.
+            </p>
+          </div>
+        </div>
+
+        <!-- 3. Chamber & Advocate Settings Card -->
+        <div class="main-card" style="max-width: 650px; margin-bottom: 20px;">
           <div class="main-card-header">
             <div>
               <h3 class="main-card-title">⚙️ Chamber & Advocate Settings</h3>
@@ -427,7 +511,7 @@
             </div>
           </div>
 
-          <div style="padding: 18px;">
+          <div style="padding: 20px;">
             <form id="firm-settings-form">
               <div class="form-group-ui">
                 <label class="form-label-ui">Law Firm / Chamber Name</label>
@@ -451,14 +535,14 @@
               </div>
 
               <button type="submit" class="btn-ui btn-ui-primary" style="margin-top: 10px; padding: 8px 18px;">
-                💾 Save Settings
+                💾 Save Chamber Settings
               </button>
             </form>
           </div>
         </div>
 
-        <!-- Official Meta WhatsApp Business Cloud API Card -->
-        <div class="main-card" style="max-width: 600px; margin-top: 20px;">
+        <!-- 4. Official Meta WhatsApp Business Cloud API Card -->
+        <div class="main-card" style="max-width: 650px; margin-bottom: 20px;">
           <div class="main-card-header">
             <div>
               <div style="display: flex; align-items: center; gap: 8px;">
@@ -498,6 +582,29 @@
             </form>
           </div>
         </div>
+
+        <!-- 5. Hearing Updates & Date Change Audit Trail Card -->
+        <div class="main-card" style="max-width: 650px;">
+          <div class="main-card-header">
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 1.2rem;">📋</span>
+                <h3 class="main-card-title">Recent Hearing Updates & Date Change Log</h3>
+              </div>
+              <p class="main-card-sub">Automatic audit trail when judges adjourn or assign new next hearing dates</p>
+            </div>
+            <button type="button" class="btn-ui btn-ui-secondary" onclick="loadHearingChangeLogs()" style="font-size: 0.72rem;">
+              🔄 Refresh Logs
+            </button>
+          </div>
+
+          <div style="padding: 16px;">
+            <div id="hearing-change-logs-container">
+              <p style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 12px 0;">Loading date change audit logs...</p>
+            </div>
+          </div>
+        </div>
+
       </section>
 
     </main>

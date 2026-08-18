@@ -967,6 +967,7 @@ function renderAllCasesTable(cases) {
       <td style="text-align: right;">
         <div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center;">
           <a href="${getWhatsAppUrl(c)}" target="_blank" class="table-action-btn" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border-color: rgba(16, 185, 129, 0.4); font-weight: 800;" title="Send WhatsApp Notice">💬</a>
+          <button onclick="toggleCaseDisposed('${escapeHtml(c.cnr_number)}', '${escapeHtml(c.case_status || 'PENDING')}')" class="table-action-btn" title="${c.case_status === 'DISPOSED' ? 'Reopen Case (Active)' : 'Mark Case Disposed / Closed (Freeze API)'}">${c.case_status === 'DISPOSED' ? '🔓' : '🏁'}</button>
           <button onclick="syncSingleCase('${escapeHtml(c.cnr_number)}')" class="table-action-btn" title="Check Live eCourts">🔄</button>
           <a href="/api/export-case/${encodeURIComponent(c.cnr_number)}" target="_blank" class="table-action-btn" title="Print Case Sheet">🖨️</a>
           <button onclick="deleteSingleCase('${escapeHtml(c.cnr_number)}')" class="table-action-btn" style="color: #f87171;" title="Remove Case">🗑️</button>
@@ -1359,6 +1360,39 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // eCourts API Key Form Listener
+  const apiKeyForm = document.getElementById("ecourts-api-key-form");
+  if (apiKeyForm) {
+    apiKeyForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const keyInput = document.getElementById("cfg-ecourts-api-key");
+      const keyVal = keyInput ? keyInput.value.trim() : "";
+      if (!keyVal) {
+        alert("Please enter a valid eCourts API Key.");
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/save-key", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ api_key: keyVal })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(`✅ eCourts API Key Saved & Verified!\nMasked Key: ${data.masked_key}`);
+          keyInput.value = "";
+          await loadApiKeyStatus();
+          await loadSchedulerEvaluation();
+        } else {
+          alert("❌ Failed to save key: " + (data.error || "Unknown error"));
+        }
+      } catch (err) {
+        alert("Error saving API key: " + err.message);
+      }
+    });
+  }
+
   // Date picker change listener
   const datePicker = document.getElementById("dashboard-date-picker");
   if (datePicker) {
@@ -1373,6 +1407,9 @@ document.addEventListener("DOMContentLoaded", () => {
   async function initApp() {
     runStartupSequence();
     await loadAdvocateSettings();
+    await loadApiKeyStatus();
+    await loadSchedulerEvaluation();
+    await loadHearingChangeLogs();
     await loadMetaConfig();
     await loadTrackedCases();
     await loadDailyCauseList(getSelectedOrTodayDate());
@@ -1384,7 +1421,162 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // =========================================================================
-// 7. OFFICIAL META WHATSAPP CLOUD API INTEGRATION
+// 7. eCOURTS API KEY & CREDIT SHIELD MANAGEMENT
+// =========================================================================
+async function loadApiKeyStatus() {
+  try {
+    const res = await fetch("/api/key-status");
+    const data = await res.json();
+    const keyInput = document.getElementById("cfg-ecourts-api-key");
+    const badge = document.getElementById("ecourts-api-status-badge");
+    const guardLabel = document.getElementById("credit-guard-label");
+    const topGuardLabel = document.getElementById("credits-balance-label");
+
+    if (keyInput && data.masked_key) {
+      keyInput.placeholder = `Saved: ${data.masked_key}`;
+    }
+
+    if (badge) {
+      if (data.configured) {
+        badge.innerText = "✓ Active & Guarded";
+        badge.style.background = "rgba(16, 185, 129, 0.15)";
+        badge.style.color = "#34d399";
+        badge.style.borderColor = "rgba(16, 185, 129, 0.35)";
+      } else {
+        badge.innerText = "Chamber Vault Mode";
+        badge.style.background = "rgba(56, 189, 248, 0.15)";
+        badge.style.color = "#38bdf8";
+        badge.style.borderColor = "rgba(56, 189, 248, 0.35)";
+      }
+    }
+
+    if (guardLabel && data.credit_guard) {
+      guardLabel.innerText = data.credit_guard.message || "🛡️ Credit Guard: Zero-Credit Chamber Vault Active";
+    }
+
+    if (topGuardLabel) {
+      topGuardLabel.innerText = data.configured ? "Guarded (Live)" : "Vault Mode (0 Credits)";
+    }
+  } catch (e) {}
+}
+
+window.toggleApiKeyVisibility = function() {
+  const keyInput = document.getElementById("cfg-ecourts-api-key");
+  if (!keyInput) return;
+  if (keyInput.type === "password") {
+    keyInput.type = "text";
+  } else {
+    keyInput.type = "password";
+  }
+};
+
+window.loadSchedulerEvaluation = async function() {
+  try {
+    const res = await fetch("/api/scheduler/evaluation");
+    const data = await res.json();
+
+    const elTotal = document.getElementById("shield-total-cases");
+    const elSleeping = document.getElementById("shield-sleeping-cases");
+    const elDisposed = document.getElementById("shield-disposed-cases");
+    const elSaved = document.getElementById("shield-saved-amount");
+
+    if (elTotal) elTotal.innerText = data.total_cases || 0;
+    if (elSleeping) elSleeping.innerText = data.sleeping_cases || 0;
+    if (elDisposed) elDisposed.innerText = data.disposed_cases || 0;
+    if (elSaved) elSaved.innerText = `₹${(data.credits_saved_today || 0).toFixed(2)}`;
+  } catch (e) {}
+};
+
+window.triggerSmartSyncNow = async function() {
+  try {
+    const res = await fetch("/api/scheduler/smart-sync", { method: "POST" });
+    const data = await res.json();
+    alert(`⚡ Smart Predictive Sync Complete!\n\n• Monitored Cases: ${data.total_monitored}\n• Checked Due Cases: ${data.checked_count}\n• Sleeping Cases (0 Credits): ${data.sleeping_count}\n• Updated Next Hearings: ${data.updated_count}\n• Estimated Rupees Saved: ₹${data.credits_saved_rupees}`);
+    await loadTrackedCases();
+    await loadDailyCauseList(getSelectedOrTodayDate());
+    await loadSchedulerEvaluation();
+    await loadHearingChangeLogs();
+  } catch (err) {
+    alert("Smart sync error: " + err.message);
+  }
+};
+
+window.loadHearingChangeLogs = async function() {
+  const container = document.getElementById("hearing-change-logs-container");
+  if (!container) return;
+
+  try {
+    const res = await fetch("/api/history");
+    const logs = await res.json();
+
+    if (!logs || logs.length === 0) {
+      container.innerHTML = `<p style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 12px 0;">No hearing date changes recorded yet. When judges adjourn attended cases, they will appear here automatically.</p>`;
+      return;
+    }
+
+    container.innerHTML = `
+      <div style="overflow-x: auto;">
+        <table class="hearing-table" style="font-size: 0.82rem;">
+          <thead>
+            <tr>
+              <th style="width: 25%;">Case / Client</th>
+              <th style="width: 25%;">Previous Date</th>
+              <th style="width: 25%;">New Hearing Date</th>
+              <th style="width: 25%; text-align: right;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${logs.map(l => `
+              <tr>
+                <td>
+                  <strong>${escapeHtml(l.case_title || l.cnr_number)}</strong>
+                  <div style="font-size: 0.72rem; color: var(--text-muted);">${escapeHtml(l.client_name || '')} (${escapeHtml(l.client_phone || '-')})</div>
+                </td>
+                <td style="color: #94a3b8; font-family: var(--font-mono);">${escapeHtml(l.previous_hearing_date || 'N/A')}</td>
+                <td style="color: #34d399; font-weight: 800; font-family: var(--font-mono);">${escapeHtml(l.new_hearing_date || '-')}</td>
+                <td style="text-align: right;">
+                  <a href="https://wa.me/${(l.client_phone || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`⚖️ Court Hearing Update for ${l.case_title}: Your hearing has been adjourned to ${l.new_hearing_date}.`)}" target="_blank" class="btn-ui btn-ui-wa" style="font-size: 0.7rem; padding: 3px 8px;">📲 Send Notice</a>
+                </td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch (err) {
+    container.innerHTML = `<p style="color: #f87171; font-size: 0.8rem;">Failed to load history logs: ${err.message}</p>`;
+  }
+};
+
+window.toggleCaseDisposed = async function(cnr, currentStatus) {
+  const isDisposed = (currentStatus || "").toUpperCase() === "DISPOSED";
+  const targetStatus = isDisposed ? "PENDING" : "DISPOSED";
+  const actionName = isDisposed ? "Reopen Case" : "Mark as Disposed (Freeze API Checks)";
+
+  if (!confirm(`Are you sure you want to ${actionName} for case ${cnr}?`)) return;
+
+  try {
+    const res = await fetch(`/api/cases/${encodeURIComponent(cnr)}/status`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: targetStatus })
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert(`✅ Case status updated to "${targetStatus}"!\n${targetStatus === 'DISPOSED' ? '❄️ Case is now frozen in Chamber Vault (0 API credits used forever).' : '⚡ Case reactivated for hearing monitoring.'}`);
+      await loadTrackedCases();
+      await loadDailyCauseList(getSelectedOrTodayDate());
+      await loadSchedulerEvaluation();
+    } else {
+      alert("❌ Failed to update case status.");
+    }
+  } catch (err) {
+    alert("Error: " + err.message);
+  }
+};
+
+// =========================================================================
+// 8. OFFICIAL META WHATSAPP CLOUD API INTEGRATION
 // =========================================================================
 async function loadMetaConfig() {
   try {

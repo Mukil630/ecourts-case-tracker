@@ -1,7 +1,5 @@
-from app.db import (
-    get_db_connection,
-    init_db,
-    get_current_ist_date,
+from app.db.database import get_db_connection, init_db, get_current_ist_date
+from app.db.repository import (
     get_all_cases,
     get_case_by_cnr,
     delete_case,
@@ -18,15 +16,13 @@ from app.db import (
     mark_log_notified,
     get_advocate_settings,
     update_advocate_settings,
+)
+from app.db.seed_data import (
     ensure_today_hearings_synchronized,
     import_karur_sample_data,
 )
-from app.config import Config
-
-DB_PATH = Config.DB_PATH
 
 __all__ = [
-    "DB_PATH",
     "get_db_connection",
     "init_db",
     "get_current_ist_date",

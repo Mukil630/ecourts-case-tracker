@@ -1,5 +1,7 @@
 import time
+from pathlib import Path
 from playwright.sync_api import sync_playwright
+from app.config import Config
 
 def capture_dashboard_screenshot():
     with sync_playwright() as p:
@@ -20,7 +22,9 @@ def capture_dashboard_screenshot():
         time.sleep(1)
 
         # Screenshot the full interface
-        screenshot_path = "C:/Users/mukil/ecourts_automation/assets/dashboard_preview.png"
+        assets_dir = Config.BASE_DIR / "assets"
+        assets_dir.mkdir(parents=True, exist_ok=True)
+        screenshot_path = str(assets_dir / "dashboard_preview.png")
         page.screenshot(path=screenshot_path, full_page=True)
         print(f"High-res dashboard screenshot saved to: {screenshot_path}")
         browser.close()
