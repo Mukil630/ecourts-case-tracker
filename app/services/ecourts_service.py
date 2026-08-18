@@ -71,12 +71,11 @@ def reset_circuit_breaker():
 
 def fetch_case_details(cnr_number: str, force_live: bool = False, cache_ttl_seconds: int = 86400) -> Dict[str, Any]:
     """
-    Fetches case details with Fail-Safe Credit-Guard & Local SQLite Cache protection.
-    Will NEVER burn credits if circuit breaker is active or cached copy exists.
+    Fetches case details from eCourtsIndia v4 Partner API: GET /api/partner/case/{cnr}
     """
     clean_cnr = cnr_number.strip().upper()
 
-    # 1. Check Local SQLite Cache first (Primary Credit-Guard)
+    # 1. Check Local SQLite Cache first
     if not force_live:
         try:
             cached_json = get_cached_case(clean_cnr, max_age_seconds=cache_ttl_seconds)
@@ -88,7 +87,7 @@ def fetch_case_details(cnr_number: str, force_live: bool = False, cache_ttl_seco
         except Exception:
             pass
 
-    # 2. Check Database Existing Case as instant local fallback
+    # 2. Check Database Existing Case
     try:
         existing = get_case_by_cnr(clean_cnr)
         if existing and not force_live:
@@ -98,6 +97,10 @@ def fetch_case_details(cnr_number: str, force_live: bool = False, cache_ttl_seco
                 "case_title": existing.get("case_title", f"{clean_cnr} Matter"),
                 "case_status": existing.get("case_status", "PENDING"),
                 "court_name": existing.get("court_name", "Karur District Court"),
+                "court_room": existing.get("court_room", "Room 1"),
+                "item_number": existing.get("item_number", "1"),
+                "judge_name": existing.get("judge_name", ""),
+                "case_stage": existing.get("case_stage", "Evidence"),
                 "petitioners": [existing.get("client_name", "Petitioner")],
                 "respondents": ["Opposing Party"],
                 "last_hearing_date": existing.get("last_hearing_date", ""),
@@ -108,7 +111,7 @@ def fetch_case_details(cnr_number: str, force_live: bool = False, cache_ttl_seco
     except Exception:
         pass
 
-    # 3. Check Circuit Breaker (Prevents credit draining loops)
+    # 3. Check Circuit Breaker
     if API_CIRCUIT_BREAKER["tripped"] and not force_live:
         return {
             "success": False,
@@ -123,51 +126,43 @@ def fetch_case_details(cnr_number: str, force_live: bool = False, cache_ttl_seco
         return {
             "success": False,
             "error_type": "CONFIG_ERROR",
-            "error": "eCourts API Key not configured. Please add ECOURTS_API_KEY to .env or dashboard settings."
+            "error": "eCourts API Key not configured. Please add ECOURTS_API_KEY in settings."
         }
 
-    # 5. Make Live HTTP Request to eCourts Partner API
-    url = f"{Config.ECOURTS_API_BASE_URL}/cnr/details"
+    # 5. Make Live HTTP Request to v4 Partner API: GET /api/partner/case/{cnr}
+    url = f"{Config.ECOURTS_API_BASE_URL}/api/partner/case/{clean_cnr}"
     headers = {
         "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
         "Accept": "application/json"
     }
-    payload = {"cnumber": clean_cnr}
 
     try:
-        response = requests.post(url, headers=headers, json=payload, timeout=25)
+        response = requests.get(url, headers=headers, timeout=25)
 
-        # Handle 402 Payment Required / Insufficient Credits
         if response.status_code == 402:
             API_CIRCUIT_BREAKER["tripped"] = True
             API_CIRCUIT_BREAKER["reason"] = "Insufficient API Credits on webapi.ecourtsindia.com"
-            API_CIRCUIT_BREAKER["last_error_time"] = time.time()
             return {
                 "success": False,
                 "error_type": "INSUFFICIENT_CREDITS",
-                "error": "eCourts Partner API account is out of credits (₹0.00). Local Chamber Vault protection engaged.",
+                "error": "eCourts Partner API is out of credits (₹0.00).",
                 "credit_guard": True
             }
 
-        # Handle 401 Unauthorized / Expired Token
         if response.status_code == 401:
             API_CIRCUIT_BREAKER["tripped"] = True
             API_CIRCUIT_BREAKER["reason"] = "Invalid or Expired eCourts API Key"
-            API_CIRCUIT_BREAKER["last_error_time"] = time.time()
             return {
                 "success": False,
                 "error_type": "AUTH_ERROR",
-                "error": "API Key rejected by eCourts API. Please verify your key on webapi.ecourtsindia.com.",
+                "error": "API Key rejected. Please verify on webapi.ecourtsindia.com.",
                 "credit_guard": True
             }
 
-        # Handle 200 OK Response
         if response.status_code == 200:
             API_CIRCUIT_BREAKER["consecutive_failures"] = 0
             raw_data = response.json()
 
-            # Cache the raw response in SQLite
             try:
                 set_cached_case(clean_cnr, raw_data)
             except Exception:
@@ -175,20 +170,13 @@ def fetch_case_details(cnr_number: str, force_live: bool = False, cache_ttl_seco
 
             parsed = parse_ecourts_response(clean_cnr, raw_data)
             parsed["is_cached"] = False
-            parsed["cache_note"] = "Live eCourts API Sync (1 API Credit consumed)"
+            parsed["cache_note"] = "Live eCourts v4 API Sync (1 API Credit consumed)"
             return parsed
 
         return {
             "success": False,
             "error_type": f"HTTP_{response.status_code}",
             "error": f"eCourts API error ({response.status_code}): {response.text[:200]}"
-        }
-
-    except requests.exceptions.Timeout:
-        return {
-            "success": False,
-            "error_type": "TIMEOUT",
-            "error": "eCourts API took longer than 25s to respond. Using local vault backup."
         }
     except Exception as e:
         return {
@@ -201,109 +189,183 @@ def fetch_case_by_cnr(cnr_number: str) -> Dict[str, Any]:
     """Backward compatibility alias for fetch_case_details."""
     return fetch_case_details(cnr_number)
 
+def check_cnr_in_cause_list(cnr_number: str, date: str) -> Dict[str, Any]:
+    """
+    Checks if a specific CNR number is scheduled in tomorrow's cause list with Room & Item.
+    """
+    api_key = get_api_key()
+    clean_cnr = cnr_number.strip().upper()
+
+    if api_key and not API_CIRCUIT_BREAKER["tripped"]:
+        url = f"{Config.ECOURTS_API_BASE_URL}/api/partner/causelist/cnr/batch"
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        }
+        try:
+            res = requests.post(url, headers=headers, json={"cnrs": [clean_cnr]}, timeout=15)
+            if res.status_code == 200:
+                data = res.json().get("data", [])
+                if data and len(data) > 0:
+                    listing = data[0].get("nextListing") or {}
+                    return {
+                        "success": True,
+                        "cnr": clean_cnr,
+                        "is_listed": data[0].get("hasCauselist", False),
+                        "item_number": str(listing.get("listingNo") or "1"),
+                        "court_room": f"Room {listing.get('courtNo', '1')}",
+                        "judge_name": (listing.get("judge") or [""])[0] if listing.get("judge") else "",
+                        "cost_estimate_rupees": 0.30
+                    }
+        except Exception:
+            pass
+
+    return {
+        "success": True,
+        "cnr": clean_cnr,
+        "is_listed": False,
+        "cost_estimate_rupees": 0.00
+    }
+
 def parse_ecourts_response(cnr_number: str, raw_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Normalizes variable raw JSON structures from eCourts Partner API into clean schema."""
-    case_info = raw_data.get("data", raw_data.get("case_details", raw_data))
-    if not isinstance(case_info, dict):
-        case_info = {}
+    """Normalizes raw JSON from eCourtsIndia v4 API into clean internal schema."""
+    case_wrapper = raw_data.get("data", raw_data.get("case_details", raw_data))
+    if not isinstance(case_wrapper, dict):
+        case_wrapper = {}
+    court_data = case_wrapper.get("courtCaseData", case_wrapper)
+    if not isinstance(court_data, dict):
+        court_data = {}
 
-    title = case_info.get("case_title") or case_info.get("title") or f"{cnr_number} Case"
-    status = case_info.get("case_status") or case_info.get("status") or "PENDING"
-    court = case_info.get("court_name") or case_info.get("court") or "District Court"
-    state = case_info.get("state") or "Tamil Nadu"
-    district = case_info.get("district") or "Karur"
+    pets = court_data.get("petitioners", [])
+    if isinstance(pets, str):
+        pets = [pets]
+    resps = court_data.get("respondents", [])
+    if isinstance(resps, str):
+        resps = [resps]
 
-    # Hearing Dates
-    next_date = case_info.get("next_hearing_date") or case_info.get("next_date") or ""
-    last_date = case_info.get("last_hearing_date") or case_info.get("last_date") or ""
+    pet_str = pets[0] if pets else "Petitioner"
+    resp_str = resps[0] if resps else "Respondent"
 
-    # Parties
-    pet_list = case_info.get("petitioners", [])
-    if isinstance(pet_list, str):
-        pet_list = [pet_list]
-    resp_list = case_info.get("respondents", [])
-    if isinstance(resp_list, str):
-        resp_list = [resp_list]
+    title = court_data.get("case_title") or court_data.get("caseTitle") or court_data.get("title") or (f"{pet_str} vs {resp_str}" if pets and resps else f"{cnr_number} Case")
+    status = court_data.get("case_status") or court_data.get("caseStatus") or court_data.get("status") or "PENDING"
+    court = court_data.get("court_name") or court_data.get("courtName") or court_data.get("court") or "District Court"
+    room = str(court_data.get("court_room") or court_data.get("courtNo") or "Room 1")
+    if not room.startswith("Room") and room != "":
+        room = f"Room {room}"
 
-    pet_adv = case_info.get("petitioner_advocates", [])
-    if isinstance(pet_adv, str):
-        pet_adv = [pet_adv]
-    resp_adv = case_info.get("respondent_advocates", [])
-    if isinstance(resp_adv, str):
-        resp_adv = [resp_adv]
+    stage = court_data.get("purpose") or court_data.get("case_stage") or court_data.get("caseTypeSub") or "Evidence"
+    next_date = court_data.get("next_hearing_date") or court_data.get("nextHearingDate") or court_data.get("next_date") or court_data.get("decisionDate") or ""
+    last_date = court_data.get("last_hearing_date") or court_data.get("lastHearingDate") or court_data.get("last_date") or court_data.get("firstHearingDate") or ""
+    judge = court_data.get("judge_name") or court_data.get("judge") or ""
+    if isinstance(judge, list):
+        judge = judge[0] if judge else ""
+
+    case_type = court_data.get("caseType") or court_data.get("case_type") or ""
+    reg_num = court_data.get("registrationNumber") or court_data.get("registration_number") or court_data.get("filingNumber") or ""
+    formatted_num = f"{case_type}/{reg_num}" if case_type and reg_num else cnr_number
 
     return {
         "success": True,
         "cnr_number": cnr_number,
+        "case_number_formatted": formatted_num,
         "case_title": title,
         "case_status": status,
         "court_name": court,
-        "state": state,
-        "district": district,
+        "court_room": room,
+        "judge_name": judge,
+        "case_stage": stage,
         "next_hearing_date": next_date,
         "last_hearing_date": last_date,
-        "petitioners": pet_list,
-        "respondents": resp_list,
-        "petitioner_advocates": pet_adv,
-        "respondent_advocates": resp_adv,
-        "hearing_count": case_info.get("hearing_count", len(case_info.get("hearings", []))),
-        "order_count": case_info.get("order_count", len(case_info.get("orders", []))),
+        "petitioners": pets,
+        "respondents": resps,
+        "client_name": pet_str,
         "raw": raw_data
     }
 
 def search_cases_by_advocate(advocate_name: str, district: str = "Karur", date: Optional[str] = None) -> Dict[str, Any]:
     """
-    Cost-Efficient Single Bulk Fetch (₹0.60):
-    Searches all cases listed under Advocate's name for a target date across courts.
+    Live Search via eCourtsIndia v4 API: GET /api/partner/causelist/search & GET /api/partner/search
     """
     api_key = get_api_key()
     matched = []
 
     # 1. Live API Query if Key is Available
     if api_key and not API_CIRCUIT_BREAKER["tripped"]:
-        url = f"{Config.ECOURTS_API_BASE_URL}/case/search"
         headers = {
             "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
+            "Accept": "application/json"
         }
-        payload = {
-            "advocate_name": advocate_name,
-            "district": district
-        }
-        if date:
-            payload["date"] = date
+        clean_adv = advocate_name.replace("Advocate", "").replace(".", "").strip()
 
-        try:
-            res = requests.post(url, headers=headers, json=payload, timeout=20)
-            if res.status_code == 200:
-                data = res.json()
-                raw_cases = data.get("data", data.get("cases", []))
-                for c in raw_cases:
-                    matched.append({
-                        "cnr_number": c.get("cnr_number") or c.get("cnr") or "",
-                        "case_number_formatted": c.get("case_number") or c.get("case_no") or "",
-                        "case_title": c.get("case_title") or c.get("title") or "",
-                        "court_name": c.get("court_name") or f"{district} Court",
-                        "court_room": c.get("court_room") or "Room 1",
-                        "item_number": str(c.get("item_number") or c.get("item") or "1"),
-                        "judge_name": c.get("judge_name") or "",
-                        "case_stage": c.get("stage") or "Evidence",
-                        "case_status": c.get("status") or "PENDING",
-                        "next_hearing_date": c.get("next_hearing_date") or date or "",
-                        "client_name": c.get("petitioner") or c.get("client_name") or "",
-                        "advocates": advocate_name
-                    })
-                return {
-                    "success": True,
-                    "advocate_name": advocate_name,
-                    "district": district,
-                    "total_found": len(matched),
-                    "cases": matched,
-                    "mode": "LIVE_API_SEARCH",
-                    "cost_estimate_rupees": 0.60
-                }
-        except Exception:
-            pass
+        # Try Cause List Search if date is specified
+        if date:
+            cl_url = f"{Config.ECOURTS_API_BASE_URL}/api/partner/causelist/search?advocate={clean_adv}&date={date}&limit=50"
+            try:
+                r = requests.get(cl_url, headers=headers, timeout=15)
+                if r.status_code == 200:
+                    data = r.json().get("data", {})
+                    for item in data.get("results", []):
+                        c_no = item.get("caseNumber", [""])[0] if item.get("caseNumber") else ""
+                        c_room = str(item.get("courtNo") or "1")
+                        matched.append({
+                            "cnr_number": item.get("cnr") or f"TNKR_{c_no.replace('/', '_')}",
+                            "case_number_formatted": c_no,
+                            "case_title": item.get("party") or "Party vs Opponent",
+                            "court_name": item.get("courtName") or item.get("courtDescription") or f"{district} Court",
+                            "court_room": f"Room {c_room}" if not c_room.startswith("Room") else c_room,
+                            "item_number": str(item.get("listingNo") or "1"),
+                            "judge_name": (item.get("judge") or [""])[0] if item.get("judge") else "",
+                            "case_stage": item.get("listingFor") or "Evidence",
+                            "case_status": item.get("status") or "PENDING",
+                            "next_hearing_date": item.get("date") or date,
+                            "client_name": (item.get("petitioners") or [item.get("party") or "Client"])[0],
+                            "advocates": advocate_name
+                        })
+            except Exception:
+                pass
+
+        # If no date or no cause list results, query full case search
+        if not matched:
+            search_url = f"{Config.ECOURTS_API_BASE_URL}/api/partner/search?advocates={clean_adv}&pageSize=30"
+            try:
+                r = requests.get(search_url, headers=headers, timeout=15)
+                if r.status_code == 200:
+                    data = r.json().get("data", {})
+                    for item in data.get("results", []):
+                        pets = item.get("petitioners", [])
+                        resps = item.get("respondents", [])
+                        p_str = pets[0] if pets else "Petitioner"
+                        r_str = resps[0] if resps else "Respondent"
+                        c_type = item.get("caseType", "")
+                        c_reg = item.get("registrationNumber", "")
+                        matched.append({
+                            "cnr_number": item.get("cnr") or "",
+                            "case_number_formatted": f"{c_type}/{c_reg}" if c_type and c_reg else item.get("cnr", ""),
+                            "case_title": f"{p_str} vs {r_str}",
+                            "court_name": item.get("courtName") or f"{district} Court",
+                            "court_room": "Room 1",
+                            "item_number": "1",
+                            "judge_name": (item.get("judges") or [""])[0] if item.get("judges") else "",
+                            "case_stage": "Evidence",
+                            "case_status": item.get("caseStatus") or "PENDING",
+                            "next_hearing_date": item.get("nextHearingDate") or "",
+                            "client_name": p_str,
+                            "advocates": advocate_name
+                        })
+            except Exception:
+                pass
+
+        if matched:
+            return {
+                "success": True,
+                "advocate_name": advocate_name,
+                "district": district,
+                "total_found": len(matched),
+                "cases": matched,
+                "mode": "LIVE_ECOURTS_V4_API",
+                "cost_estimate_rupees": 0.60
+            }
 
     # 2. Local Chamber Vault Fallback (₹0.00)
     from app.db.repository import get_all_cases
