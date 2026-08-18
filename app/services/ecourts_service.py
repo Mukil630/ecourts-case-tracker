@@ -251,22 +251,114 @@ def parse_ecourts_response(cnr_number: str, raw_data: Dict[str, Any]) -> Dict[st
         "raw": raw_data
     }
 
-def search_cases_by_advocate(advocate_name: str, district: str = "Karur") -> Dict[str, Any]:
-    """Queries cases under advocate's name across courts."""
+def search_cases_by_advocate(advocate_name: str, district: str = "Karur", date: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Cost-Efficient Single Bulk Fetch (₹0.60):
+    Searches all cases listed under Advocate's name for a target date across courts.
+    """
+    api_key = get_api_key()
+    matched = []
+
+    # 1. Live API Query if Key is Available
+    if api_key and not API_CIRCUIT_BREAKER["tripped"]:
+        url = f"{Config.ECOURTS_API_BASE_URL}/case/search"
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "advocate_name": advocate_name,
+            "district": district
+        }
+        if date:
+            payload["date"] = date
+
+        try:
+            res = requests.post(url, headers=headers, json=payload, timeout=20)
+            if res.status_code == 200:
+                data = res.json()
+                raw_cases = data.get("data", data.get("cases", []))
+                for c in raw_cases:
+                    matched.append({
+                        "cnr_number": c.get("cnr_number") or c.get("cnr") or "",
+                        "case_number_formatted": c.get("case_number") or c.get("case_no") or "",
+                        "case_title": c.get("case_title") or c.get("title") or "",
+                        "court_name": c.get("court_name") or f"{district} Court",
+                        "court_room": c.get("court_room") or "Room 1",
+                        "item_number": str(c.get("item_number") or c.get("item") or "1"),
+                        "judge_name": c.get("judge_name") or "",
+                        "case_stage": c.get("stage") or "Evidence",
+                        "case_status": c.get("status") or "PENDING",
+                        "next_hearing_date": c.get("next_hearing_date") or date or "",
+                        "client_name": c.get("petitioner") or c.get("client_name") or "",
+                        "advocates": advocate_name
+                    })
+                return {
+                    "success": True,
+                    "advocate_name": advocate_name,
+                    "district": district,
+                    "total_found": len(matched),
+                    "cases": matched,
+                    "mode": "LIVE_API_SEARCH",
+                    "cost_estimate_rupees": 0.60
+                }
+        except Exception:
+            pass
+
+    # 2. Local Chamber Vault Fallback (₹0.00)
     from app.db.repository import get_all_cases
     cases = get_all_cases()
-    matched = []
     clean_name = advocate_name.lower().replace("advocate", "").replace(".", "").strip()
 
     for c in cases:
         adv = (c.get("advocates") or "").lower()
         if clean_name in adv or "anbaiya" in adv or not clean_name:
-            matched.append(c)
+            if not date or c.get("next_hearing_date") == date:
+                matched.append(c)
 
     return {
         "success": True,
         "advocate_name": advocate_name,
         "district": district,
         "total_found": len(matched),
-        "cases": matched
+        "cases": matched,
+        "mode": "CHAMBER_VAULT_LOCAL",
+        "cost_estimate_rupees": 0.00
+    }
+
+def check_cnr_in_cause_list(cnr_number: str, date: str) -> Dict[str, Any]:
+    """
+    Cost-Efficient Single CNR Check (₹0.30):
+    Checks if a specific CNR number is scheduled in tomorrow's cause list with Room & Item.
+    """
+    api_key = get_api_key()
+    clean_cnr = cnr_number.strip().upper()
+
+    if api_key and not API_CIRCUIT_BREAKER["tripped"]:
+        url = f"{Config.ECOURTS_API_BASE_URL}/cause-list/check-cnr"
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        try:
+            res = requests.post(url, headers=headers, json={"cnr": clean_cnr, "date": date}, timeout=15)
+            if res.status_code == 200:
+                data = res.json()
+                return {
+                    "success": True,
+                    "cnr": clean_cnr,
+                    "is_listed": data.get("is_listed", True),
+                    "item_number": data.get("item_number", "1"),
+                    "court_room": data.get("court_room", "Room 1"),
+                    "judge_name": data.get("judge_name", ""),
+                    "cost_estimate_rupees": 0.30
+                }
+        except Exception:
+            pass
+
+    return {
+        "success": True,
+        "cnr": clean_cnr,
+        "is_listed": False,
+        "cost_estimate_rupees": 0.00
     }
