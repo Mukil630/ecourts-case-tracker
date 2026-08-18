@@ -125,9 +125,33 @@ class AutoSyncWorker:
     def smart_sync_cases(self, force_all: bool = False) -> Dict[str, Any]:
         """
         Runs the smart predictive sync over all monitored cases.
-        Only queries live eCourts API for cases with hearings due soon, post-hearing, or new discoveries.
-        Automatically updates next hearing dates, stages, and courtroom details daily.
+        1. Auto-discovers tomorrow's / next court day's new client allocations at 7:30 PM.
+        2. Updates next hearing dates, stages, and courtroom details daily.
         """
+        from app.db.database import get_effective_practice_date
+        target_effective_date = get_effective_practice_date()
+
+        # 1. Automatic Evening Cause List Allocations Discovery
+        try:
+            from app.services.ecourts_service import search_cases_by_advocate
+            adv_res = search_cases_by_advocate("Advocate R. Anbaiya", district="Karur", date=target_effective_date)
+            if adv_res.get("success") and adv_res.get("cases"):
+                for discovered in adv_res["cases"]:
+                    upsert_case(
+                        discovered,
+                        client_name=discovered.get("client_name", ""),
+                        client_phone="+919842112233",
+                        litigant_role="Petitioner / Complainant",
+                        notes=f"Auto-allocated for {target_effective_date} court session",
+                        case_number_formatted=discovered.get("case_number_formatted", ""),
+                        case_stage=discovered.get("case_stage", "Hearing"),
+                        court_room=discovered.get("court_room", "Room 1"),
+                        item_number=discovered.get("item_number", "1"),
+                        judge_name=discovered.get("judge_name", "")
+                    )
+        except Exception as ex:
+            print(f"[Evening CauseList Allocations Sync] {ex}")
+
         all_cases = get_all_cases()
         today = get_current_ist_date()
 
