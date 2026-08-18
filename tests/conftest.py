@@ -19,7 +19,8 @@ def app():
     app.config["DB_PATH"] = db_path
 
     with app.app_context():
-        init_db(db_path=db_path, auto_seed=True)
+        init_db(db_path=db_path, auto_seed=False)
+        import_karur_sample_data(db_path=db_path)
 
     yield app
 

@@ -86,7 +86,7 @@ def test_case_status_update(client):
 
 def test_daily_cause_list(client):
     """Verifies cause list grouped response."""
-    res = client.get("/api/cause-list")
+    res = client.get("/api/cause-list?date=2026-08-14")
     assert res.status_code == 200
     data = res.get_json()
     assert "total_hearings" in data

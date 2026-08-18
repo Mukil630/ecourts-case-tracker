@@ -13,7 +13,18 @@ def get_current_ist_date() -> str:
 
 def get_db_connection(db_path: Optional[str] = None, timeout: float = 20.0) -> sqlite3.Connection:
     """Creates a thread-safe, high-concurrency SQLite connection with WAL mode enabled."""
-    target_path = db_path or Config.DB_PATH
+    if db_path is None:
+        try:
+            from flask import current_app, has_app_context
+            if has_app_context() and current_app and current_app.config.get("DB_PATH"):
+                target_path = current_app.config.get("DB_PATH")
+            else:
+                target_path = Config.DB_PATH
+        except Exception:
+            target_path = Config.DB_PATH
+    else:
+        target_path = db_path
+
     conn = sqlite3.connect(target_path, timeout=timeout)
     conn.row_factory = sqlite3.Row
     if target_path != ":memory:":
@@ -22,8 +33,8 @@ def get_db_connection(db_path: Optional[str] = None, timeout: float = 20.0) -> s
     conn.execute("PRAGMA foreign_keys=ON")
     return conn
 
-def init_db(db_path: Optional[str] = None, auto_seed: bool = True):
-    """Initializes and migrates the database schema."""
+def init_db(db_path: Optional[str] = None, auto_seed: bool = False):
+    """Initializes and migrates the database schema without inserting fake data."""
     conn = get_db_connection(db_path)
     cursor = conn.cursor()
 
@@ -125,15 +136,9 @@ def init_db(db_path: Optional[str] = None, auto_seed: bool = True):
         )
     """)
 
-    # Check case count and auto-seed if empty
-    cursor.execute("SELECT COUNT(*) FROM cases")
-    case_count = cursor.fetchone()[0]
     conn.commit()
     conn.close()
 
     if auto_seed:
-        from app.db.seed_data import import_karur_sample_data, ensure_today_hearings_synchronized
-        if case_count == 0:
-            import_karur_sample_data(db_path)
-        else:
-            ensure_today_hearings_synchronized(db_path)
+        from app.db.seed_data import import_karur_sample_data
+        import_karur_sample_data(db_path)

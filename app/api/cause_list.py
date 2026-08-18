@@ -14,12 +14,6 @@ def cause_list_endpoint():
     """Returns the grouped Daily Cause List & Court Hearing Board."""
     target_date = request.args.get("date", "").strip()
     cause_list = get_daily_cause_list(target_date)
-    if cause_list.get("total_hearings", 0) == 0 and len(get_all_cases()) == 0:
-        try:
-            import_karur_sample_data()
-            cause_list = get_daily_cause_list(target_date)
-        except Exception:
-            pass
     return jsonify(cause_list)
 
 @cause_list_bp.route("/api/cause-list/import-karur", methods=["POST"])

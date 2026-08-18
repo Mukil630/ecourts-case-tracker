@@ -50,8 +50,8 @@ def create_app(config: Optional[Union[Config, str]] = None, start_background_tas
     # 2. Setup CORS
     CORS(app)
 
-    # 3. Initialize SQLite Database Schema & Seed Data
-    init_db(db_path=app.config.get("DB_PATH"), auto_seed=True)
+    # 3. Initialize SQLite Database Schema (Clean Slate)
+    init_db(db_path=app.config.get("DB_PATH"), auto_seed=False)
 
     # 4. Register API Blueprints
     register_blueprints(app)

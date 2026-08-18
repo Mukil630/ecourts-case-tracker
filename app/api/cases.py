@@ -17,14 +17,7 @@ cases_bp = Blueprint("cases", __name__)
 @cases_bp.route("/api/cases", methods=["GET"])
 def list_cases():
     """Returns all stored cases from SQLite."""
-    cases = get_all_cases()
-    if not cases:
-        try:
-            import_karur_sample_data()
-            cases = get_all_cases()
-        except Exception:
-            pass
-    return jsonify(cases)
+    return jsonify(get_all_cases())
 
 @cases_bp.route("/api/cases/clear-all", methods=["DELETE", "POST"])
 def clear_all_endpoint():
