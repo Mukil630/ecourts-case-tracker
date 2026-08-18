@@ -715,7 +715,7 @@ function startLiveSyncLoop() {
 // =========================================================================
 // 5. DATA LOADERS & RENDERERS
 // =========================================================================
-async function loadDailyCauseList(targetDate) {
+async function loadDailyCauseList(targetDate, autoForwardIfEmpty = true) {
   if (!targetDate) {
     targetDate = getSelectedOrTodayDate();
   }
@@ -741,11 +741,11 @@ async function loadDailyCauseList(targetDate) {
   const now = new Date();
   const isEvening = now.getHours() > 19 || (now.getHours() === 19 && now.getMinutes() >= 30);
   if (mainTitle) {
-    mainTitle.innerText = isEvening ? "⚖️ Tomorrow's Court Hearing Board" : "⚖️ Daily Court Hearing Board";
+    mainTitle.innerText = isEvening ? "⚖️ Active Court Hearing Board" : "⚖️ Daily Court Hearing Board";
   }
   if (mainSub) {
     mainSub.innerHTML = isEvening 
-      ? `🌅 <span style="color:var(--text-gold); font-weight:700;">Evening Session Active:</span> Displaying schedule for ${targetDate} &bull; Grouped by Court, Room & Item Number`
+      ? `🌅 <span style="color:var(--text-gold); font-weight:700;">Evening Session:</span> Schedule for ${targetDate} &bull; Grouped by Court, Room & Item Number`
       : `Grouped by Court Complex, Presiding Judge, Court Room & Item Number`;
   }
 
@@ -761,6 +761,20 @@ async function loadDailyCauseList(targetDate) {
 
     const count = data.total_hearings || 0;
     const courtsCount = data.total_courts || (data.court_summaries ? data.court_summaries.length : 0);
+
+    // If target date has 0 hearings and autoForward is allowed, jump directly to next active court date!
+    if (count === 0 && autoForwardIfEmpty && allCases && allCases.length > 0) {
+      const nextActiveCase = allCases
+        .filter(c => c.next_hearing_date && c.next_hearing_date > targetDate && (c.case_status || '').toUpperCase() !== 'DISPOSED')
+        .sort((a, b) => (a.next_hearing_date || '').localeCompare(b.next_hearing_date || ''))[0];
+
+      if (nextActiveCase && nextActiveCase.next_hearing_date) {
+        if (mainSub) {
+          mainSub.innerHTML = `🌅 <span style="color:var(--text-gold); font-weight:700;">Active Session:</span> Displaying ${nextActiveCase.next_hearing_date} (since ${targetDate} has no court hearings) &bull; Grouped by Court, Room & Item Number`;
+        }
+        return loadDailyCauseList(nextActiveCase.next_hearing_date, false);
+      }
+    }
 
     const kpiTodayHearings = document.getElementById("kpi-today-hearings");
     const badgeTodayHearings = document.getElementById("badge-today-hearings");
