@@ -4,12 +4,12 @@ import json
 import time
 from flask import Flask, request, jsonify, send_from_directory, render_template_string
 from flask_cors import CORS
-from ecourts_api import fetch_case_details, get_api_key
+from ecourts_api import fetch_case_details, get_api_key, get_credit_guard_status, reset_circuit_breaker
 from db import (
     init_db, upsert_case, get_all_cases, get_case_by_cnr, delete_case, clear_all_cases,
     get_case_history_logs, mark_log_notified, update_case_preferences,
     get_advocate_settings, update_advocate_settings, get_daily_cause_list,
-    import_karur_sample_data
+    import_karur_sample_data, get_current_ist_date, ensure_today_hearings_synchronized
 )
 
 from sync_engine import sync_worker, evaluate_case_check_need
@@ -75,11 +75,17 @@ def key_status():
     key = get_api_key()
     has_key = bool(key and key != "your_api_key_here")
     masked = (key[:8] + "..." + key[-4:]) if has_key and len(key) > 12 else ""
+    guard = get_credit_guard_status()
     return jsonify({
         "configured": has_key,
         "masked_key": masked,
-        "full_key": key if has_key else ""
+        "full_key": key if has_key else "",
+        "credit_guard": guard
     })
+
+@app.route("/api/credit-guard", methods=["GET"])
+def credit_guard_route():
+    return jsonify(get_credit_guard_status())
 
 @app.route("/api/save-key", methods=["POST"])
 def save_key():
@@ -93,7 +99,12 @@ def save_key():
         f.write(f"# eCourts API Key Configuration\nECOURTS_API_KEY={new_key}\n")
     
     os.environ["ECOURTS_API_KEY"] = new_key
-    return jsonify({"success": True, "masked_key": new_key[:8] + "..." + new_key[-4:] if len(new_key) > 12 else "***"})
+    reset_circuit_breaker()
+    return jsonify({
+        "success": True, 
+        "masked_key": new_key[:8] + "..." + new_key[-4:] if len(new_key) > 12 else "***",
+        "credit_guard": get_credit_guard_status()
+    })
 
 @app.route("/api/cases", methods=["GET"])
 def list_cases():
@@ -634,22 +645,24 @@ def leads_endpoint():
 @app.route("/api/live-status")
 def live_status_endpoint():
     """Lightweight endpoint for zero-refresh real-time live sync polling."""
-    from db import get_all_cases, get_daily_cause_list
+    from db import get_all_cases, get_daily_cause_list, get_current_ist_date
     all_c = get_all_cases()
-    today_date = request.args.get("date") or time.strftime("%Y-%m-%d")
+    today_date = request.args.get("date") or get_current_ist_date()
     today_data = get_daily_cause_list(today_date)
     return jsonify({
         "timestamp": int(time.time()),
         "total_cases": len(all_c),
         "today_hearings": today_data.get("total_hearings", 0),
+        "today_date": today_date,
         "last_updated": time.strftime("%H:%M:%S")
     })
 
 @app.route("/api/scheduler/evaluation", methods=["GET"])
 def scheduler_evaluation():
     """Evaluates all portfolio cases and returns sleeping vs active check status with credit calculation."""
+    from db import get_current_ist_date
     cases = get_all_cases()
-    today = time.strftime("%Y-%m-%d")
+    today = get_current_ist_date()
     
     evaluations = []
     sleeping_count = 0

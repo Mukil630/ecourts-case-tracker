@@ -1362,9 +1362,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // Date picker change listener
   const datePicker = document.getElementById("dashboard-date-picker");
   if (datePicker) {
-    if (!datePicker.value) {
-      datePicker.value = "2026-08-14"; // Default to loaded board date
-    }
+    const todayStr = getSelectedOrTodayDate();
+    datePicker.value = todayStr;
     datePicker.addEventListener("change", () => {
       loadDailyCauseList(datePicker.value);
     });

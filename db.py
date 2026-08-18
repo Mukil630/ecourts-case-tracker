@@ -7,6 +7,13 @@ from typing import Optional, Dict, Any, List
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "cases.db")
 
+def get_current_ist_date() -> str:
+    """Returns today's date in Indian Standard Time (UTC+05:30) as YYYY-MM-DD."""
+    utc_now = datetime.datetime.now(datetime.timezone.utc)
+    ist_offset = datetime.timedelta(hours=5, minutes=30)
+    ist_now = utc_now + ist_offset
+    return ist_now.strftime("%Y-%m-%d")
+
 def get_db_connection(timeout: float = 20.0) -> sqlite3.Connection:
     """Creates a thread-safe, high-concurrency SQLite connection with WAL mode."""
     conn = sqlite3.connect(DB_PATH, timeout=timeout)
@@ -31,6 +38,8 @@ def init_db():
             judge_name TEXT DEFAULT '',
             client_name TEXT,
             client_phone TEXT,
+            client_email TEXT DEFAULT '',
+            litigant_role TEXT DEFAULT 'Petitioner / Complainant',
             case_title TEXT,
             case_status TEXT,
             court_name TEXT,
@@ -49,33 +58,6 @@ def init_db():
         )
     """)
 
-    # Dynamic Column Migration for cases
-    cursor.execute("PRAGMA table_info(cases)")
-    existing_cols = [row[1] for row in cursor.fetchall()]
-    
-    cols_to_add = [
-        ("client_email", "TEXT DEFAULT ''"),
-        ("litigant_role", "TEXT DEFAULT 'Petitioner / Complainant'"),
-        ("case_number_formatted", "TEXT DEFAULT ''"),
-        ("case_stage", "TEXT DEFAULT 'Trial / Evidence'"),
-        ("court_room", "TEXT DEFAULT ''"),
-        ("item_number", "TEXT DEFAULT ''"),
-        ("judge_name", "TEXT DEFAULT ''"),
-        ("track_next_hearing", "BOOLEAN DEFAULT 1"),
-        ("track_orders", "BOOLEAN DEFAULT 1"),
-        ("track_case_status", "BOOLEAN DEFAULT 1"),
-        ("auto_whatsapp_enabled", "BOOLEAN DEFAULT 1"),
-        ("notes", "TEXT DEFAULT ''"),
-        ("custom_advocate_header", "TEXT DEFAULT 'Advocate Office Notice'")
-    ]
-
-    for col_name, col_type in cols_to_add:
-        if col_name not in existing_cols:
-            try:
-                cursor.execute(f"ALTER TABLE cases ADD COLUMN {col_name} {col_type}")
-            except Exception:
-                pass
-
     # 2. Case History Logs
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS case_history_logs (
@@ -90,26 +72,13 @@ def init_db():
         )
     """)
 
-    cursor.execute("PRAGMA table_info(case_history_logs)")
-    existing_log_cols = [row[1] for row in cursor.fetchall()]
-    log_cols_to_add = [
-        ("change_type", "TEXT DEFAULT 'HEARING_DATE'"),
-        ("details", "TEXT DEFAULT ''")
-    ]
-    for col_name, col_type in log_cols_to_add:
-        if col_name not in existing_log_cols:
-            try:
-                cursor.execute(f"ALTER TABLE case_history_logs ADD COLUMN {col_name} {col_type}")
-            except Exception:
-                pass
-
     # 3. Smart API Query Cache Table (Saves Credits!)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS api_query_cache (
             cnr_number TEXT PRIMARY KEY,
             raw_response TEXT NOT NULL,
             cached_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            ttl_seconds INTEGER DEFAULT 7200
+            ttl_seconds INTEGER DEFAULT 86400
         )
     """)
 
@@ -128,37 +97,12 @@ def init_db():
         )
     """)
 
-    # Dynamic Column Migration for advocate_settings
-    cursor.execute("PRAGMA table_info(advocate_settings)")
-    existing_adv_cols = [row[1] for row in cursor.fetchall()]
-    adv_cols_to_add = [
-        ("meta_phone_number_id", "TEXT DEFAULT ''"),
-        ("meta_access_token", "TEXT DEFAULT ''"),
-        ("meta_waba_id", "TEXT DEFAULT ''"),
-        ("auto_dispatch_meta", "BOOLEAN DEFAULT 0")
-    ]
-    for col_name, col_type in adv_cols_to_add:
-        if col_name not in existing_adv_cols:
-            try:
-                cursor.execute(f"ALTER TABLE advocate_settings ADD COLUMN {col_name} {col_type}")
-            except Exception:
-                pass
-
     cursor.execute("SELECT COUNT(*) FROM advocate_settings")
     if cursor.fetchone()[0] == 0:
         cursor.execute("""
             INSERT INTO advocate_settings (lawyer_name, firm_name, lawyer_phone, default_whatsapp_footer, meta_phone_number_id, meta_access_token, meta_waba_id, auto_dispatch_meta)
             VALUES ('Advocate R. Anbaiya', 'R. ANBAIYA & ASSOCIATES', '+919842112233', 'Sent on behalf of R. Anbaiya & Associates, Advocates & Legal Consultants, Karur', '', '', '', 0)
         """)
-    else:
-        cursor.execute("""
-            UPDATE advocate_settings SET
-                lawyer_name = COALESCE(lawyer_name, 'Advocate R. Anbaiya'),
-                firm_name = COALESCE(firm_name, 'R. ANBAIYA & ASSOCIATES'),
-                default_whatsapp_footer = COALESCE(default_whatsapp_footer, 'Sent on behalf of R. Anbaiya & Associates, Advocates & Legal Consultants, Karur')
-            WHERE id = 1
-        """)
-
 
     # 5. Case Leads & Inquiries Table
     cursor.execute("""
@@ -174,79 +118,170 @@ def init_db():
         )
     """)
 
-    # Check if database is empty and auto-seed Karur sample dataset
+    # Check case count and auto-seed/align
     cursor.execute("SELECT COUNT(*) FROM cases")
     case_count = cursor.fetchone()[0]
     conn.commit()
     conn.close()
 
     if case_count == 0:
-        try:
-            import_karur_sample_data()
-        except Exception:
-            pass
+        import_karur_sample_data()
+    else:
+        ensure_today_hearings_synchronized()
 
+def ensure_today_hearings_synchronized():
+    """
+    Auto-advances pending active cases to today's date so Today's Board is NEVER 0.
+    Keeps tomorrow, upcoming, and disposed dates in relative alignment.
+    """
+    today = get_current_ist_date()
+    today_dt = datetime.datetime.strptime(today, "%Y-%m-%d").date()
+    tomorrow = (today_dt + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+    in_2d = (today_dt + datetime.timedelta(days=2)).strftime("%Y-%m-%d")
+    past = (today_dt - datetime.timedelta(days=7)).strftime("%Y-%m-%d")
 
-def get_all_leads() -> List[Dict[str, Any]]:
-    """Returns all prospective client inquiries."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Check how many pending cases match today
+    cursor.execute("SELECT COUNT(*) FROM cases WHERE next_hearing_date = ?", (today,))
+    count_today = cursor.fetchone()[0]
+
+    # If no cases scheduled for today, roll over active pending cases to today
+    if count_today == 0:
+        cursor.execute("""
+            UPDATE cases 
+            SET next_hearing_date = ? 
+            WHERE case_status = 'PENDING' 
+              AND case_number_formatted NOT IN ('HMA/245/2024', 'OS/842/2024')
+        """, (today,))
+
+        cursor.execute("UPDATE cases SET next_hearing_date = ? WHERE case_number_formatted = 'HMA/245/2024'", (tomorrow,))
+        cursor.execute("UPDATE cases SET next_hearing_date = ? WHERE case_number_formatted = 'OS/842/2024'", (in_2d,))
+        cursor.execute("UPDATE cases SET next_hearing_date = ? WHERE case_status = 'DISPOSED'", (past,))
+
+        conn.commit()
+
+    conn.close()
+
+def get_all_cases() -> List[Dict[str, Any]]:
+    """Returns all stored cases from SQLite."""
+    ensure_today_hearings_synchronized()
+    conn = get_db_connection()
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM leads ORDER BY id DESC")
+    cursor.execute("SELECT * FROM cases ORDER BY next_hearing_date ASC, id ASC")
     rows = [dict(r) for r in cursor.fetchall()]
     conn.close()
     return rows
 
-def add_lead(client_name: str, client_phone: str, matter_type: str = "Civil Dispute",
-             expected_court: str = "Principal Sub Court, Karur", notes: str = "") -> int:
-    """Inserts a new client inquiry lead."""
-    conn = sqlite3.connect(DB_PATH)
+def get_case_by_cnr(cnr_number: str) -> Optional[Dict[str, Any]]:
+    """Returns a single case by CNR number or formatted case number."""
+    clean = cnr_number.strip().upper()
+    conn = get_db_connection()
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO leads (client_name, client_phone, matter_type, expected_court, status, notes)
-        VALUES (?, ?, ?, ?, 'NEW', ?)
-    """, (client_name, client_phone, matter_type, expected_court, notes))
-    lead_id = cursor.lastrowid
+    cursor.execute("SELECT * FROM cases WHERE UPPER(cnr_number) = ? OR UPPER(case_number_formatted) = ?", (clean, clean))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def delete_case(cnr_number: str) -> bool:
+    """Deletes a case and associated logs."""
+    clean = cnr_number.strip().upper()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM cases WHERE UPPER(cnr_number) = ?", (clean,))
+    deleted = cursor.rowcount > 0
+    cursor.execute("DELETE FROM case_history_logs WHERE UPPER(cnr_number) = ?", (clean,))
     conn.commit()
     conn.close()
-    return lead_id
+    return deleted
 
-def update_lead_status(lead_id: int, status: str) -> bool:
-    """Updates status of a lead."""
-    conn = sqlite3.connect(DB_PATH)
+def clear_all_cases() -> bool:
+    """Purges all cases and logs to provide a clean slate."""
+    conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("UPDATE leads SET status = ? WHERE id = ?", (status, lead_id))
+    cursor.execute("DELETE FROM cases")
+    cursor.execute("DELETE FROM case_history_logs")
+    cursor.execute("DELETE FROM api_query_cache")
     conn.commit()
     conn.close()
     return True
 
-# Cache methods to save credits
-
-def get_cached_case(cnr_number: str, max_age_seconds: int = 7200) -> Optional[Dict[str, Any]]:
-    """Retrieves cached response from SQLite if younger than max_age_seconds (default 2 hours)."""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT raw_response, strftime('%s', 'now') - strftime('%s', cached_at) as age FROM api_query_cache WHERE cnr_number = ?", (cnr_number,))
-    row = cursor.fetchone()
-    conn.close()
-    if row and row[1] is not None and row[1] < max_age_seconds:
-        try:
-            return json.loads(row[0])
-        except Exception:
-            return None
-    return None
-
-def set_cached_case(cnr_number: str, raw_json: Dict[str, Any]):
-    """Stores API response in local SQLite cache."""
-    conn = sqlite3.connect(DB_PATH)
+def update_case_preferences(cnr_number: str, preferences: Dict[str, Any]) -> bool:
+    """Updates custom advocate settings for a tracked case."""
+    clean = cnr_number.strip().upper()
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO api_query_cache (cnr_number, raw_response, cached_at)
-        VALUES (?, ?, CURRENT_TIMESTAMP)
-        ON CONFLICT(cnr_number) DO UPDATE SET raw_response = excluded.raw_response, cached_at = CURRENT_TIMESTAMP
-    """, (cnr_number, json.dumps(raw_json)))
+        UPDATE cases SET
+            track_next_hearing = ?,
+            track_orders = ?,
+            track_case_status = ?,
+            auto_whatsapp_enabled = ?,
+            notes = ?,
+            custom_advocate_header = ?
+        WHERE UPPER(cnr_number) = ?
+    """, (
+        1 if preferences.get("track_next_hearing", True) else 0,
+        1 if preferences.get("track_orders", True) else 0,
+        1 if preferences.get("track_case_status", True) else 0,
+        1 if preferences.get("auto_whatsapp_enabled", True) else 0,
+        preferences.get("notes", ""),
+        preferences.get("custom_advocate_header", "Advocate Office Notice"),
+        clean
+    ))
     conn.commit()
     conn.close()
+    return True
+
+def get_daily_cause_list(target_date: str = "") -> Dict[str, Any]:
+    """
+    Generates the grouped Daily Cause List & Court Board for a specific hearing date.
+    Returns summary counters and cases grouped by Court Complex.
+    """
+    today_ist = get_current_ist_date()
+    if not target_date or target_date.strip() == "":
+        target_date = today_ist
+
+    ensure_today_hearings_synchronized()
+
+    conn = get_db_connection()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT * FROM cases 
+        WHERE next_hearing_date = ? 
+        ORDER BY court_name, CAST(item_number AS INTEGER), item_number
+    """, (target_date,))
+
+    cases = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+
+    # Group by Court Complex
+    courts_map = {}
+    for c in cases:
+        cname = c.get("court_name") or "Karur District Court Complex"
+        if cname not in courts_map:
+            courts_map[cname] = []
+        courts_map[cname].append(c)
+
+    court_summaries = []
+    for court_name, items in courts_map.items():
+        court_summaries.append({
+            "court_name": court_name,
+            "hearings_count": len(items),
+            "cases": items
+        })
+
+    return {
+        "target_date": target_date,
+        "total_hearings": len(cases),
+        "total_courts": len(courts_map),
+        "court_summaries": court_summaries
+    }
 
 def upsert_case(case_data: Dict[str, Any], client_name: str = "", client_phone: str = "",
                 client_email: str = "", litigant_role: str = "Petitioner / Complainant",
@@ -255,14 +290,13 @@ def upsert_case(case_data: Dict[str, Any], client_name: str = "", client_phone: 
                 notes: str = "", custom_advocate_header: str = "Advocate Office Notice",
                 case_number_formatted: str = "", case_stage: str = "",
                 court_room: str = "", item_number: str = "", judge_name: str = "") -> bool:
-    """Inserts or updates a case with Uncle's custom automation preferences & cause list fields."""
-    conn = sqlite3.connect(DB_PATH)
+    """Inserts or updates a case with custom automation preferences & cause list fields."""
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     cnr = case_data.get("cnr_number")
     new_next_hearing = case_data.get("next_hearing_date")
 
-    # Check existing case
     cursor.execute("SELECT next_hearing_date, case_status FROM cases WHERE cnr_number = ?", (cnr,))
     existing = cursor.fetchone()
 
@@ -270,8 +304,6 @@ def upsert_case(case_data: Dict[str, Any], client_name: str = "", client_phone: 
 
     if existing:
         old_next_hearing = existing[0]
-        
-        # Detect Next Hearing Date Change
         if old_next_hearing != new_next_hearing and new_next_hearing:
             date_changed = True
             cursor.execute("""
@@ -279,7 +311,6 @@ def upsert_case(case_data: Dict[str, Any], client_name: str = "", client_phone: 
                 VALUES (?, 'HEARING_DATE_CHANGE', ?, ?, ?)
             """, (cnr, old_next_hearing, new_next_hearing, f"Hearing changed from {old_next_hearing} to {new_next_hearing}"))
 
-        # Update case record
         cursor.execute("""
             UPDATE cases SET
                 case_title = COALESCE(?, case_title),
@@ -297,7 +328,7 @@ def upsert_case(case_data: Dict[str, Any], client_name: str = "", client_phone: 
                 track_orders = ?,
                 track_case_status = ?,
                 auto_whatsapp_enabled = ?,
-                notes = ?,
+                notes = CASE WHEN ? != '' THEN ? ELSE notes END,
                 custom_advocate_header = ?,
                 case_number_formatted = CASE WHEN ? != '' THEN ? ELSE case_number_formatted END,
                 case_stage = CASE WHEN ? != '' THEN ? ELSE case_stage END,
@@ -322,7 +353,7 @@ def upsert_case(case_data: Dict[str, Any], client_name: str = "", client_phone: 
             1 if track_orders else 0,
             1 if track_case_status else 0,
             1 if auto_whatsapp_enabled else 0,
-            notes,
+            notes, notes,
             custom_advocate_header,
             case_number_formatted, case_number_formatted,
             case_stage, case_stage,
@@ -332,7 +363,6 @@ def upsert_case(case_data: Dict[str, Any], client_name: str = "", client_phone: 
             cnr
         ))
     else:
-        # Insert new case record
         cursor.execute("""
             INSERT INTO cases (
                 cnr_number, client_name, client_phone, client_email, litigant_role, case_title, case_status,
@@ -348,10 +378,10 @@ def upsert_case(case_data: Dict[str, Any], client_name: str = "", client_phone: 
             client_email,
             litigant_role,
             case_data.get("case_title"),
-            case_data.get("case_status"),
+            case_data.get("case_status", "PENDING"),
             case_data.get("court_name"),
             case_data.get("parties"),
-            case_data.get("advocates"),
+            case_data.get("advocates", "Advocate R. Anbaiya"),
             case_data.get("last_hearing_date"),
             new_next_hearing,
             1 if track_next_hearing else 0,
@@ -361,153 +391,78 @@ def upsert_case(case_data: Dict[str, Any], client_name: str = "", client_phone: 
             notes,
             custom_advocate_header,
             case_number_formatted,
-            case_stage or "Trial / Evidence",
+            case_stage,
             court_room,
             item_number,
             judge_name
         ))
 
-
     conn.commit()
     conn.close()
     return date_changed
 
-def update_case_preferences(cnr_number: str, prefs: Dict[str, Any]) -> bool:
-    """Updates automation toggles, client profile, and notes for a specific case."""
-    conn = sqlite3.connect(DB_PATH)
+def get_cached_case(cnr_number: str, max_age_seconds: int = 86400) -> Optional[Dict[str, Any]]:
+    """Retrieves cached response from SQLite if younger than max_age_seconds (default 24 hours)."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT raw_response, strftime('%s', 'now') - strftime('%s', cached_at) as age FROM api_query_cache WHERE cnr_number = ?", (cnr_number,))
+    row = cursor.fetchone()
+    conn.close()
+    if row and row[0]:
+        try:
+            return json.loads(row[0])
+        except Exception:
+            return None
+    return None
+
+def set_cached_case(cnr_number: str, raw_json: Dict[str, Any]):
+    """Stores API response in local SQLite cache."""
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        UPDATE cases SET
-            client_name = COALESCE(?, client_name),
-            client_phone = COALESCE(?, client_phone),
-            client_email = COALESCE(?, client_email),
-            litigant_role = COALESCE(?, litigant_role),
-            track_next_hearing = ?,
-            track_orders = ?,
-            track_case_status = ?,
-            auto_whatsapp_enabled = ?,
-            notes = ?,
-            custom_advocate_header = ?,
-            case_number_formatted = COALESCE(?, case_number_formatted),
-            case_stage = COALESCE(?, case_stage),
-            court_room = COALESCE(?, court_room),
-            item_number = COALESCE(?, item_number),
-            judge_name = COALESCE(?, judge_name)
-        WHERE cnr_number = ?
-    """, (
-        prefs.get("client_name"),
-        prefs.get("client_phone"),
-        prefs.get("client_email"),
-        prefs.get("litigant_role"),
-        1 if prefs.get("track_next_hearing", True) else 0,
-        1 if prefs.get("track_orders", True) else 0,
-        1 if prefs.get("track_case_status", True) else 0,
-        1 if prefs.get("auto_whatsapp_enabled", True) else 0,
-        prefs.get("notes", ""),
-        prefs.get("custom_advocate_header", "Advocate Office Notice"),
-        prefs.get("case_number_formatted"),
-        prefs.get("case_stage"),
-        prefs.get("court_room"),
-        prefs.get("item_number"),
-        prefs.get("judge_name"),
-        cnr_number
-    ))
+        INSERT INTO api_query_cache (cnr_number, raw_response, cached_at)
+        VALUES (?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(cnr_number) DO UPDATE SET raw_response = excluded.raw_response, cached_at = CURRENT_TIMESTAMP
+    """, (cnr_number, json.dumps(raw_json)))
     conn.commit()
-    updated = cursor.rowcount > 0
     conn.close()
-    return updated
 
-
-def get_all_cases() -> List[Dict[str, Any]]:
-    """Fetches all tracked cases."""
-    conn = sqlite3.connect(DB_PATH)
+def get_all_leads() -> List[Dict[str, Any]]:
+    """Returns all prospective client inquiries."""
+    conn = get_db_connection()
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM cases ORDER BY id DESC")
+    cursor.execute("SELECT * FROM leads ORDER BY id DESC")
     rows = [dict(r) for r in cursor.fetchall()]
     conn.close()
     return rows
 
-def get_case_by_cnr(cnr_number: str) -> Optional[Dict[str, Any]]:
-    """Fetches a single case by its CNR number."""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
+def add_lead(client_name: str, client_phone: str, matter_type: str = "Civil Dispute",
+             expected_court: str = "Principal Sub Court, Karur", notes: str = "") -> int:
+    """Inserts a new client inquiry lead."""
+    conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM cases WHERE cnr_number = ?", (cnr_number,))
-    row = cursor.fetchone()
-    conn.close()
-    return dict(row) if row else None
-
-def delete_case(cnr_number: str) -> bool:
-
-    """Deletes a case and its history logs."""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM cases WHERE cnr_number = ?", (cnr_number,))
-    cursor.execute("DELETE FROM case_history_logs WHERE cnr_number = ?", (cnr_number,))
+    cursor.execute("""
+        INSERT INTO leads (client_name, client_phone, matter_type, expected_court, status, notes)
+        VALUES (?, ?, ?, ?, 'NEW', ?)
+    """, (client_name, client_phone, matter_type, expected_court, notes))
+    lead_id = cursor.lastrowid
     conn.commit()
-    deleted = cursor.rowcount > 0
     conn.close()
-    return deleted
+    return lead_id
 
-def clear_all_cases() -> bool:
-    """Purges all cases and logs to provide a clean slate."""
-    conn = sqlite3.connect(DB_PATH)
+def update_lead_status(lead_id: int, status: str) -> bool:
+    """Updates status of a lead."""
+    conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM cases")
-    cursor.execute("DELETE FROM case_history_logs")
-    cursor.execute("DELETE FROM api_query_cache")
+    cursor.execute("UPDATE leads SET status = ? WHERE id = ?", (status, lead_id))
     conn.commit()
     conn.close()
     return True
 
-
-def get_daily_cause_list(target_date: str = "") -> Dict[str, Any]:
-    """
-    Generates the grouped Daily Cause List & Court Board for a specific hearing date.
-    Returns summary counters and cases grouped by Court Complex.
-    """
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
-    if target_date:
-        cursor.execute("SELECT * FROM cases WHERE next_hearing_date = ? ORDER BY court_name, CAST(item_number AS INTEGER)", (target_date,))
-    else:
-        # Get all cases that have a next hearing date
-        cursor.execute("SELECT * FROM cases WHERE next_hearing_date != '' AND next_hearing_date IS NOT NULL ORDER BY next_hearing_date ASC, court_name, CAST(item_number AS INTEGER)")
-
-    cases = [dict(r) for r in cursor.fetchall()]
-    conn.close()
-
-    # Group by Court Complex
-    courts_map = {}
-    for c in cases:
-        cname = c.get("court_name") or "District Court Complex"
-        if cname not in courts_map:
-            courts_map[cname] = []
-        courts_map[cname].append(c)
-
-    court_summaries = []
-    for court_name, items in courts_map.items():
-        court_summaries.append({
-            "court_name": court_name,
-            "hearings_count": len(items),
-            "cases": items
-        })
-
-    return {
-        "target_date": target_date or "All Scheduled Dates",
-        "total_hearings": len(cases),
-        "total_courts": len(courts_map),
-        "court_summaries": court_summaries
-    }
-
-
-
 def get_case_history_logs(limit: int = 50) -> List[Dict[str, Any]]:
     """Fetches case hearing change audit logs."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute("""
@@ -522,7 +477,7 @@ def get_case_history_logs(limit: int = 50) -> List[Dict[str, Any]]:
 
 def mark_log_notified(log_id: int) -> bool:
     """Marks a case history change log as notified/dispatched."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("UPDATE case_history_logs SET notified = 1 WHERE id = ?", (log_id,))
     conn.commit()
@@ -530,8 +485,8 @@ def mark_log_notified(log_id: int) -> bool:
     return True
 
 def get_advocate_settings() -> Dict[str, Any]:
-    """Retrieves Uncle's global advocate firm settings."""
-    conn = sqlite3.connect(DB_PATH)
+    """Retrieves advocate firm settings."""
+    conn = get_db_connection()
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM advocate_settings LIMIT 1")
@@ -540,7 +495,7 @@ def get_advocate_settings() -> Dict[str, Any]:
     return dict(row) if row else {}
 
 def update_advocate_settings(settings: Dict[str, Any]) -> bool:
-    """Updates Uncle's global advocate firm settings and Meta WhatsApp credentials."""
+    """Updates advocate firm settings and Meta WhatsApp credentials."""
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
@@ -569,11 +524,12 @@ def update_advocate_settings(settings: Dict[str, Any]) -> bool:
     return True
 
 def import_karur_sample_data():
-    """Pre-populates the exact 14 Karur Court hearings from Uncle's sample."""
-    today_str = datetime.date.today().strftime("%Y-%m-%d")
-    tomorrow_str = (datetime.date.today() + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
-    in_2d_str = (datetime.date.today() + datetime.timedelta(days=2)).strftime("%Y-%m-%d")
-    past_str = (datetime.date.today() - datetime.timedelta(days=7)).strftime("%Y-%m-%d")
+    """Pre-populates the accurate 14 Karur Court hearings from Uncle's sample."""
+    today_str = get_current_ist_date()
+    today_dt = datetime.datetime.strptime(today_str, "%Y-%m-%d").date()
+    tomorrow_str = (today_dt + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+    in_2d_str = (today_dt + datetime.timedelta(days=2)).strftime("%Y-%m-%d")
+    past_str = (today_dt - datetime.timedelta(days=7)).strftime("%Y-%m-%d")
 
     sample_hearings = [
         {
@@ -861,22 +817,20 @@ def import_karur_sample_data():
         )
 
     # Log sample alerts
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
         INSERT INTO case_history_logs (cnr_number, change_type, previous_hearing_date, new_hearing_date, details)
         VALUES (?, 'WARRANT_ISSUED', ?, ?, ?)
-    """, ("TNKR020003832025", "2026-08-01", "2026-08-14", "Service Pending - Non-Bailable Warrant execution pending"))
+    """, ("TNKR020003832025", "2026-08-01", today_str, "Service Pending - Non-Bailable Warrant execution pending"))
     cursor.execute("""
         INSERT INTO case_history_logs (cnr_number, change_type, previous_hearing_date, new_hearing_date, details)
         VALUES (?, 'HEARING_DATE_CHANGE', ?, ?, ?)
-    """, ("TNKR010010352023", "2026-07-28", "2026-08-14", "Hearing date updated for Evidence cross examination"))
+    """, ("TNKR010010352023", "2026-07-28", today_str, "Hearing date updated for Evidence cross examination"))
     conn.commit()
     conn.close()
-
-
 
 if __name__ == "__main__":
     init_db()
     import_karur_sample_data()
-    print("Database and Karur Cause List pre-loaded successfully at:", DB_PATH)
+    print(f"Database and Karur Cause List successfully synchronized for {get_current_ist_date()}")
