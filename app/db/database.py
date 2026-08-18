@@ -11,6 +11,20 @@ def get_current_ist_date() -> str:
     ist_now = utc_now + ist_offset
     return ist_now.strftime("%Y-%m-%d")
 
+def get_effective_practice_date() -> str:
+    """
+    Returns active court practice date in IST (UTC+05:30).
+    Rule: After 7:30 PM (19:30), courts have concluded for today.
+    The active practice date rolls forward to Tomorrow (T+1) and stays locked
+    until Tomorrow 7:30 PM!
+    """
+    utc_now = datetime.datetime.now(datetime.timezone.utc)
+    ist_offset = datetime.timedelta(hours=5, minutes=30)
+    ist_now = utc_now + ist_offset
+    if ist_now.hour > 19 or (ist_now.hour == 19 and ist_now.minute >= 30):
+        ist_now += datetime.timedelta(days=1)
+    return ist_now.strftime("%Y-%m-%d")
+
 def get_db_connection(db_path: Optional[str] = None, timeout: float = 20.0) -> sqlite3.Connection:
     """Creates a thread-safe, high-concurrency SQLite connection with WAL mode enabled."""
     if db_path is None:

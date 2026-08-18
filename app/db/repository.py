@@ -106,9 +106,9 @@ def get_daily_cause_list(target_date: str = "", db_path: Optional[str] = None) -
     Generates the grouped Daily Cause List & Court Board for a specific hearing date.
     Returns summary counters and cases grouped by Court Complex.
     """
-    today_ist = get_current_ist_date()
+    from app.db.database import get_effective_practice_date
     if not target_date or target_date.strip() == "":
-        target_date = today_ist
+        target_date = get_effective_practice_date()
 
     ensure_today_hearings_synchronized(db_path)
 
