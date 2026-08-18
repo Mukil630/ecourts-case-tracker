@@ -1256,11 +1256,13 @@ function renderAllCasesTable(cases) {
       <td>
         <strong style="color: var(--text-gold); font-size: 0.92rem; display: block; font-weight: 800; font-family: var(--font-mono);">${escapeHtml(c.next_hearing_date || 'Awaiting Date')}</strong>
         <div style="margin-top: 4px; display: flex; gap: 4px; flex-wrap: wrap;">
-          ${c.next_hearing_date === todayStr 
-            ? '<span style="background: #059669; color: #ffffff; padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 800; display: inline-block;">🔔 Hearing Today</span>'
-            : (c.case_status === 'DISPOSED' 
-                ? '<span style="background: #334155; color: #f1f5f9; padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 700; display: inline-block;">🏁 Disposed</span>'
-                : '<span style="background: #1e293b; color: #cbd5e1; border: 1px solid rgba(255, 255, 255, 0.12); padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 600; display: inline-block;">📅 Scheduled</span>')}
+          ${(c.case_status === 'DISPOSED' || (c.case_status || '').toUpperCase() === 'DISPOSED')
+            ? '<span style="background: #334155; color: #f1f5f9; padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 700; display: inline-block;">🏁 Disposed</span>'
+            : (c.next_hearing_date === todayStr
+                ? '<span style="background: #059669; color: #ffffff; padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 800; display: inline-block;">🔔 Hearing Today</span>'
+                : (c.next_hearing_date && c.next_hearing_date > todayStr
+                    ? '<span style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 700; display: inline-block;">📅 Upcoming</span>'
+                    : '<span style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 600; display: inline-block;" title="Past hearing date. Awaiting court adjourned date posting.">⏳ Awaiting Next Date</span>'))}
           <span class="badge ${getBadgeClass(c.case_stage)}" style="font-size: 0.72rem; padding: 2px 6px;">${escapeHtml(c.case_stage || 'Evidence')}</span>
         </div>
       </td>
