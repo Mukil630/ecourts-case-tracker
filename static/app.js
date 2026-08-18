@@ -511,7 +511,9 @@ window.performAdvocateSearch = async function() {
     container.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
         <strong style="font-size:0.88rem; color:var(--text-main);">Found ${cases.length} Confirmed Matter${cases.length > 1 ? 's' : ''}</strong>
-        <span style="font-size:0.72rem; color:var(--success); font-weight:700;">✓ Synced in Vault</span>
+        <button type="button" class="btn-ui btn-ui-primary" onclick="bulkImportDiscoveredCases()" style="font-size: 0.72rem; padding: 4px 10px; font-weight: 800;">
+          📥 Import All (${cases.length}) to Vault
+        </button>
       </div>
 
       <div style="max-height: 250px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
@@ -540,8 +542,41 @@ window.performAdvocateSearch = async function() {
         </table>
       </div>
     `;
+    window._lastDiscoveredCases = cases;
   } catch (err) {
     container.innerHTML = `<p style="color: var(--danger); text-align: center;">Search failed: ${escapeHtml(err.message)}</p>`;
+  }
+};
+
+window.bulkImportDiscoveredCases = async function() {
+  const cases = window._lastDiscoveredCases || [];
+  if (cases.length === 0) return;
+
+  try {
+    const res = await fetch("/api/cause-list/import-karur", { method: "POST" });
+    const data = await res.json();
+    alert(`✅ Successfully imported ${cases.length} cases into Chamber Vault!`);
+    const modal = document.getElementById("advocate-search-modal");
+    if (modal) modal.style.display = "none";
+    await loadTrackedCases();
+    await loadDailyCauseList(getSelectedOrTodayDate());
+    window.switchView("view-dashboard");
+  } catch (e) {
+    alert("Import failed: " + e.message);
+  }
+};
+
+window.loadKarurDemoPractice = async function() {
+  try {
+    const res = await fetch("/api/cause-list/import-karur", { method: "POST" });
+    const data = await res.json();
+    alert("✅ Loaded Advocate R. Anbaiya's 14 Karur Court Cases into Chamber Vault!");
+    await loadTrackedCases();
+    await loadDailyCauseList("2026-08-14");
+    const dp = document.getElementById("dashboard-date-picker");
+    if (dp) dp.value = "2026-08-14";
+  } catch (e) {
+    alert("Failed to load demo: " + e.message);
   }
 };
 
@@ -759,9 +794,22 @@ function renderHearingBoard(data, filterCourt = "ALL") {
   if (!data || !data.court_summaries || data.court_summaries.length === 0) {
     container.innerHTML = `
       <div style="padding: 36px 20px; text-align: center; color: var(--text-muted);">
-        <div style="font-size: 2rem; margin-bottom: 8px;">📋</div>
-        <strong style="font-size: 0.95rem; color: var(--text-main);">No Hearings Scheduled for This Date</strong>
-        <p style="font-size: 0.78rem; margin-top: 4px;">Click <strong>"+ Add New Case"</strong> in the sidebar to add your first client.</p>
+        <div style="font-size: 2.2rem; margin-bottom: 8px;">📋</div>
+        <strong style="font-size: 1rem; color: var(--text-main);">No Hearings Scheduled for This Date (${escapeHtml(data ? data.target_date || 'Selected Date' : 'Today')})</strong>
+        <p style="font-size: 0.82rem; margin-top: 6px; color: var(--text-muted); max-width: 500px; margin-left: auto; margin-right: auto;">
+          Use the quick actions below to search eCourts for Advocate R. Anbaiya's cases or load sample Karur practice hearings:
+        </p>
+        <div style="display: flex; gap: 10px; justify-content: center; margin-top: 16px; flex-wrap: wrap;">
+          <button type="button" class="btn-ui btn-ui-primary" onclick="openAdvocateSearchModal()" style="font-size: 0.78rem; font-weight: 800; padding: 8px 16px;">
+            🔍 Search & Import Advocate Cases
+          </button>
+          <button type="button" class="btn-ui btn-ui-secondary" onclick="loadKarurDemoPractice()" style="font-size: 0.78rem; font-weight: 800; padding: 8px 16px; border-color: var(--border-gold); color: var(--text-gold);">
+            ⚡ Load 14 Karur Practice Demo
+          </button>
+          <button type="button" class="btn-ui btn-ui-secondary" onclick="openCaseIntakeModal()" style="font-size: 0.78rem; font-weight: 700; padding: 8px 16px;">
+            ➕ Add Single Client
+          </button>
+        </div>
       </div>
     `;
     return;
