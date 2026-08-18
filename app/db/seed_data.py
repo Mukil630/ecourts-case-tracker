@@ -1,49 +1,13 @@
 import datetime
 from typing import Optional
-from app.db.database import get_db_connection, get_current_ist_date
+from app.db.database import get_db_connection
 
 def ensure_today_hearings_synchronized(db_path: Optional[str] = None):
-    """
-    Auto-advances pending active cases to today's date so Today's Board is NEVER 0.
-    Keeps tomorrow, upcoming, and disposed dates in relative alignment.
-    """
-    today = get_current_ist_date()
-    today_dt = datetime.datetime.strptime(today, "%Y-%m-%d").date()
-    tomorrow = (today_dt + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
-    in_2d = (today_dt + datetime.timedelta(days=2)).strftime("%Y-%m-%d")
-    past = (today_dt - datetime.timedelta(days=7)).strftime("%Y-%m-%d")
-
-    conn = get_db_connection(db_path)
-    cursor = conn.cursor()
-
-    # Check how many pending cases match today
-    cursor.execute("SELECT COUNT(*) FROM cases WHERE next_hearing_date = ?", (today,))
-    count_today = cursor.fetchone()[0]
-
-    if count_today == 0:
-        cursor.execute("""
-            UPDATE cases 
-            SET next_hearing_date = ? 
-            WHERE case_status = 'PENDING' 
-              AND case_number_formatted NOT IN ('HMA/245/2024', 'OS/842/2024')
-        """, (today,))
-
-        cursor.execute("UPDATE cases SET next_hearing_date = ? WHERE case_number_formatted = 'HMA/245/2024'", (tomorrow,))
-        cursor.execute("UPDATE cases SET next_hearing_date = ? WHERE case_number_formatted = 'OS/842/2024'", (in_2d,))
-        cursor.execute("UPDATE cases SET next_hearing_date = ? WHERE case_status = 'DISPOSED'", (past,))
-
-        conn.commit()
-
-    conn.close()
+    """No-op: Does NOT overwrite real case dates artificially."""
+    pass
 
 def import_karur_sample_data(db_path: Optional[str] = None):
-    """Pre-populates the accurate 14 Karur Court hearings from Uncle's sample."""
-    today_str = get_current_ist_date()
-    today_dt = datetime.datetime.strptime(today_str, "%Y-%m-%d").date()
-    tomorrow_str = (today_dt + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
-    in_2d_str = (today_dt + datetime.timedelta(days=2)).strftime("%Y-%m-%d")
-    past_str = (today_dt - datetime.timedelta(days=7)).strftime("%Y-%m-%d")
-
+    """Pre-populates the accurate 14 Karur Court hearings with their real dates (2026-08-14)."""
     sample_hearings = [
         {
             "cnr_number": "TNKR010010352023",
@@ -55,7 +19,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
             "judge_name": "M. CHARLES ALBERT, Judicial Magistrate No.II",
             "case_stage": "Evidence",
             "case_status": "PENDING",
-            "next_hearing_date": today_str,
+            "next_hearing_date": "2026-08-14",
             "client_name": "M Palanisamy",
             "client_phone": "+919443322110",
             "notes": "Complainant evidence cross examination"
@@ -70,7 +34,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
             "judge_name": "Thiru R.Mahesh, B.A., LL.B(Hons)., LL.M.",
             "case_stage": "Service Pending - Warrant",
             "case_status": "PENDING",
-            "next_hearing_date": today_str,
+            "next_hearing_date": "2026-08-14",
             "client_name": "G Eniyavan",
             "client_phone": "+919842112233",
             "notes": "NBW execution pending"
@@ -85,7 +49,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
             "judge_name": "Thiru P.Thangavel, B.Sc., LL.M., Sessions Judge",
             "case_stage": "For Attachment / Arrest / Deposit",
             "case_status": "PENDING",
-            "next_hearing_date": today_str,
+            "next_hearing_date": "2026-08-14",
             "client_name": "Shalini",
             "client_phone": "+919789012345",
             "notes": "Execution petition for deposit"
@@ -100,7 +64,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
             "judge_name": "Tmt. S.SUMATHY, M.L., District Judge",
             "case_stage": "IA Pending",
             "case_status": "PENDING",
-            "next_hearing_date": today_str,
+            "next_hearing_date": "2026-08-14",
             "client_name": "S Nirmala",
             "client_phone": "+919655443322",
             "notes": "Injunction application hearing"
@@ -111,149 +75,149 @@ def import_karur_sample_data(db_path: Optional[str] = None):
             "case_title": "State Bank of India vs M/s Kathiravan Tea Stall",
             "court_name": "Principal District Munsif Court, Karur",
             "court_room": "Room 5",
-            "item_number": "43",
-            "judge_name": "Thiru S. Balakrishnan, B.L., Principal District Munsif",
-            "case_stage": "Written Statement",
+            "item_number": "16",
+            "judge_name": "Thiru. N.Nilaveshwaran, B.A., B.L.",
+            "case_stage": "Evidence",
             "case_status": "PENDING",
-            "next_hearing_date": today_str,
+            "next_hearing_date": "2026-08-14",
             "client_name": "Kathiravan (Proprietor)",
             "client_phone": "+919944112233",
             "notes": "Bank loan recovery suit"
         },
         {
-            "cnr_number": "TNKR060000692024",
-            "case_number_formatted": "HMOP/69/2024",
-            "case_title": "R Sasikumar vs K Priya",
-            "court_name": "Family Court, Karur",
-            "court_room": "Room 4",
-            "item_number": "12",
-            "judge_name": "Tmt. K. Geetha, M.L., Judge, Family Court",
-            "case_stage": "Counselling / Mediation",
-            "case_status": "PENDING",
-            "next_hearing_date": today_str,
-            "client_name": "R Sasikumar",
-            "client_phone": "+919842556677",
-            "notes": "Appearance before Family Counsellor"
-        },
-        {
-            "cnr_number": "TNKR070001422023",
-            "case_number_formatted": "CC/142/2023",
-            "case_title": "Inspector of Police vs Karthikeyan & 2 Ors",
-            "court_name": "Judicial Magistrate No.I, Karur",
-            "court_room": "Room 7",
-            "item_number": "19",
-            "judge_name": "Thiru A. Saravanan, Judicial Magistrate No.I",
-            "case_stage": "Examination of Witnesses",
-            "case_status": "PENDING",
-            "next_hearing_date": today_str,
-            "client_name": "Karthikeyan (Accused 1)",
-            "client_phone": "+919788223344",
-            "notes": "PW1 and PW2 cross-examination"
-        },
-        {
-            "cnr_number": "TNKR080000882024",
-            "case_number_formatted": "MCOP/88/2024",
-            "case_title": "Dhanalakshmi vs United India Insurance Co Ltd",
-            "court_name": "Motor Accident Claims Tribunal, Karur",
-            "court_room": "Room 3",
-            "item_number": "31",
-            "judge_name": "Special Sub Judge (MACT), Karur",
-            "case_stage": "Petitioner Evidence",
-            "case_status": "PENDING",
-            "next_hearing_date": today_str,
-            "client_name": "Dhanalakshmi",
-            "client_phone": "+919442001122",
-            "notes": "Accident claim medical bills marked"
-        },
-        {
-            "cnr_number": "TNKR090002102023",
-            "case_number_formatted": "LAOP/210/2023",
-            "case_title": "K Periasamy vs Revenue Divisional Officer, Karur",
-            "court_name": "Principal Sub Court, Karur",
-            "court_room": "Room 2",
-            "item_number": "15",
-            "judge_name": "Principal Subordinate Judge, Karur",
-            "case_stage": "Enquiry",
-            "case_status": "PENDING",
-            "next_hearing_date": today_str,
-            "client_name": "K Periasamy",
-            "client_phone": "+919629112233",
-            "notes": "National Highway land acquisition enhanced compensation"
-        },
-        {
-            "cnr_number": "TNKR100000552025",
-            "case_number_formatted": "Crl.MP/55/2025",
-            "case_title": "Vimal vs State rep by Sub Inspector of Police",
-            "court_name": "District & Sessions Court, Karur",
-            "court_room": "Room 1",
-            "item_number": "8",
-            "judge_name": "Principal Sessions Judge, Karur",
-            "case_stage": "Bail Arguments",
-            "case_status": "PENDING",
-            "next_hearing_date": today_str,
-            "client_name": "Vimal (Surety: Brother Ramesh)",
-            "client_phone": "+919865112244",
-            "notes": "Anticipatory bail petition hearing"
-        },
-        {
-            "cnr_number": "TNKR110003122022",
-            "case_number_formatted": "AS/312/2022",
-            "case_title": "V Karuppan vs Subramani & Ors",
-            "court_name": "Additional District Court, Karur",
-            "court_room": "Room 2",
-            "item_number": "52",
-            "judge_name": "Additional District Judge, Karur",
-            "case_stage": "Appellants Arguments",
-            "case_status": "PENDING",
-            "next_hearing_date": today_str,
-            "client_name": "V Karuppan",
-            "client_phone": "+919443778899",
-            "notes": "First Appeal partition suit final arguments"
-        },
-        {
-            "cnr_number": "TNKR120000942024",
-            "case_number_formatted": "HMA/245/2024",
-            "case_title": "K Sundar vs S Meena",
-            "court_name": "Family Court, Karur",
-            "court_room": "Room 4",
-            "item_number": "7",
-            "judge_name": "Tmt. K. Geetha, M.L., Judge, Family Court",
-            "case_stage": "Restitution Arguments",
-            "case_status": "PENDING",
-            "next_hearing_date": tomorrow_str,
-            "client_name": "K Sundar",
-            "client_phone": "+919787113355",
-            "notes": "Section 9 HM Act arguments scheduled tomorrow"
-        },
-        {
-            "cnr_number": "TNKR130008422024",
-            "case_number_formatted": "OS/842/2024",
-            "case_title": "Baroda Pioneer Finance vs K Loganathan",
+            "cnr_number": "TNKR050001392021",
+            "case_number_formatted": "OS/139/2021",
+            "case_title": "A Palaniyappan vs R Manokaran & 5 Ors",
             "court_name": "Principal District Munsif Court, Karur",
             "court_room": "Room 5",
-            "item_number": "60",
-            "judge_name": "Thiru S. Balakrishnan, B.L., Principal District Munsif",
-            "case_stage": "Framing of Issues",
+            "item_number": "23",
+            "judge_name": "Thiru. N.Nilaveshwaran, B.A., B.L.",
+            "case_stage": "Trial",
             "case_status": "PENDING",
-            "next_hearing_date": in_2d_str,
-            "client_name": "K Loganathan",
-            "client_phone": "+919943556688",
-            "notes": "Promissory note recovery suit"
+            "next_hearing_date": "2026-08-14",
+            "client_name": "A Palaniyappan",
+            "client_phone": "+919842555666",
+            "notes": "Final trial arguments"
         },
         {
-            "cnr_number": "TNKR140001152021",
-            "case_number_formatted": "EP/115/2021",
-            "case_title": "Murugesan vs Selvam & Anr",
+            "cnr_number": "TNKR090000692024",
+            "case_number_formatted": "COS/69/2024",
+            "case_title": "Shobika Impex Private LTD vs Sundar A N Sundarapandiyan",
             "court_name": "Principal Sub Court, Karur",
-            "court_room": "Room 2",
-            "item_number": "3",
-            "judge_name": "Principal Subordinate Judge, Karur",
-            "case_stage": "Full Satisfaction Recorded",
-            "case_status": "DISPOSED",
-            "next_hearing_date": past_str,
-            "client_name": "Murugesan",
-            "client_phone": "+919442667788",
-            "notes": "Decree amount realized and EP closed"
+            "court_room": "Room 3",
+            "item_number": "1",
+            "judge_name": "Tmt K.L.Priyanga, B.A., B.L.(Hons)",
+            "case_stage": "Evidence",
+            "case_status": "PENDING",
+            "next_hearing_date": "2026-08-14",
+            "client_name": "Shobika Impex Ltd",
+            "client_phone": "+919843011223",
+            "notes": "Commercial dispute evidence"
+        },
+        {
+            "cnr_number": "TNKR090001392025",
+            "case_number_formatted": "OS/139/2025",
+            "case_title": "Bank of Baroda Karur vs P Kalyani & Anr",
+            "court_name": "Principal Sub Court, Karur",
+            "court_room": "Room 3",
+            "item_number": "31",
+            "judge_name": "Tmt K.L.Priyanga, B.A., B.L.(Hons)",
+            "case_stage": "Ex-parte Evidence",
+            "case_status": "PENDING",
+            "next_hearing_date": "2026-08-14",
+            "client_name": "Bank of Baroda Main",
+            "client_phone": "+919444111222",
+            "notes": "Proof affidavit filing"
+        },
+        {
+            "cnr_number": "TNKR090003952025",
+            "case_number_formatted": "OS/395/2025",
+            "case_title": "Bank of Baroda vs B Priyadharshini & 2 Ors",
+            "court_name": "Principal Sub Court, Karur",
+            "court_room": "Room 3",
+            "item_number": "35",
+            "judge_name": "Tmt K.L.Priyanga, B.A., B.L.(Hons)",
+            "case_stage": "Ex-parte Evidence",
+            "case_status": "PENDING",
+            "next_hearing_date": "2026-08-14",
+            "client_name": "BOB Aravakurichi",
+            "client_phone": "+919444333444",
+            "notes": "Recovery suit exparte"
+        },
+        {
+            "cnr_number": "TNKR090008312025",
+            "case_number_formatted": "OS/831/2025",
+            "case_title": "State Bank of India vs P Arumugam",
+            "court_name": "Principal Sub Court, Karur",
+            "court_room": "Room 3",
+            "item_number": "37",
+            "judge_name": "Tmt K.L.Priyanga, B.A., B.L.(Hons)",
+            "case_stage": "Ex-parte Evidence",
+            "case_status": "PENDING",
+            "next_hearing_date": "2026-08-14",
+            "client_name": "SBI Aravakurichi",
+            "client_phone": "+919445112233",
+            "notes": "Exparte order hearing"
+        },
+        {
+            "cnr_number": "TNKR090005552023",
+            "case_number_formatted": "OS/555/2023",
+            "case_title": "SBI Kovai Road vs D Yasotha",
+            "court_name": "Principal Sub Court, Karur",
+            "court_room": "Room 3",
+            "item_number": "46",
+            "judge_name": "Tmt K.L.Priyanga, B.A., B.L.(Hons)",
+            "case_stage": "Steps",
+            "case_status": "PENDING",
+            "next_hearing_date": "2026-08-14",
+            "client_name": "SBI Kovai Road",
+            "client_phone": "+919445998877",
+            "notes": "Legal heir steps petition"
+        },
+        {
+            "cnr_number": "TNKR090000942025",
+            "case_number_formatted": "OS/94/2025",
+            "case_title": "Bank of Baroda vs V Kumar",
+            "court_name": "Principal Sub Court, Karur",
+            "court_room": "Room 4",
+            "item_number": "42",
+            "judge_name": "Thiru. BALAMURUGAN V.S., Addl Subordinate Judge",
+            "case_stage": "Ex-parte Evidence",
+            "case_status": "PENDING",
+            "next_hearing_date": "2026-08-14",
+            "client_name": "BOB Karur Main",
+            "client_phone": "+919444111222",
+            "notes": "Proof affidavit"
+        },
+        {
+            "cnr_number": "TNKR090004662025",
+            "case_number_formatted": "OS/466/2025",
+            "case_title": "T Shankar vs A A Thangavelu & 10 Ors",
+            "court_name": "Principal Sub Court, Karur",
+            "court_room": "Room 4",
+            "item_number": "43",
+            "judge_name": "Thiru. BALAMURUGAN V.S., Addl Subordinate Judge",
+            "case_stage": "Ex-parte Evidence",
+            "case_status": "PENDING",
+            "next_hearing_date": "2026-08-14",
+            "client_name": "T Shankar",
+            "client_phone": "+919842199887",
+            "notes": "Partition suit exparte"
+        },
+        {
+            "cnr_number": "TNKR090000722021",
+            "case_number_formatted": "OS/72/2021",
+            "case_title": "K Lakshmi vs V Vadivel",
+            "court_name": "Principal Sub Court, Karur",
+            "court_room": "Room 4",
+            "item_number": "106",
+            "judge_name": "Thiru. BALAMURUGAN V.S., Addl Subordinate Judge",
+            "case_stage": "IA Pending",
+            "case_status": "PENDING",
+            "next_hearing_date": "2026-08-14",
+            "client_name": "K Lakshmi",
+            "client_phone": "+919842333221",
+            "notes": "Commissioner report objection"
         }
     ]
 
