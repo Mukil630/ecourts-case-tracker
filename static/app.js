@@ -29,6 +29,12 @@ function getSelectedOrTodayDate() {
   return `${year}-${month}-${day}`;
 }
 
+window.switchDashboardDate = function(dateStr) {
+  const picker = document.getElementById("dashboard-date-picker");
+  if (picker) picker.value = dateStr;
+  loadDailyCauseList(dateStr);
+};
+
 // =========================================================================
 // 0. SIMPLE & ELEGANT STARTUP SPLASH / VIDEO INTRO CONTROLLER
 // =========================================================================
@@ -812,22 +818,51 @@ function renderHearingBoard(data, filterCourt = "ALL") {
   if (!container) return;
 
   if (!data || !data.court_summaries || data.court_summaries.length === 0) {
+    // Find next upcoming hearing date from allCases
+    const todayIso = new Date().toISOString().split("T")[0];
+    const nextCase = (allCases || [])
+      .filter(c => c.next_hearing_date && c.next_hearing_date > (data ? data.target_date : todayIso) && c.case_status !== "DISPOSED")
+      .sort((a, b) => (a.next_hearing_date || "").localeCompare(b.next_hearing_date || ""))[0];
+
+    let nextDateHtml = "";
+    if (nextCase) {
+      let nextDateFormatted = nextCase.next_hearing_date;
+      try {
+        nextDateFormatted = new Date(nextCase.next_hearing_date + "T00:00:00").toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short", year: "numeric" });
+      } catch(e) {}
+
+      nextDateHtml = `
+        <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: var(--radius-sm); padding: 14px; margin: 16px auto; max-width: 520px; text-align: left;">
+          <div style="font-size: 0.8rem; font-weight: 700; color: #60a5fa; text-transform: uppercase;">Next Active Court Session:</div>
+          <div style="font-size: 1.05rem; font-weight: 800; color: #ffffff; margin-top: 4px;">
+            🏛️ ${escapeHtml(nextDateFormatted)}
+          </div>
+          <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">
+            Case: <strong>${escapeHtml(nextCase.case_title)}</strong> (${escapeHtml(nextCase.case_number_formatted || nextCase.cnr_number)}) in <strong>${escapeHtml(nextCase.court_name)}</strong>
+          </p>
+          <div style="margin-top: 10px;">
+            <button type="button" class="btn-ui btn-ui-primary" onclick="switchDashboardDate('${escapeHtml(nextCase.next_hearing_date)}')" style="font-size: 0.78rem; font-weight: 800; padding: 6px 14px;">
+              👉 Switch to ${escapeHtml(nextCase.next_hearing_date)} Board
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
     container.innerHTML = `
-      <div style="padding: 36px 20px; text-align: center; color: var(--text-muted);">
+      <div style="padding: 32px 20px; text-align: center; color: var(--text-muted);">
         <div style="font-size: 2.2rem; margin-bottom: 8px;">📋</div>
-        <strong style="font-size: 1rem; color: var(--text-main);">No Hearings Scheduled for This Date (${escapeHtml(data ? data.target_date || 'Selected Date' : 'Today')})</strong>
+        <strong style="font-size: 1.05rem; color: var(--text-main);">No Hearings Scheduled for ${escapeHtml(data ? data.target_date || 'Selected Date' : 'Today')}</strong>
         <p style="font-size: 0.82rem; margin-top: 6px; color: var(--text-muted); max-width: 500px; margin-left: auto; margin-right: auto;">
-          Use the quick actions below to search eCourts for Advocate R. Anbaiya's cases or load sample Karur practice hearings:
+          No cases are listed on the official court diary for this specific date.
         </p>
+        ${nextDateHtml}
         <div style="display: flex; gap: 10px; justify-content: center; margin-top: 16px; flex-wrap: wrap;">
-          <button type="button" class="btn-ui btn-ui-primary" onclick="openAdvocateSearchModal()" style="font-size: 0.78rem; font-weight: 800; padding: 8px 16px;">
-            🔍 Search & Import Advocate Cases
+          <button type="button" class="btn-ui btn-ui-secondary" onclick="openAdvocateSearchModal()" style="font-size: 0.78rem; font-weight: 700; padding: 7px 14px;">
+            🔍 Search eCourts Live
           </button>
-          <button type="button" class="btn-ui btn-ui-secondary" onclick="loadKarurDemoPractice()" style="font-size: 0.78rem; font-weight: 800; padding: 8px 16px; border-color: var(--border-gold); color: var(--text-gold);">
-            ⚡ Load 14 Karur Practice Demo
-          </button>
-          <button type="button" class="btn-ui btn-ui-secondary" onclick="openCaseIntakeModal()" style="font-size: 0.78rem; font-weight: 700; padding: 8px 16px;">
-            ➕ Add Single Client
+          <button type="button" class="btn-ui btn-ui-secondary" onclick="openCaseIntakeModal()" style="font-size: 0.78rem; font-weight: 700; padding: 7px 14px;">
+            ➕ Add New Case
           </button>
         </div>
       </div>
