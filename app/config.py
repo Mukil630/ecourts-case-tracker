@@ -29,7 +29,7 @@ class Config:
         DB_PATH = os.environ.get("ECOURTS_DB_PATH", str(DEFAULT_DB_FILE))
 
     # eCourts Partner API
-    ECOURTS_API_BASE_URL = os.environ.get("ECOURTS_API_BASE_URL", "https://webapi.ecourtsindia.com/api/partner")
+    ECOURTS_API_BASE_URL = os.environ.get("ECOURTS_API_BASE_URL", "https://webapi.ecourtsindia.com")
     ECOURTS_API_KEY = os.environ.get("ECOURTS_API_KEY", "")
     
     # Meta WhatsApp Business Cloud API

@@ -38,7 +38,12 @@ window.switchDashboardDate = function(dateStr) {
 // =========================================================================
 window.dismissStartupSplash = function() {
   const splash = document.getElementById("app-startup-splash");
-  if (splash) splash.style.display = "none";
+  if (splash) {
+    splash.classList.add("splash-hidden");
+    setTimeout(() => {
+      splash.style.display = "none";
+    }, 550);
+  }
 };
 
 // =========================================================================
@@ -1494,7 +1499,8 @@ function renderAllCasesTable(cases) {
         </div>
       </td>
     </tr>
-  `).join("");
+    `;
+  }).join("");
 }
 
 function renderClientsTable(cases) {
@@ -1948,7 +1954,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Initial Loads & Start Live Sync Loop
   async function initApp() {
-    window.dismissStartupSplash();
+    const splashLabel = document.getElementById("splash-status-label");
+    if (splashLabel) splashLabel.innerText = "⚡ Initializing Private Chamber Vault...";
     
     // 1. Set default real today date in picker
     const datePicker = document.getElementById("dashboard-date-picker");
@@ -1957,8 +1964,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // 2. Prioritize Core Case Data & Daily Cause List
+    if (splashLabel) splashLabel.innerText = "⚖️ Loading Daily Court Hearing Board...";
     try { await loadTrackedCases(); } catch (e) { console.warn("loadTrackedCases error:", e); }
     try { await loadDailyCauseList(getSelectedOrTodayDate()); } catch (e) { console.warn("loadDailyCauseList error:", e); }
+
+    if (splashLabel) splashLabel.innerText = "🤖 JARVIS Legal AI Co-Pilot Online...";
+    setTimeout(() => {
+      window.dismissStartupSplash();
+    }, 450);
 
     // 3. Load settings & auxiliary configurations
     try { await loadAdvocateSettings(); } catch (e) { console.warn("loadAdvocateSettings error:", e); }

@@ -257,13 +257,28 @@ def parse_ecourts_response(cnr_number: str, raw_data: Dict[str, Any]) -> Dict[st
     stage = court_data.get("purpose") or court_data.get("case_stage") or court_data.get("caseTypeSub") or "Evidence"
     next_date = court_data.get("next_hearing_date") or court_data.get("nextHearingDate") or court_data.get("next_date") or court_data.get("decisionDate") or ""
     last_date = court_data.get("last_hearing_date") or court_data.get("lastHearingDate") or court_data.get("last_date") or court_data.get("firstHearingDate") or ""
-    judge = court_data.get("judge_name") or court_data.get("judge") or ""
+    pet_advs = court_data.get("petitionerAdvocates") or court_data.get("petitioner_advocates") or []
+    if isinstance(pet_advs, str):
+        pet_advs = [pet_advs]
+    resp_advs = court_data.get("respondentAdvocates") or court_data.get("respondent_advocates") or []
+    if isinstance(resp_advs, str):
+        resp_advs = [resp_advs]
+
+    judge = court_data.get("judge_name") or court_data.get("judge") or court_data.get("judges") or ""
     if isinstance(judge, list):
         judge = judge[0] if judge else ""
 
     case_type = court_data.get("caseType") or court_data.get("case_type") or ""
     reg_num = court_data.get("registrationNumber") or court_data.get("registration_number") or court_data.get("filingNumber") or ""
     formatted_num = f"{case_type}/{reg_num}" if case_type and reg_num else cnr_number
+
+    parties_str = f"Petitioner: {', '.join(pets)} | Respondent: {', '.join(resps)}" if (pets or resps) else ""
+    pet_adv_str = ', '.join(pet_advs) if isinstance(pet_advs, list) else str(pet_advs)
+    resp_adv_str = ', '.join(resp_advs) if isinstance(resp_advs, list) else str(resp_advs)
+    adv_str = f"Petitioner Adv: {pet_adv_str} | Respondent Adv: {resp_adv_str}" if (pet_adv_str or resp_adv_str) else ""
+
+    history = court_data.get("historyOfCaseHearings") or []
+    orders = court_data.get("interimOrders") or court_data.get("orders") or []
 
     return {
         "success": True,
@@ -273,12 +288,18 @@ def parse_ecourts_response(cnr_number: str, raw_data: Dict[str, Any]) -> Dict[st
         "case_status": status,
         "court_name": court,
         "court_room": room,
-        "judge_name": judge,
+        "judge_name": str(judge),
         "case_stage": stage,
         "next_hearing_date": next_date,
         "last_hearing_date": last_date,
         "petitioners": pets,
         "respondents": resps,
+        "petitioner_advocates": pet_advs,
+        "respondent_advocates": resp_advs,
+        "parties": parties_str,
+        "advocates": adv_str,
+        "hearing_count": court_data.get("hearingCount", len(history)),
+        "order_count": court_data.get("orderCount", len(orders)),
         "client_name": pet_str,
         "raw": raw_data
     }

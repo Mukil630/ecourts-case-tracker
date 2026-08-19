@@ -105,8 +105,8 @@ def check_case():
                     "case_title": api_result.get("case_title") or f"{client_name} Matter",
                     "case_status": api_result.get("case_status") or "PENDING",
                     "court_name": api_result.get("court_name") or court_name,
-                    "parties": f"Petitioner: {', '.join(api_result.get('petitioners', []))} | Respondent: {', '.join(api_result.get('respondents', []))}",
-                    "advocates": f"Petitioner Adv: {', '.join(api_result.get('petitioner_advocates', []))} | Respondent Adv: {', '.join(api_result.get('respondent_advocates', []))}",
+                    "parties": api_result.get("parties") or f"Petitioner: {', '.join(api_result.get('petitioners', []))} | Respondent: {', '.join(api_result.get('respondents', []))}",
+                    "advocates": api_result.get("advocates") or f"Petitioner Adv: {', '.join(api_result.get('petitioner_advocates', []))} | Respondent Adv: {', '.join(api_result.get('respondent_advocates', []))}",
                     "last_hearing_date": api_result.get("last_hearing_date") or "",
                     "next_hearing_date": api_result.get("next_hearing_date") or next_hearing_date
                 }
@@ -121,10 +121,11 @@ def check_case():
                     track_case_status=True,
                     auto_whatsapp_enabled=True,
                     notes=notes,
-                    case_number_formatted=case_number_formatted,
-                    case_stage=case_stage,
-                    court_room=court_room,
-                    item_number=item_number
+                    case_number_formatted=api_result.get("case_number_formatted") or case_number_formatted,
+                    case_stage=api_result.get("case_stage") or case_stage,
+                    court_room=api_result.get("court_room") or court_room,
+                    item_number=item_number,
+                    judge_name=api_result.get("judge_name") or ""
                 )
                 return jsonify({
                     "success": True,

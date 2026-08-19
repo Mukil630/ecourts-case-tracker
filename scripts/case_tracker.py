@@ -1,6 +1,9 @@
 import sys
 import os
 import argparse
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from app.services.ecourts_service import fetch_case_details, get_api_key
 from app.services.whatsapp_service import format_legal_notice_text
 from app.db.database import init_db

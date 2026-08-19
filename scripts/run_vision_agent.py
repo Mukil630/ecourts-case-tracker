@@ -1,4 +1,7 @@
 import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from app.services.vision_agent import run_vision_agent
 
 if __name__ == "__main__":

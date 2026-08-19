@@ -4,9 +4,42 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>R. Anbaiya & Associates • Legal Practice Management & eCourts Automation</title>
-  <link rel="stylesheet" href="/static/style.css?v=18.0">
+  <link rel="stylesheet" href="/static/style.css?v=20.0">
 </head>
 <body>
+
+  <!-- ==========================================================================
+       0. CINEMATIC STARTUP SPLASH & LOADING ANIMATION
+       ========================================================================== -->
+  <div id="app-startup-splash" class="startup-splash-overlay">
+    <div class="splash-bg-glow"></div>
+    <div class="splash-anim-container">
+      <div class="splash-emblem-wrap">
+        <div class="splash-ring-outer"></div>
+        <div class="splash-ring-inner"></div>
+        <div class="splash-emblem-core">
+          <svg viewBox="0 0 100 100" style="width: 100%; height: 100%;" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M35 22L50 14L65 22L58 26L50 20L42 26L35 22Z" fill="#f59e0b" />
+            <path d="M48 24H52V76H48V24Z" fill="#f59e0b" />
+            <path d="M22 34H78V37H22V34Z" fill="#f59e0b" />
+            <circle cx="50" cy="35.5" r="4.5" fill="#38bdf8" />
+            <path d="M26 37L16 56H36L26 37Z" stroke="#f59e0b" stroke-width="2.5" fill="none" />
+            <path d="M14 56C14 62 38 62 38 56H14Z" fill="#f59e0b" />
+            <path d="M74 37L64 56H84L74 37Z" stroke="#f59e0b" stroke-width="2.5" fill="none" />
+            <path d="M62 56C62 62 86 62 86 56H62Z" fill="#f59e0b" />
+            <path d="M34 76H66V80H34V76Z" fill="#f59e0b" />
+            <path d="M28 80H72V83H28V80Z" fill="#38bdf8" />
+          </svg>
+        </div>
+      </div>
+      <div class="splash-title-text">R. Anbaiya & Associates</div>
+      <div class="splash-subtitle-text">eCourts Autonomous Chamber Vault & AI Copilot</div>
+      <div class="splash-progress-track">
+        <div class="splash-progress-bar"></div>
+      </div>
+      <div class="splash-status-text" id="splash-status-label">⚡ JARVIS Auto-Sync Engine Initializing...</div>
+    </div>
+  </div>
 
   <!-- Mobile Sidebar Backdrop -->
   <div id="sidebar-backdrop" class="sidebar-backdrop" onclick="toggleMobileSidebar()"></div>
@@ -929,7 +962,7 @@
     </button>
   </nav>
 
-  <script src="/static/app.js?v=18.0"></script>
+  <script src="/static/app.js?v=20.0"></script>
 </body>
 </html>
 
