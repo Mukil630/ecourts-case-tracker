@@ -206,14 +206,29 @@ function getCasePlainExplanation(c) {
   };
 }
 
-window.openCaseDrawer = function(cnrNumber) {
+window.openCaseDrawer = async function(cnrNumber) {
   if (!cnrNumber) return;
 
-  // Find case in allCases or causeListData
-  let c = allCases.find(item => item.cnr_number === cnrNumber);
+  // Close JARVIS AI drawer if open so it doesn't block the case drawer
+  const jarvisDrawer = document.getElementById("jarvis-ai-drawer");
+  if (jarvisDrawer) {
+    jarvisDrawer.style.right = "-520px";
+    isJarvisOpen = false;
+  }
+
+  // 1. Search in local allCases
+  let c = allCases.find(item => 
+    (item.cnr_number && item.cnr_number.toLowerCase() === String(cnrNumber).toLowerCase()) ||
+    (item.case_number_formatted && item.case_number_formatted.toLowerCase() === String(cnrNumber).toLowerCase())
+  );
+
+  // 2. Search in causeListData
   if (!c && causeListData && causeListData.court_summaries) {
     for (const court of causeListData.court_summaries) {
-      const match = court.cases.find(item => item.cnr_number === cnrNumber);
+      const match = (court.cases || []).find(item => 
+        (item.cnr_number && item.cnr_number.toLowerCase() === String(cnrNumber).toLowerCase()) ||
+        (item.case_number_formatted && item.case_number_formatted.toLowerCase() === String(cnrNumber).toLowerCase())
+      );
       if (match) {
         c = match;
         break;
@@ -221,8 +236,20 @@ window.openCaseDrawer = function(cnrNumber) {
     }
   }
 
+  // 3. Fallback: Fetch directly from server API
   if (!c) {
-    alert("Case details not found for " + cnrNumber);
+    try {
+      const res = await fetch(`/api/case/${encodeURIComponent(cnrNumber)}`);
+      if (res.ok) {
+        c = await res.json();
+      }
+    } catch (err) {
+      console.warn("Failed to fetch case detail:", err);
+    }
+  }
+
+  if (!c) {
+    alert("Case details could not be loaded for: " + cnrNumber);
     return;
   }
 
@@ -694,6 +721,9 @@ window.loadKarurDemoPractice = async function() {
 window.toggleJarvisDrawer = function() {
   const drawer = document.getElementById("jarvis-ai-drawer");
   if (!drawer) return;
+  
+  if (window.closeCaseDrawer) window.closeCaseDrawer();
+
   isJarvisOpen = !isJarvisOpen;
   drawer.style.right = isJarvisOpen ? "0px" : "-420px";
   if (isJarvisOpen) {

@@ -902,7 +902,7 @@ select.form-input-ui option {
   height: 100%;
   background: rgba(4, 7, 14, 0.7);
   backdrop-filter: blur(4px);
-  z-index: 110;
+  z-index: 120;
   display: none;
 }
 
@@ -916,7 +916,7 @@ select.form-input-ui option {
   background: #0b1120;
   border-left: 1px solid rgba(245, 158, 11, 0.3);
   box-shadow: -15px 0 40px rgba(0, 0, 0, 0.6);
-  z-index: 115;
+  z-index: 125;
   display: flex;
   flex-direction: column;
   transition: right 0.28s cubic-bezier(0.16, 1, 0.3, 1);
