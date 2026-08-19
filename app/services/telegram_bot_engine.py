@@ -76,15 +76,27 @@ class TelegramBotWorker:
 def handle_telegram_incoming_message(text: str, chat_id: str, user_name: str = "Advocate") -> str:
     """
     Processes incoming Telegram commands and queries.
-    STRICT ZERO-HALLUCINATION POLICY: All information is retrieved directly from SQLite database.
+    STRICT ZERO-HALLUCINATION POLICY: Uses Groq RAG grounded directly in the SQLite database.
     """
     cmd = text.strip()
     cmd_lower = cmd.lower()
     today_str = get_current_ist_date()
 
     # Save active chat ID to settings automatically
-    from app.db.repository import update_advocate_settings
-    update_advocate_settings({"telegram_chat_id": chat_id})
+    if chat_id:
+        try:
+            from app.db.repository import update_advocate_settings
+            update_advocate_settings({"telegram_chat_id": chat_id})
+        except Exception:
+            pass
+
+    # 1. If Groq API Key is configured, use Autonomous RAG Engine
+    try:
+        from app.services.rag_service import get_groq_api_key, generate_rag_response
+        if get_groq_api_key():
+            return generate_rag_response(text, user_name)
+    except Exception as ex:
+        print(f"[RAG Engine Fallback] {ex}")
 
     settings = get_advocate_settings()
     lawyer = settings.get("lawyer_name", "Advocate R. Anbaiya")

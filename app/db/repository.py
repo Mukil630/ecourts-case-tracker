@@ -379,7 +379,8 @@ def update_advocate_settings(settings: Dict[str, Any], db_path: Optional[str] = 
             meta_waba_id = COALESCE(?, meta_waba_id),
             auto_dispatch_meta = COALESCE(?, auto_dispatch_meta),
             telegram_bot_token = COALESCE(?, telegram_bot_token),
-            telegram_chat_id = COALESCE(?, telegram_chat_id)
+            telegram_chat_id = COALESCE(?, telegram_chat_id),
+            groq_api_key = COALESCE(?, groq_api_key)
         WHERE id = 1
     """, (
         lawyer_name,
@@ -391,7 +392,8 @@ def update_advocate_settings(settings: Dict[str, Any], db_path: Optional[str] = 
         settings.get("meta_waba_id"),
         1 if settings.get("auto_dispatch_meta") else 0,
         settings.get("telegram_bot_token"),
-        settings.get("telegram_chat_id")
+        settings.get("telegram_chat_id"),
+        settings.get("groq_api_key")
     ))
     conn.commit()
     conn.close()
