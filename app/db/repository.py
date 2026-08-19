@@ -117,7 +117,7 @@ def get_daily_cause_list(target_date: str = "", db_path: Optional[str] = None) -
 
     cursor.execute("""
         SELECT * FROM cases 
-        WHERE next_hearing_date = ? 
+        WHERE next_hearing_date = ? AND UPPER(COALESCE(case_status, '')) != 'DISPOSED'
         ORDER BY court_name, CAST(item_number AS INTEGER), item_number
     """, (target_date,))
 

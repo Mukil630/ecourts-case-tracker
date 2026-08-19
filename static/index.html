@@ -82,12 +82,12 @@
       <button class="nav-item active" data-view="view-dashboard" onclick="switchView('view-dashboard')">
         <span class="nav-item-icon">📊</span>
         <span>Today's Board</span>
-        <span class="nav-badge" id="badge-today-hearings">14</span>
+        <span class="nav-badge" id="badge-today-hearings">-</span>
       </button>
       <button class="nav-item" data-view="view-cases" onclick="switchView('view-cases')">
         <span class="nav-item-icon">📁</span>
         <span>All Cases</span>
-        <span class="nav-badge" id="badge-total-cases">17</span>
+        <span class="nav-badge" id="badge-total-cases">-</span>
       </button>
       <button class="nav-item" data-view="view-clients" onclick="switchView('view-clients')">
         <span class="nav-item-icon">👥</span>
@@ -254,6 +254,11 @@
 
           <!-- Grouped Hearing Board List -->
           <div id="hearing-board-list-container">
+            <!-- Rendered dynamically by app.js -->
+          </div>
+
+          <!-- Evening Advance Docket for Tomorrow (Appears in Evening / When Today has 0 hearings) -->
+          <div id="tomorrow-evening-docket-container">
             <!-- Rendered dynamically by app.js -->
           </div>
 

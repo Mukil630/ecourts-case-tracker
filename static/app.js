@@ -13,20 +13,18 @@ let currentCalendarDate = new Date();
 let lastSyncTimestamp = 0;
 let isJarvisOpen = false;
 
-function getSelectedOrTodayDate() {
-  const picker = document.getElementById("dashboard-date-picker");
-  if (picker && picker.value) return picker.value;
+function getRealTodayDate() {
   const d = new Date();
-  const hours = d.getHours();
-  const minutes = d.getMinutes();
-  // If after 7:30 PM (19:30), courts for today have concluded. Default to Tomorrow!
-  if (hours > 19 || (hours === 19 && minutes >= 30)) {
-    d.setDate(d.getDate() + 1);
-  }
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+function getSelectedOrTodayDate() {
+  const picker = document.getElementById("dashboard-date-picker");
+  if (picker && picker.value) return picker.value;
+  return getRealTodayDate();
 }
 
 window.switchDashboardDate = function(dateStr) {
@@ -384,6 +382,9 @@ window.openCaseDrawer = function(cnrNumber) {
             🔄 Sync eCourts
           </button>
         </div>
+        <button onclick="toggleCaseDisposed('${escapeHtml(c.cnr_number)}', '${escapeHtml(c.case_status || 'PENDING')}'); closeCaseDrawer();" class="btn-ui btn-ui-secondary" style="width:100%; text-align:center; padding:9px; font-size:0.78rem; font-weight:700; ${((c.case_status || '').toUpperCase() === 'DISPOSED') ? 'border-color:#10b981; color:#34d399; background:rgba(16,185,129,0.1);' : 'border-color:#ef4444; color:#f87171; background:rgba(239,68,68,0.08);'}">
+          ${((c.case_status || '').toUpperCase() === 'DISPOSED') ? '🔓 Reopen / Move to Active Cases' : '🏁 Mark Case as Disposed / Closed'}
+        </button>
       </div>
     `;
   }
@@ -582,13 +583,11 @@ window.loadKarurDemoPractice = async function() {
   try {
     const res = await fetch("/api/cause-list/import-karur", { method: "POST" });
     const data = await res.json();
-    alert("✅ Loaded Advocate R. Anbaiya's 14 Karur Court Cases into Chamber Vault!");
+    alert("✅ Loaded Advocate R. Anbaiya Chamber Cases into Vault!");
     await loadTrackedCases();
-    await loadDailyCauseList("2026-08-14");
-    const dp = document.getElementById("dashboard-date-picker");
-    if (dp) dp.value = "2026-08-14";
+    await loadDailyCauseList(getSelectedOrTodayDate());
   } catch (e) {
-    alert("Failed to load demo: " + e.message);
+    alert("Failed to load cases: " + e.message);
   }
 };
 
@@ -715,22 +714,29 @@ function startLiveSyncLoop() {
 // =========================================================================
 // 5. DATA LOADERS & RENDERERS
 // =========================================================================
-async function loadDailyCauseList(targetDate, autoForwardIfEmpty = true) {
+async function loadDailyCauseList(targetDate) {
   if (!targetDate) {
     targetDate = getSelectedOrTodayDate();
   }
+  const realToday = getRealTodayDate();
+  const isToday = (targetDate === realToday);
+
   const picker = document.getElementById("dashboard-date-picker");
   if (picker && picker.value !== targetDate) {
     picker.value = targetDate;
   }
+
   const dayLabel = document.getElementById("header-current-date-day");
   if (dayLabel) {
     try {
-      dayLabel.innerText = new Date(targetDate + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+      const dObj = new Date(targetDate + "T00:00:00");
+      const formatted = dObj.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+      dayLabel.innerText = isToday ? `Today (${formatted})` : formatted;
     } catch(e) {
       dayLabel.innerText = targetDate;
     }
   }
+
   const hExp = document.getElementById("header-export-btn");
   if (hExp) hExp.href = `/api/export-cause-list?date=${encodeURIComponent(targetDate)}`;
   const mExp = document.getElementById("main-export-btn");
@@ -738,20 +744,19 @@ async function loadDailyCauseList(targetDate, autoForwardIfEmpty = true) {
 
   const mainTitle = document.getElementById("hearing-board-main-title");
   const mainSub = document.getElementById("hearing-board-main-sub");
-  const now = new Date();
-  const isEvening = now.getHours() > 19 || (now.getHours() === 19 && now.getMinutes() >= 30);
+
   if (mainTitle) {
-    mainTitle.innerText = isEvening ? "⚖️ Active Court Hearing Board" : "⚖️ Daily Court Hearing Board";
+    mainTitle.innerText = isToday ? "⚖️ Today's Court Hearing Board" : `⚖️ Court Hearing Board • ${targetDate}`;
   }
   if (mainSub) {
-    mainSub.innerHTML = isEvening 
-      ? `🌅 <span style="color:var(--text-gold); font-weight:700;">Evening Session:</span> Schedule for ${targetDate} &bull; Grouped by Court, Room & Item Number`
-      : `Grouped by Court Complex, Presiding Judge, Court Room & Item Number`;
+    mainSub.innerHTML = isToday
+      ? `Live Daily Court Docket &bull; Grouped by Court Complex, Presiding Judge, Court Room & Item Number`
+      : `Viewing Scheduled Cause List for <strong style="color:var(--text-gold);">${targetDate}</strong> &bull; Grouped by Court, Room & Item Number`;
   }
 
   const container = document.getElementById("hearing-board-list-container");
   if (container) {
-    container.innerHTML = `<p style="padding: 24px; text-align: center; color: var(--text-muted);">Loading Daily Court Hearing Board for ${targetDate}...</p>`;
+    container.innerHTML = `<p style="padding: 24px; text-align: center; color: var(--text-muted);">Loading Court Hearing Board for ${targetDate}...</p>`;
   }
 
   try {
@@ -762,36 +767,27 @@ async function loadDailyCauseList(targetDate, autoForwardIfEmpty = true) {
     const count = data.total_hearings || 0;
     const courtsCount = data.total_courts || (data.court_summaries ? data.court_summaries.length : 0);
 
-    // If target date has 0 hearings and autoForward is allowed, jump directly to next active court date!
-    if (count === 0 && autoForwardIfEmpty && allCases && allCases.length > 0) {
-      const nextActiveCase = allCases
-        .filter(c => c.next_hearing_date && c.next_hearing_date > targetDate && (c.case_status || '').toUpperCase() !== 'DISPOSED')
-        .sort((a, b) => (a.next_hearing_date || '').localeCompare(b.next_hearing_date || ''))[0];
-
-      if (nextActiveCase && nextActiveCase.next_hearing_date) {
-        if (mainSub) {
-          mainSub.innerHTML = `🌅 <span style="color:var(--text-gold); font-weight:700;">Active Session:</span> Displaying ${nextActiveCase.next_hearing_date} (since ${targetDate} has no court hearings) &bull; Grouped by Court, Room & Item Number`;
-        }
-        return loadDailyCauseList(nextActiveCase.next_hearing_date, false);
-      }
-    }
-
     const kpiTodayHearings = document.getElementById("kpi-today-hearings");
     const badgeTodayHearings = document.getElementById("badge-today-hearings");
     const kpiTodayHearingsSub = document.getElementById("kpi-today-hearings-sub");
     const allCourtsTabBadge = document.getElementById("all-courts-tab-badge");
     const btnBulkWa = document.getElementById("btn-bulk-wa-header");
 
-    if (kpiTodayHearings) kpiTodayHearings.innerText = count;
-    if (badgeTodayHearings) badgeTodayHearings.innerText = count;
+    if (kpiTodayHearings) kpiTodayHearings.innerText = isToday ? count : (allCases ? allCases.filter(c => c.next_hearing_date === realToday && (c.case_status || '').toUpperCase() !== 'DISPOSED').length : count);
+    if (badgeTodayHearings) badgeTodayHearings.innerText = isToday ? count : (allCases ? allCases.filter(c => c.next_hearing_date === realToday && (c.case_status || '').toUpperCase() !== 'DISPOSED').length : count);
     if (allCourtsTabBadge) allCourtsTabBadge.innerText = count;
     if (btnBulkWa) btnBulkWa.innerText = `📲 Send Notice to All (${count}) Clients`;
     if (kpiTodayHearingsSub) {
-      kpiTodayHearingsSub.innerText = count > 0 ? `Across ${courtsCount} Courts in Karur` : "No hearings scheduled";
+      if (isToday) {
+        kpiTodayHearingsSub.innerText = count > 0 ? `Across ${courtsCount} Courts in Karur` : "No hearings scheduled today";
+      } else {
+        kpiTodayHearingsSub.innerText = `Today has ${allCases ? allCases.filter(c => c.next_hearing_date === realToday && (c.case_status || '').toUpperCase() !== 'DISPOSED').length : 0} hearings`;
+      }
     }
 
     renderHearingBoard(data, selectedCourtFilter);
     setupCourtChips(data);
+    await renderTomorrowEveningDocket(targetDate);
     renderUpcomingHearingsPipeline();
     renderRescheduledHearingsSection();
   } catch (e) {
@@ -832,32 +828,58 @@ function renderHearingBoard(data, filterCourt = "ALL") {
   const container = document.getElementById("hearing-board-list-container");
   if (!container) return;
 
+  const realToday = getRealTodayDate();
+  const isToday = (!data || !data.target_date || data.target_date === realToday);
+  const targetDateStr = data ? (data.target_date || realToday) : realToday;
+
+  let targetDateFormatted = targetDateStr;
+  try {
+    targetDateFormatted = new Date(targetDateStr + "T00:00:00").toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short", year: "numeric" });
+  } catch(e) {}
+
   if (!data || !data.court_summaries || data.court_summaries.length === 0) {
     // Find next upcoming hearing date from allCases
-    const todayIso = new Date().toISOString().split("T")[0];
-    const nextCase = (allCases || [])
-      .filter(c => c.next_hearing_date && c.next_hearing_date > (data ? data.target_date : todayIso) && c.case_status !== "DISPOSED")
-      .sort((a, b) => (a.next_hearing_date || "").localeCompare(b.next_hearing_date || ""))[0];
+    const futureCases = (allCases || [])
+      .filter(c => c.next_hearing_date && c.next_hearing_date > targetDateStr && (c.case_status || '').toUpperCase() !== "DISPOSED")
+      .sort((a, b) => (a.next_hearing_date || "").localeCompare(b.next_hearing_date || ""));
 
     let nextDateHtml = "";
-    if (nextCase) {
-      let nextDateFormatted = nextCase.next_hearing_date;
+    if (futureCases.length > 0) {
+      const nextDate = futureCases[0].next_hearing_date;
+      const casesOnNextDate = futureCases.filter(c => c.next_hearing_date === nextDate);
+      
+      let nextDateFormatted = nextDate;
       try {
-        nextDateFormatted = new Date(nextCase.next_hearing_date + "T00:00:00").toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short", year: "numeric" });
+        nextDateFormatted = new Date(nextDate + "T00:00:00").toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short", year: "numeric" });
       } catch(e) {}
 
+      const tom = new Date();
+      tom.setDate(tom.getDate() + 1);
+      const tomStr = tom.toISOString().split("T")[0];
+      const isNextTomorrow = (nextDate === tomStr);
+
       nextDateHtml = `
-        <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: var(--radius-sm); padding: 14px; margin: 16px auto; max-width: 520px; text-align: left;">
-          <div style="font-size: 0.8rem; font-weight: 700; color: #60a5fa; text-transform: uppercase;">Next Active Court Session:</div>
-          <div style="font-size: 1.05rem; font-weight: 800; color: #ffffff; margin-top: 4px;">
-            🏛️ ${escapeHtml(nextDateFormatted)}
+        <div style="background: rgba(59, 130, 246, 0.1); border: 1.5px solid rgba(59, 130, 246, 0.35); border-radius: var(--radius-md); padding: 18px 20px; margin: 20px auto 0 auto; max-width: 600px; text-align: left; box-shadow: 0 4px 16px rgba(0,0,0,0.3);">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <span style="font-size: 0.76rem; font-weight: 800; color: #60a5fa; text-transform: uppercase; background: rgba(59,130,246,0.2); padding: 3px 10px; border-radius: 12px; border: 1px solid rgba(59,130,246,0.4);">
+              📅 Next Scheduled Court Session
+            </span>
+            <span style="font-size: 0.8rem; color: var(--text-gold); font-weight: 700;">
+              ${casesOnNextDate.length} Confirmed Hearing${casesOnNextDate.length > 1 ? 's' : ''}
+            </span>
           </div>
-          <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">
-            Case: <strong>${escapeHtml(nextCase.case_title)}</strong> (${escapeHtml(nextCase.case_number_formatted || nextCase.cnr_number)}) in <strong>${escapeHtml(nextCase.court_name)}</strong>
-          </p>
-          <div style="margin-top: 10px;">
-            <button type="button" class="btn-ui btn-ui-primary" onclick="switchDashboardDate('${escapeHtml(nextCase.next_hearing_date)}')" style="font-size: 0.78rem; font-weight: 800; padding: 6px 14px;">
-              👉 Switch to ${escapeHtml(nextCase.next_hearing_date)} Board
+          <div style="font-size: 1.15rem; font-weight: 800; color: #ffffff; margin-top: 8px;">
+            🏛️ ${isNextTomorrow ? 'Tomorrow • ' : ''}${escapeHtml(nextDateFormatted)}
+          </div>
+          <div style="margin-top: 10px; font-size: 0.82rem; color: #cbd5e1; line-height: 1.45;">
+            ${casesOnNextDate.slice(0, 3).map(c => `
+              <div style="margin-top: 4px;">• <strong>${escapeHtml(c.case_title)}</strong> (${escapeHtml(c.case_number_formatted || c.cnr_number)}) in <em>${escapeHtml(c.court_name)}</em> (Item #${escapeHtml(c.item_number || '-')})</div>
+            `).join("")}
+            ${casesOnNextDate.length > 3 ? `<div style="color:var(--text-muted); margin-top:2px;">...and ${casesOnNextDate.length - 3} more cases</div>` : ''}
+          </div>
+          <div style="margin-top: 14px; display:flex; gap:10px;">
+            <button type="button" class="btn-ui btn-ui-primary" onclick="switchDashboardDate('${escapeHtml(nextDate)}')" style="font-size: 0.8rem; font-weight: 800; padding: 7px 16px;">
+              👉 Switch to ${escapeHtml(nextDate)} Board
             </button>
           </div>
         </div>
@@ -865,14 +887,19 @@ function renderHearingBoard(data, filterCourt = "ALL") {
     }
 
     container.innerHTML = `
-      <div style="padding: 32px 20px; text-align: center; color: var(--text-muted);">
-        <div style="font-size: 2.2rem; margin-bottom: 8px;">📋</div>
-        <strong style="font-size: 1.05rem; color: var(--text-main);">No Hearings Scheduled for ${escapeHtml(data ? data.target_date || 'Selected Date' : 'Today')}</strong>
-        <p style="font-size: 0.82rem; margin-top: 6px; color: var(--text-muted); max-width: 500px; margin-left: auto; margin-right: auto;">
-          No cases are listed on the official court diary for this specific date.
+      <div style="padding: 36px 20px; text-align: center; color: var(--text-muted);">
+        <div style="font-size: 2.5rem; margin-bottom: 8px;">📋</div>
+        <strong style="font-size: 1.15rem; color: var(--text-main); display: block;">
+          No Hearings Scheduled for ${isToday ? 'Today (' + targetDateFormatted + ')' : targetDateFormatted}
+        </strong>
+        <p style="font-size: 0.85rem; margin-top: 6px; color: var(--text-muted); max-width: 560px; margin-left: auto; margin-right: auto; line-height: 1.5;">
+          ${isToday 
+            ? 'Advocate R. Anbaiya has <strong>0 court appearances or cause list listings</strong> allocated for today. All pending matters in the chamber vault are in good standing.' 
+            : 'No cases are listed on the official court diary for this specific date.'}
         </p>
         ${nextDateHtml}
-        <div style="display: flex; gap: 10px; justify-content: center; margin-top: 16px; flex-wrap: wrap;">
+        <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px; flex-wrap: wrap;">
+          ${!isToday ? `<button type="button" class="btn-ui btn-ui-secondary" onclick="switchDashboardDate('${getRealTodayDate()}')" style="font-size: 0.78rem; font-weight: 700; padding: 7px 14px;">👈 Back to Today (${getRealTodayDate()})</button>` : ''}
           <button type="button" class="btn-ui btn-ui-secondary" onclick="openAdvocateSearchModal()" style="font-size: 0.78rem; font-weight: 700; padding: 7px 14px;">
             🔍 Search eCourts Live
           </button>
@@ -892,9 +919,14 @@ function renderHearingBoard(data, filterCourt = "ALL") {
       <div class="hearing-board-summary-box">
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 14px; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
           <div>
-            <span style="background: rgba(245, 158, 11, 0.15); color: var(--text-gold); border: 1px solid rgba(245, 158, 11, 0.3); font-size: 0.74rem; padding: 3px 10px; border-radius: 12px; font-weight: 700; text-transform: uppercase;">Hearings for ${escapeHtml(data.target_date || 'Today')}</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="background: rgba(245, 158, 11, 0.15); color: var(--text-gold); border: 1px solid rgba(245, 158, 11, 0.3); font-size: 0.74rem; padding: 3px 10px; border-radius: 12px; font-weight: 700; text-transform: uppercase;">
+                ${isToday ? '⚡ Today\'s Scheduled Board' : '📅 Cause List for ' + targetDateFormatted}
+              </span>
+              ${!isToday ? `<button onclick="switchDashboardDate('${getRealTodayDate()}')" class="btn-ui btn-ui-secondary" style="padding: 2px 8px; font-size: 0.7rem; font-weight: 700;">👈 Back to Today</button>` : ''}
+            </div>
             <div style="font-weight: 800; font-size: 1.05rem; color: #ffffff; margin-top: 6px;">
-              You have <span style="color: var(--text-gold); font-weight: 800;">${data.total_hearings}</span> confirmed hearings scheduled across ${courtsCount} Karur Court${courtsCount > 1 ? 's' : ''}
+              Advocate R. Anbaiya has <span style="color: var(--text-gold); font-weight: 800;">${data.total_hearings}</span> confirmed hearings scheduled across ${courtsCount} Karur Court${courtsCount > 1 ? 's' : ''}
             </div>
           </div>
           <div style="display: flex; gap: 10px; align-items: center;">
@@ -959,36 +991,53 @@ function renderHearingBoard(data, filterCourt = "ALL") {
             </tr>
           </thead>
           <tbody>
-            ${court.cases.map(c => `
-              <tr class="clickable-case-row">
-                <td style="text-align: center; width: 60px;" onclick="openCaseDrawer('${escapeHtml(c.cnr_number)}')">
-                  <div class="item-badge-cell" style="cursor: pointer;">${escapeHtml(c.item_number || '-')}</div>
-                </td>
-                <td class="clickable-case-cell" onclick="openCaseDrawer('${escapeHtml(c.cnr_number)}')" style="max-width: 420px;">
-                  <div class="case-title-text">${escapeHtml(c.case_title)}</div>
-                  <div class="case-sub-text">
-                    <span class="case-number-pill">${escapeHtml(c.case_number_formatted || c.cnr_number)}</span>
-                    ${c.notes ? `<span class="notes-badge-pill">📌 Note: ${escapeHtml(c.notes)}</span>` : ''}
-                  </div>
-                </td>
-                <td style="min-width: 170px;">
-                  <strong style="color: #ffffff; font-size: 0.95rem; display: block; font-weight: 800;">${escapeHtml(c.client_name || 'Client')}</strong>
-                  <div class="client-phone-pill">📞 ${escapeHtml(c.client_phone || '-')}</div>
-                </td>
-                <td>
-                  <span class="badge ${getBadgeClass(c.case_stage)}">${escapeHtml(c.case_stage || 'Evidence')}</span>
-                </td>
-                <td style="min-width: 180px;">
-                  <div class="room-badge">${escapeHtml(c.court_room || '-')}</div>
-                  <div class="judge-text">${escapeHtml(c.judge_name || '-')}</div>
-                </td>
-                <td style="text-align: right; min-width: 140px;">
-                  <a href="${getWhatsAppUrl(c)}" target="_blank" class="btn-ui btn-ui-wa" style="padding: 8px 14px; font-size: 0.82rem; font-weight: 800;">
-                    📲 Send Notice
-                  </a>
-                </td>
-              </tr>
-            `).join("")}
+            ${court.cases.map(c => {
+              const isNewFiling = (c.case_number_formatted || c.cnr_number || '').includes('2026');
+              const filingBadge = isNewFiling 
+                ? '<span style="font-size:0.68rem; background:rgba(59,130,246,0.18); color:#60a5fa; border:1px solid rgba(59,130,246,0.35); padding:1px 6px; border-radius:4px; font-weight:700;">🆕 New Filing (2026)</span>'
+                : '<span style="font-size:0.68rem; background:rgba(148,163,184,0.12); color:#94a3b8; border:1px solid rgba(148,163,184,0.25); padding:1px 6px; border-radius:4px; font-weight:600;">📜 Ongoing Matter</span>';
+
+              let hearingDateFormatted = c.next_hearing_date || '-';
+              try {
+                const dObj = new Date(c.next_hearing_date + "T00:00:00");
+                hearingDateFormatted = dObj.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+              } catch(e) {}
+
+              return `
+                <tr class="clickable-case-row">
+                  <td style="text-align: center; width: 60px;" onclick="openCaseDrawer('${escapeHtml(c.cnr_number)}')">
+                    <div class="item-badge-cell" style="cursor: pointer;">${escapeHtml(c.item_number || '-')}</div>
+                  </td>
+                  <td class="clickable-case-cell" onclick="openCaseDrawer('${escapeHtml(c.cnr_number)}')" style="max-width: 420px;">
+                    <div class="case-title-text" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+                      <span>${escapeHtml(c.case_title)}</span>
+                      <span style="font-size:0.72rem; background:rgba(245,158,11,0.15); color:#fbbf24; border:1px solid rgba(245,158,11,0.35); padding:2px 7px; border-radius:5px; font-weight:800; font-family:var(--font-mono); white-space:nowrap;">📅 ${escapeHtml(hearingDateFormatted)}</span>
+                    </div>
+                    <div class="case-sub-text" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:4px;">
+                      <span class="case-number-pill">${escapeHtml(c.case_number_formatted || c.cnr_number)}</span>
+                      ${filingBadge}
+                      ${c.notes ? `<span class="notes-badge-pill">📌 Note: ${escapeHtml(c.notes)}</span>` : ''}
+                    </div>
+                  </td>
+                  <td style="min-width: 170px;">
+                    <strong style="color: #ffffff; font-size: 0.95rem; display: block; font-weight: 800;">${escapeHtml(c.client_name || 'Client')}</strong>
+                    <div class="client-phone-pill">📞 ${escapeHtml(c.client_phone || '-')}</div>
+                  </td>
+                  <td>
+                    <span class="badge ${getBadgeClass(c.case_stage)}">${escapeHtml(c.case_stage || 'Evidence')}</span>
+                  </td>
+                  <td style="min-width: 180px;">
+                    <div class="room-badge">${escapeHtml(c.court_room || '-')}</div>
+                    <div class="judge-text">${escapeHtml(c.judge_name || '-')}</div>
+                  </td>
+                  <td style="text-align: right; min-width: 140px;">
+                    <a href="${getWhatsAppUrl(c)}" target="_blank" class="btn-ui btn-ui-wa" style="padding: 8px 14px; font-size: 0.82rem; font-weight: 800;">
+                      📲 Send Notice
+                    </a>
+                  </td>
+                </tr>
+              `;
+            }).join("")}
           </tbody>
         </table>
       </div>
@@ -996,21 +1045,167 @@ function renderHearingBoard(data, filterCourt = "ALL") {
   `).join("");
 }
 
+function getTomorrowDate() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+async function renderTomorrowEveningDocket(currentTargetDate) {
+  const container = document.getElementById("tomorrow-evening-docket-container");
+  if (!container) return;
+
+  const realToday = getRealTodayDate();
+  const tomorrowStr = getTomorrowDate();
+  
+  // If user is ALREADY viewing tomorrow's board directly, clear this advance container
+  if (currentTargetDate === tomorrowStr) {
+    container.innerHTML = "";
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/cause-list?date=${encodeURIComponent(tomorrowStr)}`);
+    const tomorrowData = await res.json();
+
+    if (!tomorrowData || !tomorrowData.total_hearings || tomorrowData.total_hearings === 0) {
+      container.innerHTML = "";
+      return;
+    }
+
+    let tomorrowFormatted = tomorrowStr;
+    try {
+      tomorrowFormatted = new Date(tomorrowStr + "T00:00:00").toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short", year: "numeric" });
+    } catch(e) {}
+
+    container.innerHTML = `
+      <div style="background: #060a14; border: 2px solid #f59e0b; border-radius: var(--radius-md); padding: 22px 24px; margin-top: 24px; box-shadow: 0 8px 32px rgba(245, 158, 11, 0.15);">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1.5px solid rgba(245, 158, 11, 0.3); padding-bottom: 14px; margin-bottom: 16px; flex-wrap:wrap; gap:12px;">
+          <div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1.5px solid rgba(245, 158, 11, 0.5); font-size: 0.76rem; padding: 4px 12px; border-radius: 14px; font-weight: 800; text-transform: uppercase;">
+                🌙 Evening Advance Docket for Tomorrow
+              </span>
+              <span style="color:#94a3b8; font-size:0.75rem;">(Auto-prepared for Advocate R. Anbaiya)</span>
+            </div>
+            <div style="font-weight: 800; font-size: 1.15rem; color: #ffffff; margin-top: 8px;">
+              🏛️ ${escapeHtml(tomorrowFormatted)} &bull; <span style="color: #fbbf24;">${tomorrowData.total_hearings} Confirmed Hearings</span> across ${tomorrowData.total_courts} Courts
+            </div>
+          </div>
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <a href="/api/export-cause-list?date=${encodeURIComponent(tomorrowStr)}" target="_blank" class="btn-ui btn-ui-secondary" style="font-size: 0.8rem; padding: 8px 14px; font-weight: 800; border-color: var(--border-gold); color: var(--text-gold);">
+              🖨️ A4 Cause List (PDF)
+            </a>
+            <button onclick="switchDashboardDate('${tomorrowStr}')" class="btn-ui btn-ui-primary" style="font-size: 0.8rem; padding: 8px 16px; font-weight: 800; background: linear-gradient(135deg, #f59e0b, #d97706); color: #000000; box-shadow: 0 4px 14px rgba(245,158,11,0.4);">
+              👉 Open Tomorrow's Full Board
+            </button>
+          </div>
+        </div>
+
+        <!-- 1. SUMMARY TABLE (S.NO | COURT NAME | CONFIRMED) -->
+        <div style="font-size: 0.85rem; font-weight: 800; color: #ffffff; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
+          📊 Court Summary Breakdown
+        </div>
+        <div style="overflow-x: auto; margin-bottom: 20px;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 0.84rem; background: #0c1322; border-radius: var(--radius-sm); border: 1px solid var(--border-color); overflow: hidden;">
+            <thead>
+              <tr style="background: #111b2f; border-bottom: 1px solid var(--border-color);">
+                <th style="width: 55px; padding: 9px 14px; text-align: left; font-weight: 800; color: var(--text-muted); font-size: 0.74rem;">S.NO</th>
+                <th style="padding: 9px 14px; text-align: left; font-weight: 800; color: var(--text-muted); font-size: 0.74rem;">COURT NAME</th>
+                <th style="width: 130px; padding: 9px 14px; text-align: right; font-weight: 800; color: var(--text-muted); font-size: 0.74rem;">CONFIRMED</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tomorrowData.court_summaries.map((c, i) => `
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);">
+                  <td style="padding: 9px 14px; color: var(--text-muted); font-weight: 700;">${i + 1}</td>
+                  <td style="padding: 9px 14px; color: #ffffff; font-weight: 600;">${escapeHtml(c.court_name)}</td>
+                  <td style="padding: 9px 14px; text-align: right; font-weight: 800; color: #fbbf24; font-family: var(--font-mono);">${c.hearings_count}</td>
+                </tr>
+              `).join("")}
+              <tr style="background: #17243e; font-weight: 800;">
+                <td colspan="2" style="padding: 10px 14px; text-align: right; color: #ffffff;">TOTAL CONFIRMED HEARINGS:</td>
+                <td style="padding: 10px 14px; text-align: right; color: #fbbf24; font-size: 0.98rem; font-family: var(--font-mono);">${tomorrowData.total_hearings}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 2. DETAILED ITEM-WISE COURT LISTINGS (Exact match to Court Dossier) -->
+        <div style="font-size: 0.85rem; font-weight: 800; color: #ffffff; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">
+          📋 Courtroom Item-wise Schedule
+        </div>
+        ${tomorrowData.court_summaries.map(court => `
+          <div style="background: #0a101d; border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 14px;">
+            <div style="font-weight: 800; color: #38bdf8; font-size: 0.92rem; margin-bottom: 10px; display:flex; justify-content:space-between; align-items:center;">
+              <span>🏛️ ${escapeHtml(court.court_name.toUpperCase())}</span>
+              <span style="font-size:0.75rem; background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.3); padding:2px 8px; border-radius:4px; color:#38bdf8; font-weight:700;">${court.hearings_count} Case${court.hearings_count > 1 ? 's' : ''}</span>
+            </div>
+            <div style="overflow-x: auto;">
+              <table class="hearing-table" style="font-size: 0.82rem;">
+                <thead>
+                  <tr>
+                    <th style="width: 55px; text-align: center;">Item</th>
+                    <th style="width: 160px;">Room & Judge</th>
+                    <th>Case Title & Number</th>
+                    <th style="width: 140px;">Stage</th>
+                    <th style="width: 90px; text-align: center;">Status</th>
+                    <th style="width: 130px; text-align: right;">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${court.cases.map(c => {
+                    const isNewFiling = (c.case_number_formatted || c.cnr_number || '').includes('2026');
+                    const filingTag = isNewFiling ? '<span style="font-size:0.68rem; background:rgba(59,130,246,0.18); color:#60a5fa; padding:1px 5px; border-radius:3px;">🆕 New</span>' : '<span style="font-size:0.68rem; background:rgba(148,163,184,0.12); color:#94a3b8; padding:1px 5px; border-radius:3px;">📜 Ongoing</span>';
+
+                    return `
+                      <tr>
+                        <td style="text-align: center; font-weight: 800; color: var(--primary);">#${escapeHtml(c.item_number || '-')}</td>
+                        <td>
+                          <div class="room-badge" style="font-size: 0.72rem; padding: 1px 6px;">${escapeHtml(c.court_room || '-')}</div>
+                          <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 3px;">${escapeHtml(c.judge_name || '-')}</div>
+                        </td>
+                        <td class="clickable-case-cell" onclick="openCaseDrawer('${escapeHtml(c.cnr_number)}')">
+                          <strong style="color: #ffffff; font-size: 0.88rem;">${escapeHtml(c.case_title)}</strong>
+                          <div style="font-size: 0.74rem; color: #fbbf24; margin-top: 2px; font-family: var(--font-mono); display:flex; align-items:center; gap:6px;">
+                            <span>${escapeHtml(c.case_number_formatted || c.cnr_number)}</span>
+                            ${filingTag}
+                          </div>
+                        </td>
+                        <td><span class="badge ${getBadgeClass(c.case_stage)}" style="font-size: 0.72rem;">${escapeHtml(c.case_stage || 'Hearing')}</span></td>
+                        <td style="text-align: center;"><span style="color: #34d399; font-weight: 800; font-size: 0.75rem;">✓ Confirmed</span></td>
+                        <td style="text-align: right;">
+                          <a href="${getWhatsAppUrl(c)}" target="_blank" class="btn-ui btn-ui-wa" style="padding: 5px 10px; font-size: 0.75rem; font-weight: 800;">📲 Notice</a>
+                        </td>
+                      </tr>
+                    `;
+                  }).join("")}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    `;
+  } catch(err) {
+    console.error("renderTomorrowEveningDocket error:", err);
+  }
+}
+
 function renderUpcomingHearingsPipeline() {
   const container = document.getElementById("upcoming-pipeline-table-container");
   const countBadge = document.getElementById("upcoming-pipeline-count-badge");
   if (!container) return;
 
-  const targetDate = getSelectedOrTodayDate();
-  const todayIso = new Date().toISOString().split("T")[0];
-  const now = new Date();
-  const isEvening = now.getHours() > 19 || (now.getHours() === 19 && now.getMinutes() >= 30);
-  const effectiveBaseDate = isEvening ? targetDate : todayIso;
+  const realToday = getRealTodayDate();
   
-  // Filter cases with next_hearing_date STRICTLY in future (> effectiveBaseDate)
+  // Filter cases with next_hearing_date STRICTLY in future (> realToday) and NOT disposed
   const upcomingCases = (allCases || []).filter(c => {
     const d = c.next_hearing_date;
-    return d && d > effectiveBaseDate && c.case_status !== "DISPOSED";
+    return d && d > realToday && (c.case_status || '').toUpperCase() !== "DISPOSED";
   });
 
   // Sort chronologically
@@ -1191,6 +1386,7 @@ async function loadTrackedCases() {
     const kpiDisposedCases = document.getElementById("kpi-disposed-cases");
     const kpiUpcoming7d = document.getElementById("kpi-upcoming-7d");
 
+    const realToday = getRealTodayDate();
     const activeCount = allCases.filter(c => (c.case_status || "").toUpperCase() !== "DISPOSED").length;
     const disposedCount = allCases.filter(c => (c.case_status || "").toUpperCase() === "DISPOSED").length;
 
@@ -1198,9 +1394,8 @@ async function loadTrackedCases() {
     if (badgeTotalCases) badgeTotalCases.innerText = allCases.length;
     if (kpiDisposedCases) kpiDisposedCases.innerText = disposedCount;
 
-    const targetDate = getSelectedOrTodayDate();
-    const futureCasesCount = allCases.filter(c => c.next_hearing_date && c.next_hearing_date > targetDate && (c.case_status || '').toUpperCase() !== 'DISPOSED').length;
-    const awaitingCasesCount = allCases.filter(c => c.next_hearing_date && c.next_hearing_date <= targetDate && (c.case_status || '').toUpperCase() !== 'DISPOSED').length;
+    const futureCasesCount = allCases.filter(c => c.next_hearing_date && c.next_hearing_date > realToday && (c.case_status || '').toUpperCase() !== 'DISPOSED').length;
+    const awaitingCasesCount = allCases.filter(c => c.next_hearing_date && c.next_hearing_date <= realToday && (c.case_status || '').toUpperCase() !== 'DISPOSED').length;
     if (kpiUpcoming7d) kpiUpcoming7d.innerText = futureCasesCount;
 
     // Update Filter Tab Badges
@@ -1217,8 +1412,8 @@ async function loadTrackedCases() {
     if (bAll) bAll.innerText = allCases.length;
 
     filterAllCasesView(currentCaseFilterTab || "ACTIVE");
-    renderClientsTable(allCases);
-    renderWhatsAppDockets(allCases);
+    renderClientsTable(allCases.filter(c => (c.case_status || '').toUpperCase() !== 'DISPOSED'));
+    renderWhatsAppDockets(allCases.filter(c => (c.case_status || '').toUpperCase() !== 'DISPOSED'));
   } catch (e) {
     console.error("loadTrackedCases error:", e);
   }
@@ -1232,15 +1427,15 @@ window.filterAllCasesView = function(category) {
   const activeBtn = document.getElementById(`filter-btn-${category.toLowerCase()}`);
   if (activeBtn) activeBtn.classList.add("active");
 
-  const todayStr = getSelectedOrTodayDate();
+  const realToday = getRealTodayDate();
   let filtered = allCases || [];
 
   if (category === "ACTIVE") {
     filtered = filtered.filter(c => (c.case_status || '').toUpperCase() !== 'DISPOSED');
   } else if (category === "UPCOMING") {
-    filtered = filtered.filter(c => c.next_hearing_date && c.next_hearing_date > todayStr && (c.case_status || '').toUpperCase() !== 'DISPOSED');
+    filtered = filtered.filter(c => c.next_hearing_date && c.next_hearing_date > realToday && (c.case_status || '').toUpperCase() !== 'DISPOSED');
   } else if (category === "AWAITING") {
-    filtered = filtered.filter(c => c.next_hearing_date && c.next_hearing_date <= todayStr && (c.case_status || '').toUpperCase() !== 'DISPOSED');
+    filtered = filtered.filter(c => c.next_hearing_date && c.next_hearing_date <= realToday && (c.case_status || '').toUpperCase() !== 'DISPOSED');
   } else if (category === "DISPOSED") {
     filtered = filtered.filter(c => (c.case_status || '').toUpperCase() === 'DISPOSED');
   }
@@ -1274,8 +1469,25 @@ function renderAllCasesTable(cases) {
     return;
   }
 
-  const todayStr = getSelectedOrTodayDate();
-  tbody.innerHTML = cases.map(c => `
+  const realToday = getRealTodayDate();
+  tbody.innerHTML = cases.map(c => {
+    const isDisposed = (c.case_status || "").toUpperCase() === "DISPOSED";
+    const isHearingToday = !isDisposed && c.next_hearing_date === realToday;
+    const isUpcoming = !isDisposed && c.next_hearing_date && c.next_hearing_date > realToday;
+    const isAwaiting = !isDisposed && (!c.next_hearing_date || c.next_hearing_date < realToday);
+
+    let statusTag = '';
+    if (isDisposed) {
+      statusTag = '<span style="background: #334155; color: #f1f5f9; padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 700; display: inline-block;">🏁 Disposed</span>';
+    } else if (isHearingToday) {
+      statusTag = '<span style="background: #059669; color: #ffffff; padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 800; display: inline-block;">🔔 Hearing Today</span>';
+    } else if (isUpcoming) {
+      statusTag = '<span style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 700; display: inline-block;">📅 Upcoming</span>';
+    } else {
+      statusTag = '<span style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 600; display: inline-block;" title="Past hearing date. Awaiting court adjourned date posting.">⏳ Awaiting Next Date</span>';
+    }
+
+    return `
     <tr class="clickable-case-row">
       <td class="clickable-case-cell" onclick="openCaseDrawer('${escapeHtml(c.cnr_number)}')">
         <div style="margin-bottom: 4px;">
@@ -1304,13 +1516,7 @@ function renderAllCasesTable(cases) {
       <td>
         <strong style="color: var(--text-gold); font-size: 0.92rem; display: block; font-weight: 800; font-family: var(--font-mono);">${escapeHtml(c.next_hearing_date || 'Awaiting Date')}</strong>
         <div style="margin-top: 4px; display: flex; gap: 4px; flex-wrap: wrap;">
-          ${(c.case_status === 'DISPOSED' || (c.case_status || '').toUpperCase() === 'DISPOSED')
-            ? '<span style="background: #334155; color: #f1f5f9; padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 700; display: inline-block;">🏁 Disposed</span>'
-            : (c.next_hearing_date === todayStr
-                ? '<span style="background: #059669; color: #ffffff; padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 800; display: inline-block;">🔔 Hearing Today</span>'
-                : (c.next_hearing_date && c.next_hearing_date > todayStr
-                    ? '<span style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 700; display: inline-block;">📅 Upcoming</span>'
-                    : '<span style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 600; display: inline-block;" title="Past hearing date. Awaiting court adjourned date posting.">⏳ Awaiting Next Date</span>'))}
+          ${statusTag}
           <span class="badge ${getBadgeClass(c.case_stage)}" style="font-size: 0.72rem; padding: 2px 6px;">${escapeHtml(c.case_stage || 'Evidence')}</span>
         </div>
       </td>

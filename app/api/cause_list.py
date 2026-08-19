@@ -18,9 +18,9 @@ def cause_list_endpoint():
 
 @cause_list_bp.route("/api/cause-list/import-karur", methods=["POST"])
 def import_karur_endpoint():
-    """Imports Uncle's 14 Karur Court hearings sample data."""
+    """Imports Advocate R. Anbaiya chamber cases data."""
     import_karur_sample_data()
-    return jsonify({"success": True, "message": "14 Karur Court hearings loaded successfully!"})
+    return jsonify({"success": True, "message": "Chamber cases loaded successfully!"})
 
 @cause_list_bp.route("/api/cause-list/generate-whatsapp", methods=["POST"])
 def cause_list_whatsapp():
