@@ -1387,23 +1387,7 @@ select.form-input-ui option {
 
 /* Startup Splash */
 .startup-splash-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: #050811;
-  z-index: 99999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: opacity 0.4s ease-out;
-  cursor: pointer;
-}
-
-.startup-splash-overlay.splash-dismissed {
-  opacity: 0;
-  pointer-events: none;
+  display: none !important;
 }
 
 .splash-simple-content {

@@ -34,47 +34,12 @@ window.switchDashboardDate = function(dateStr) {
 };
 
 // =========================================================================
-// 0. SIMPLE & ELEGANT STARTUP SPLASH / VIDEO INTRO CONTROLLER
+// 0. STARTUP CONTROLLER
 // =========================================================================
-let splashDismissed = false;
-
 window.dismissStartupSplash = function() {
-  if (splashDismissed) return;
-  splashDismissed = true;
   const splash = document.getElementById("app-startup-splash");
-  if (splash) {
-    splash.classList.add("splash-dismissed");
-    splash.style.display = "none";
-  }
+  if (splash) splash.style.display = "none";
 };
-
-function runStartupSequence() {
-  const video = document.getElementById("splash-video");
-  const simpleContent = document.getElementById("splash-simple-content");
-
-  // Check if custom video file is available and playable
-  if (video) {
-    video.onloadeddata = function() {
-      video.style.display = "block";
-      if (simpleContent) simpleContent.style.display = "none";
-      video.play().catch(() => {});
-    };
-
-    video.onended = function() {
-      window.dismissStartupSplash();
-    };
-
-    video.onerror = function() {
-      if (video) video.style.display = "none";
-      if (simpleContent) simpleContent.style.display = "flex";
-    };
-  }
-
-  // Smooth fallback dismissal
-  setTimeout(() => {
-    window.dismissStartupSplash();
-  }, 2000);
-}
 
 // =========================================================================
 // 1. GLOBAL NAVIGATION & VIEW SWITCHER
