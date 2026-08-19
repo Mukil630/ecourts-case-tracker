@@ -71,6 +71,14 @@ def create_app(config: Optional[Union[Config, str]] = None, start_background_tas
         if app.config.get("SYNC_INTERVAL_SECONDS", 0) > 0 and not sync_worker.running:
             sync_worker.start()
 
+        # Start Autonomous Telegram Bot Listener
+        try:
+            from app.services.telegram_bot_engine import telegram_bot_worker
+            if not telegram_bot_worker.running:
+                telegram_bot_worker.start()
+        except Exception as ex:
+            print(f"[Telegram Worker Startup Error] {ex}")
+
         # Start Render Keep-Alive Daemon
         if app.config.get("KEEP_ALIVE_ENABLED", False):
             ext_url = app.config.get("RENDER_EXTERNAL_URL", "https://ecourts-case-tracker.onrender.com")
