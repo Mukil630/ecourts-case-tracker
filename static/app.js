@@ -1952,35 +1952,58 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Initial Loads & Start Live Sync Loop
+  // Initial Loads & Start Live Sync Loop (4.5s Cinematic Loading Sequence)
   async function initApp() {
     const splashLabel = document.getElementById("splash-status-label");
-    if (splashLabel) splashLabel.innerText = "⚡ Initializing Private Chamber Vault...";
-    
+    const startTime = Date.now();
+
     // 1. Set default real today date in picker
     const datePicker = document.getElementById("dashboard-date-picker");
     if (datePicker) {
       datePicker.value = getRealTodayDate();
     }
 
-    // 2. Prioritize Core Case Data & Daily Cause List
-    if (splashLabel) splashLabel.innerText = "⚖️ Loading Daily Court Hearing Board...";
-    try { await loadTrackedCases(); } catch (e) { console.warn("loadTrackedCases error:", e); }
-    try { await loadDailyCauseList(getSelectedOrTodayDate()); } catch (e) { console.warn("loadDailyCauseList error:", e); }
+    if (splashLabel) splashLabel.innerText = "⚡ Initializing Private Chamber Vault...";
 
-    if (splashLabel) splashLabel.innerText = "🤖 JARVIS Legal AI Co-Pilot Online...";
+    // Diagnostic milestone timers spanning the 4.5 second sequence
+    const t1 = setTimeout(() => {
+      if (splashLabel) splashLabel.innerText = "🛡️ Securing 100% Zero-Credit API Shield...";
+    }, 1200);
+
+    const t2 = setTimeout(() => {
+      if (splashLabel) splashLabel.innerText = "⚖️ Synchronizing Today's Court Hearing Board...";
+    }, 2400);
+
+    const t3 = setTimeout(() => {
+      if (splashLabel) splashLabel.innerText = "🤖 JARVIS Legal AI Co-Pilot Online...";
+    }, 3600);
+
+    // 2. Load Core Case Data & Configurations in parallel
+    const loaders = Promise.all([
+      loadTrackedCases().catch(e => console.warn("loadTrackedCases error:", e)),
+      loadDailyCauseList(getSelectedOrTodayDate()).catch(e => console.warn("loadDailyCauseList error:", e)),
+      loadAdvocateSettings().catch(e => console.warn("loadAdvocateSettings error:", e)),
+      loadApiKeyStatus().catch(e => console.warn("loadApiKeyStatus error:", e)),
+      loadSchedulerEvaluation().catch(e => console.warn("loadSchedulerEvaluation error:", e)),
+      loadHearingChangeLogs().catch(e => console.warn("loadHearingChangeLogs error:", e)),
+      loadMetaConfig().catch(e => console.warn("loadMetaConfig error:", e)),
+      loadTelegramConfig().catch(e => console.warn("loadTelegramConfig error:", e)),
+      loadLeads().catch(e => console.warn("loadLeads error:", e))
+    ]);
+
+    await loaders;
+
+    // Calculate remaining duration to exactly match 4.5 seconds
+    const elapsed = Date.now() - startTime;
+    const remainingTime = Math.max(0, 4500 - elapsed);
+
     setTimeout(() => {
-      window.dismissStartupSplash();
-    }, 450);
+      if (splashLabel) splashLabel.innerText = "✨ Chamber System Ready!";
+      setTimeout(() => {
+        window.dismissStartupSplash();
+      }, 350);
+    }, remainingTime);
 
-    // 3. Load settings & auxiliary configurations
-    try { await loadAdvocateSettings(); } catch (e) { console.warn("loadAdvocateSettings error:", e); }
-    try { await loadApiKeyStatus(); } catch (e) { console.warn("loadApiKeyStatus error:", e); }
-    try { await loadSchedulerEvaluation(); } catch (e) { console.warn("loadSchedulerEvaluation error:", e); }
-    try { await loadHearingChangeLogs(); } catch (e) { console.warn("loadHearingChangeLogs error:", e); }
-    try { await loadMetaConfig(); } catch (e) { console.warn("loadMetaConfig error:", e); }
-    try { await loadTelegramConfig(); } catch (e) { console.warn("loadTelegramConfig error:", e); }
-    try { await loadLeads(); } catch (e) { console.warn("loadLeads error:", e); }
     try { renderCalendar(currentCalendarDate); } catch (e) { console.warn("renderCalendar error:", e); }
     try { startLiveSyncLoop(); } catch (e) { console.warn("startLiveSyncLoop error:", e); }
   }

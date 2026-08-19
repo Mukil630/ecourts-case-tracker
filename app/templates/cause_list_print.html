@@ -59,9 +59,12 @@
     </div>
 
     <div class="header-banner">
-        <div>
-            <div class="firm-title">⚖️ {{ settings.firm_name or 'R. ANBAIYA & ASSOCIATES' }}</div>
-            <div class="firm-sub">{{ settings.lawyer_name or 'Advocate R. Anbaiya' }} &bull; Advocates & Legal Consultants, Karur &bull; Daily Court Hearing Board</div>
+        <div style="display: flex; align-items: center; gap: 14px;">
+            <img src="/static/logo.png" style="height: 52px; width: 52px; object-fit: contain; border-radius: 6px; border: 1px solid #cbd5e1; background: #000; padding: 2px;" alt="Logo">
+            <div>
+                <div class="firm-title">{{ settings.firm_name or 'R. ANBAIYA & ASSOCIATES' }}</div>
+                <div class="firm-sub">{{ settings.lawyer_name or 'Advocate R. Anbaiya' }} &bull; Advocates & Legal Consultants, Karur &bull; Daily Court Hearing Board</div>
+            </div>
         </div>
         <div class="date-badge">
             <div>📅 Hearings for {{ cause_list.target_date }}</div>

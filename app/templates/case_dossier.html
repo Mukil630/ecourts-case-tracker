@@ -46,10 +46,13 @@
 
     <!-- Law Chamber Header -->
     <div class="header">
-        <div>
-            <div class="firm-name">⚖️ {{ settings.firm_name or 'R. ANBAIYA & ASSOCIATES' }}</div>
-            <div class="firm-subtitle">{{ settings.lawyer_name or 'Advocate R. Anbaiya' }} &bull; Advocates & Legal Consultants &bull; Karur Bar Association</div>
-            <div style="font-size: 11px; color: #64748b; margin-top: 2px;">Office Helpline: {{ settings.lawyer_phone or '+919842112233' }}</div>
+        <div style="display: flex; align-items: center; gap: 14px;">
+            <img src="/static/logo.png" style="height: 54px; width: 54px; object-fit: contain; border-radius: 6px; border: 1px solid #cbd5e1; background: #000; padding: 2px;" alt="Logo">
+            <div>
+                <div class="firm-name">{{ settings.firm_name or 'R. ANBAIYA & ASSOCIATES' }}</div>
+                <div class="firm-subtitle">{{ settings.lawyer_name or 'Advocate R. Anbaiya' }} &bull; Advocates & Legal Consultants &bull; Karur Bar Association</div>
+                <div style="font-size: 11px; color: #64748b; margin-top: 2px;">Office Helpline: {{ settings.lawyer_phone or '+919842112233' }}</div>
+            </div>
         </div>
         <div style="text-align: right;">
             <span class="badge">{{ case.case_status or 'PENDING' }}</span>
