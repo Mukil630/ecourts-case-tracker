@@ -1952,10 +1952,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Initial Loads & Start Live Sync Loop (4.5s Cinematic Loading Sequence)
+  // Initial Loads & Start Live Sync Loop (Runs Intro Video Completely)
   async function initApp() {
     const splashLabel = document.getElementById("splash-status-label");
-    const startTime = Date.now();
+    const splashVideo = document.getElementById("splash-hero-video");
+    const progressBar = document.querySelector(".splash-progress-bar");
 
     // 1. Set default real today date in picker
     const datePicker = document.getElementById("dashboard-date-picker");
@@ -1965,20 +1966,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (splashLabel) splashLabel.innerText = "⚡ Initializing Private Chamber Vault...";
 
-    // Diagnostic milestone timers spanning the 4.5 second sequence
-    const t1 = setTimeout(() => {
-      if (splashLabel) splashLabel.innerText = "🛡️ Securing 100% Zero-Credit API Shield...";
-    }, 1200);
-
-    const t2 = setTimeout(() => {
-      if (splashLabel) splashLabel.innerText = "⚖️ Synchronizing Today's Court Hearing Board...";
-    }, 2400);
-
-    const t3 = setTimeout(() => {
-      if (splashLabel) splashLabel.innerText = "🤖 JARVIS Legal AI Co-Pilot Online...";
-    }, 3600);
-
-    // 2. Load Core Case Data & Configurations in parallel
+    // 2. Load Core Case Data & Configurations in parallel in background
     const loaders = Promise.all([
       loadTrackedCases().catch(e => console.warn("loadTrackedCases error:", e)),
       loadDailyCauseList(getSelectedOrTodayDate()).catch(e => console.warn("loadDailyCauseList error:", e)),
@@ -1991,18 +1979,48 @@ document.addEventListener("DOMContentLoaded", () => {
       loadLeads().catch(e => console.warn("loadLeads error:", e))
     ]);
 
-    await loaders;
-
-    // Calculate remaining duration to exactly match 4.5 seconds
-    const elapsed = Date.now() - startTime;
-    const remainingTime = Math.max(0, 4500 - elapsed);
-
-    setTimeout(() => {
+    // Track full video playback to completion
+    let dismissed = false;
+    function finishAndDismiss() {
+      if (dismissed) return;
+      dismissed = true;
+      if (progressBar) progressBar.style.width = "100%";
       if (splashLabel) splashLabel.innerText = "✨ Chamber System Ready!";
       setTimeout(() => {
         window.dismissStartupSplash();
       }, 350);
-    }, remainingTime);
+    }
+
+    if (splashVideo) {
+      // Dynamic progress bar linked directly to the video's live playback timestamp
+      splashVideo.addEventListener("timeupdate", () => {
+        if (splashVideo.duration && progressBar) {
+          const pct = Math.min(100, Math.round((splashVideo.currentTime / splashVideo.duration) * 100));
+          progressBar.style.width = pct + "%";
+
+          if (pct > 20 && pct < 45 && splashLabel) {
+            splashLabel.innerText = "🛡️ Securing 100% Zero-Credit API Shield...";
+          } else if (pct >= 45 && pct < 75 && splashLabel) {
+            splashLabel.innerText = "⚖️ Synchronizing Today's Court Hearing Board...";
+          } else if (pct >= 75 && pct < 98 && splashLabel) {
+            splashLabel.innerText = "🤖 JARVIS Legal AI Co-Pilot Online...";
+          }
+        }
+      });
+
+      // Dismiss immediately when video finishes playing completely
+      splashVideo.addEventListener("ended", () => {
+        loaders.then(() => finishAndDismiss());
+      });
+
+      // Fallback timeout in case video autoplay stalls
+      setTimeout(() => {
+        loaders.then(() => finishAndDismiss());
+      }, 10500);
+    } else {
+      await loaders;
+      setTimeout(finishAndDismiss, 4500);
+    }
 
     try { renderCalendar(currentCalendarDate); } catch (e) { console.warn("renderCalendar error:", e); }
     try { startLiveSyncLoop(); } catch (e) { console.warn("startLiveSyncLoop error:", e); }

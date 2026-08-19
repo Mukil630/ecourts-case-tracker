@@ -1393,7 +1393,7 @@ select.form-input-ui option {
 }
 
 /* ==========================================================================
-   CINEMATIC STARTUP SPLASH & INTRO VIDEO ANIMATION
+   CINEMATIC STARTUP SPLASH & SEAMLESS INTRO VIDEO
    ========================================================================== */
 .startup-splash-overlay {
   position: fixed;
@@ -1401,52 +1401,47 @@ select.form-input-ui option {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: radial-gradient(circle at center, #0a1124 0%, #000000 100%);
+  background: #000000;
   z-index: 99999;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
   padding: 20px;
 }
 
 .startup-splash-overlay.splash-hidden {
   opacity: 0;
-  transform: translateY(-20px) scale(0.98);
+  transform: translateY(-24px) scale(0.97);
   pointer-events: none;
-}
-
-.splash-bg-glow {
-  position: absolute;
-  width: 600px;
-  height: 600px;
-  background: radial-gradient(circle, rgba(245, 158, 11, 0.15) 0%, rgba(59, 130, 246, 0.06) 50%, transparent 70%);
-  border-radius: 50%;
-  animation: pulseGlow 3s ease-in-out infinite alternate;
-  pointer-events: none;
-  z-index: 1;
 }
 
 .splash-video-box {
   position: relative;
-  width: min(520px, 92vw);
+  width: min(600px, 94vw);
+  max-height: 50vh;
   aspect-ratio: 16 / 9;
-  border-radius: 16px;
-  overflow: hidden;
-  border: 2px solid rgba(245, 158, 11, 0.5);
-  box-shadow: 0 0 50px rgba(245, 158, 11, 0.3), 0 20px 45px rgba(0, 0, 0, 0.9);
-  margin-bottom: 22px;
+  margin-bottom: 20px;
   background: #000000;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   z-index: 2;
 }
 
 .splash-hero-video {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
+  background: #000000;
+  border: none !important;
+  outline: none !important;
 }
 
 .splash-anim-container {
@@ -1456,7 +1451,7 @@ select.form-input-ui option {
   align-items: center;
   text-align: center;
   z-index: 2;
-  max-width: 520px;
+  max-width: 540px;
   padding: 0 10px;
 }
 
@@ -1481,9 +1476,10 @@ select.form-input-ui option {
 }
 
 .splash-progress-track {
-  width: 280px;
-  height: 5px;
-  background: rgba(255, 255, 255, 0.1);
+  width: 320px;
+  max-width: 80vw;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 999px;
   overflow: hidden;
   position: relative;
@@ -1499,7 +1495,7 @@ select.form-input-ui option {
   background: linear-gradient(90deg, #38bdf8, #f59e0b, #eab308);
   box-shadow: 0 0 14px #f59e0b;
   border-radius: 999px;
-  animation: progressLoad 4.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  transition: width 0.3s ease;
 }
 
 .splash-status-text {
@@ -1508,18 +1504,4 @@ select.form-input-ui option {
   font-family: var(--font-mono);
   font-weight: 700;
   letter-spacing: 0.5px;
-}
-
-@keyframes pulseGlow {
-  0% { transform: scale(0.85); opacity: 0.5; }
-  100% { transform: scale(1.15); opacity: 0.9; }
-}
-
-@keyframes progressLoad {
-  0% { width: 0%; }
-  20% { width: 22%; }
-  45% { width: 50%; }
-  75% { width: 80%; }
-  92% { width: 95%; }
-  100% { width: 100%; }
 }
