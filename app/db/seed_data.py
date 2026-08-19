@@ -1,22 +1,12 @@
-import datetime
 from typing import Optional
-from app.db.database import get_db_connection, get_current_ist_date
-
-def get_relative_date(days_offset: int) -> str:
-    """Calculates YYYY-MM-DD date offset from today in IST."""
-    try:
-        today_str = get_current_ist_date()
-        base_dt = datetime.datetime.strptime(today_str, "%Y-%m-%d").date()
-        return (base_dt + datetime.timedelta(days=days_offset)).strftime("%Y-%m-%d")
-    except Exception:
-        return datetime.date.today().strftime("%Y-%m-%d")
+from app.db.database import get_db_connection
 
 def ensure_today_hearings_synchronized(db_path: Optional[str] = None):
-    """Keeps today's court board synchronized if database was previously initialized."""
+    """No-op: Preserves authentic court diary dates without artificial shifts."""
     pass
 
 def import_karur_sample_data(db_path: Optional[str] = None):
-    """Pre-populates the complete 44 Advocate R. Anbaiya chamber cases with live synchronized dates."""
+    """Populates the 44 authentic Advocate R. Anbaiya chamber cases with their exact court dates."""
     conn = get_db_connection(db_path)
     cursor = conn.cursor()
 
@@ -31,7 +21,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "M. CHARLES ALBERT, Judicial Magistrate No.II",
         "case_stage": "Evidence",
         "case_status": "PENDING",
-        "days_offset": 0,
+        "next_hearing_date": "2026-08-14",
         "client_name": "M. Palanisamy",
         "client_phone": "+919443322110",
         "notes": "Cross examination of complainant",
@@ -48,7 +38,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Thiru R.Mahesh, B.A., LL.B(Hons)., LL.M.",
         "case_stage": "Service Pending - Warrant",
         "case_status": "PENDING",
-        "days_offset": 0,
+        "next_hearing_date": "2026-08-14",
         "client_name": "G Eniyavan",
         "client_phone": "+919842112233",
         "notes": "NBW execution pending",
@@ -65,7 +55,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Thiru P.Thangavel, B.Sc., LL.M., Sessions Judge",
         "case_stage": "For Attachment / Arrest / Deposit",
         "case_status": "PENDING",
-        "days_offset": 0,
+        "next_hearing_date": "2026-08-14",
         "client_name": "Shalini",
         "client_phone": "+919789012345",
         "notes": "Execution petition for deposit",
@@ -82,7 +72,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Tmt. S.SUMATHY, M.L., District Judge",
         "case_stage": "IA Pending",
         "case_status": "PENDING",
-        "days_offset": 0,
+        "next_hearing_date": "2026-08-14",
         "client_name": "S Nirmala",
         "client_phone": "+919655443322",
         "notes": "Injunction application hearing",
@@ -99,7 +89,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Thiru. N.Nilaveshwaran, B.A., B.L.",
         "case_stage": "Evidence",
         "case_status": "PENDING",
-        "days_offset": 0,
+        "next_hearing_date": "2026-08-14",
         "client_name": "Kathiravan (Proprietor)",
         "client_phone": "+919944112233",
         "notes": "Bank loan recovery suit",
@@ -116,7 +106,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Thiru. N.Nilaveshwaran, B.A., B.L.",
         "case_stage": "Trial",
         "case_status": "PENDING",
-        "days_offset": 0,
+        "next_hearing_date": "2026-08-14",
         "client_name": "A Palaniyappan",
         "client_phone": "+919842555666",
         "notes": "Final trial arguments",
@@ -133,7 +123,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Tmt K.L.Priyanga, B.A., B.L.(Hons)",
         "case_stage": "Evidence",
         "case_status": "PENDING",
-        "days_offset": 1,
+        "next_hearing_date": "2026-08-14",
         "client_name": "Shobika Impex Ltd",
         "client_phone": "+919843011223",
         "notes": "Commercial dispute evidence",
@@ -150,7 +140,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Tmt K.L.Priyanga, B.A., B.L.(Hons)",
         "case_stage": "Ex-parte Evidence",
         "case_status": "PENDING",
-        "days_offset": 1,
+        "next_hearing_date": "2026-08-14",
         "client_name": "Bank of Baroda Main",
         "client_phone": "+919444111222",
         "notes": "Proof affidavit filing",
@@ -167,7 +157,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Tmt K.L.Priyanga, B.A., B.L.(Hons)",
         "case_stage": "Ex-parte Evidence",
         "case_status": "PENDING",
-        "days_offset": 1,
+        "next_hearing_date": "2026-08-14",
         "client_name": "BOB Aravakurichi",
         "client_phone": "+919444333444",
         "notes": "Recovery suit exparte",
@@ -184,7 +174,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Tmt K.L.Priyanga, B.A., B.L.(Hons)",
         "case_stage": "Ex-parte Evidence",
         "case_status": "PENDING",
-        "days_offset": 1,
+        "next_hearing_date": "2026-08-14",
         "client_name": "SBI Aravakurichi",
         "client_phone": "+919445112233",
         "notes": "Exparte order hearing",
@@ -201,7 +191,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Tmt K.L.Priyanga, B.A., B.L.(Hons)",
         "case_stage": "Steps",
         "case_status": "PENDING",
-        "days_offset": 1,
+        "next_hearing_date": "2026-08-14",
         "client_name": "SBI Kovai Road",
         "client_phone": "+919445998877",
         "notes": "Legal heir steps petition",
@@ -218,7 +208,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Thiru. BALAMURUGAN V.S., Addl Subordinate Judge",
         "case_stage": "Ex-parte Evidence",
         "case_status": "PENDING",
-        "days_offset": 2,
+        "next_hearing_date": "2026-08-14",
         "client_name": "BOB Karur Main",
         "client_phone": "+919444111222",
         "notes": "Proof affidavit",
@@ -235,7 +225,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Thiru. BALAMURUGAN V.S., Addl Subordinate Judge",
         "case_stage": "Ex-parte Evidence",
         "case_status": "PENDING",
-        "days_offset": 2,
+        "next_hearing_date": "2026-08-14",
         "client_name": "T Shankar",
         "client_phone": "+919842199887",
         "notes": "Partition suit exparte",
@@ -252,7 +242,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Thiru. BALAMURUGAN V.S., Addl Subordinate Judge",
         "case_stage": "IA Pending",
         "case_status": "PENDING",
-        "days_offset": 2,
+        "next_hearing_date": "2026-08-14",
         "client_name": "K Lakshmi",
         "client_phone": "+919842333221",
         "notes": "Commissioner report objection",
@@ -269,7 +259,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Tmt. S.SUMATHY, M.L.",
         "case_stage": "Hearing",
         "case_status": "PENDING",
-        "days_offset": 3,
+        "next_hearing_date": "2026-08-24",
         "client_name": "Saravanan",
         "client_phone": "+919842112233",
         "notes": "Official eCourts live schedule for 2026-08-24",
@@ -286,7 +276,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Thiru. N.Nilaveshwaran, B.A., B.L.",
         "case_stage": "Steps",
         "case_status": "PENDING",
-        "days_offset": 4,
+        "next_hearing_date": "2026-08-25",
         "client_name": "M .VEMBARASI",
         "client_phone": "+919842112233",
         "notes": "Registered in Advocate R. Anbaiya portfolio",
@@ -303,7 +293,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Additional Subordinate Judge",
         "case_stage": "Evidence",
         "case_status": "PENDING",
-        "days_offset": 5,
+        "next_hearing_date": "2026-08-18",
         "client_name": "P Lakshmi",
         "client_phone": "+919842112233",
         "notes": "Registered in Advocate R. Anbaiya portfolio",
@@ -320,7 +310,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Tmt K.L.Priyanga.,B.A..,B.L.,(Hons)",
         "case_stage": "Counter",
         "case_status": "PENDING",
-        "days_offset": 6,
+        "next_hearing_date": "2026-08-20",
         "client_name": "S Gowtham",
         "client_phone": "+919842112233",
         "notes": "Official eCourts live schedule for 2026-08-20",
@@ -337,7 +327,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Thiru. BALAMURUGAN V.S.",
         "case_stage": "Evidence",
         "case_status": "PENDING",
-        "days_offset": 7,
+        "next_hearing_date": "2026-08-27",
         "client_name": "R RAVICHANDRAN",
         "client_phone": "+919842112233",
         "notes": "Registered in Advocate R. Anbaiya portfolio",
@@ -354,7 +344,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Thiru. BALAMURUGAN V.S.",
         "case_stage": "Hearing",
         "case_status": "PENDING",
-        "days_offset": 3,
+        "next_hearing_date": "2026-08-20",
         "client_name": "M ANBUSELVAN",
         "client_phone": "+919842112233",
         "notes": "Registered in Advocate R. Anbaiya portfolio",
@@ -371,7 +361,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Principal District Judge",
         "case_stage": "Evidence",
         "case_status": "PENDING",
-        "days_offset": 4,
+        "next_hearing_date": "2026-07-28",
         "client_name": "C Archana",
         "client_phone": "+919842112233",
         "notes": "Registered in Advocate R. Anbaiya portfolio",
@@ -388,7 +378,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Principal District Judge",
         "case_stage": "Evidence",
         "case_status": "PENDING",
-        "days_offset": 5,
+        "next_hearing_date": "2026-08-01",
         "client_name": "Y Jayasangeetha",
         "client_phone": "+919842112233",
         "notes": "Registered in Advocate R. Anbaiya portfolio",
@@ -405,7 +395,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Thiru R.Mahesh, B.A., LL.B.",
         "case_stage": "Summons Return",
         "case_status": "PENDING",
-        "days_offset": 6,
+        "next_hearing_date": "2026-09-22",
         "client_name": "M/ s Purka Exports Represented by its Partner V Pradeep",
         "client_phone": "+919842112233",
         "notes": "Registered in Advocate R. Anbaiya portfolio",
@@ -422,7 +412,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Judicial Magistrate FTC ML Karur",
         "case_stage": "Evidence",
         "case_status": "DISPOSED",
-        "days_offset": -130,
+        "next_hearing_date": "2024-09-13",
         "client_name": "Prabhu A",
         "client_phone": "+919842112233",
         "notes": "Registered in Advocate R. Anbaiya portfolio",
@@ -439,7 +429,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Judicial Magistrate FTC ML Karur",
         "case_stage": "Evidence",
         "case_status": "PENDING",
-        "days_offset": 9,
+        "next_hearing_date": "2026-02-17",
         "client_name": "S PRATHEEP",
         "client_phone": "+919842112233",
         "notes": "Registered in Advocate R. Anbaiya portfolio",
@@ -456,7 +446,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Additional Subordinate Judge",
         "case_stage": "Evidence",
         "case_status": "DISPOSED",
-        "days_offset": -140,
+        "next_hearing_date": "2025-10-30",
         "client_name": "R Balasubramanian",
         "client_phone": "+919842112233",
         "notes": "Registered in Advocate R. Anbaiya portfolio",
@@ -473,7 +463,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "District Judge",
         "case_stage": "Evidence",
         "case_status": "DISPOSED",
-        "days_offset": -145,
+        "next_hearing_date": "2025-03-04",
         "client_name": "M Rajagopal",
         "client_phone": "+919842112233",
         "notes": "Registered in Advocate R. Anbaiya portfolio",
@@ -490,7 +480,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Principal Sub Judge",
         "case_stage": "Evidence",
         "case_status": "PENDING",
-        "days_offset": 12,
+        "next_hearing_date": "2026-02-26",
         "client_name": "SARADAMBAL",
         "client_phone": "+919842112233",
         "notes": "Registered in Advocate R. Anbaiya portfolio",
@@ -507,7 +497,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Judicial Magistrate FTC ML Karur",
         "case_stage": "Evidence",
         "case_status": "PENDING",
-        "days_offset": 13,
+        "next_hearing_date": "2026-02-17",
         "client_name": "P PONNUSAMY",
         "client_phone": "+919842112233",
         "notes": "Registered in Advocate R. Anbaiya portfolio",
@@ -524,7 +514,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "District Judge",
         "case_stage": "Evidence",
         "case_status": "DISPOSED",
-        "days_offset": -160,
+        "next_hearing_date": "2018-09-10",
         "client_name": "SELVARATHINAM",
         "client_phone": "+919842112233",
         "notes": "Registered in Advocate R. Anbaiya portfolio",
@@ -541,7 +531,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "District Judge",
         "case_stage": "Evidence",
         "case_status": "PENDING",
-        "days_offset": 15,
+        "next_hearing_date": "2025-11-11",
         "client_name": "M Rajagopal",
         "client_phone": "+919842112233",
         "notes": "Registered in Advocate R. Anbaiya portfolio",
@@ -558,7 +548,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "District Munsif cum Judicial Magistrate",
         "case_stage": "Evidence",
         "case_status": "DISPOSED",
-        "days_offset": -170,
+        "next_hearing_date": "2024-03-20",
         "client_name": "Karthick B",
         "client_phone": "+919842112233",
         "notes": "Registered in Advocate R. Anbaiya portfolio",
@@ -575,7 +565,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Judicial Magistrate FTC ML Karur",
         "case_stage": "Evidence",
         "case_status": "DISPOSED",
-        "days_offset": -175,
+        "next_hearing_date": "2024-09-13",
         "client_name": "Prabhu A",
         "client_phone": "+919842112233",
         "notes": "Registered in Advocate R. Anbaiya portfolio",
@@ -592,7 +582,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Additional Subordinate Judge",
         "case_stage": "Evidence",
         "case_status": "PENDING",
-        "days_offset": 18,
+        "next_hearing_date": "2025-12-09",
         "client_name": "G Krishnan",
         "client_phone": "+919842112233",
         "notes": "Registered in Advocate R. Anbaiya portfolio",
@@ -609,7 +599,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Judicial Magistrate FTC ML Karur",
         "case_stage": "Evidence",
         "case_status": "PENDING",
-        "days_offset": 19,
+        "next_hearing_date": "2026-04-08",
         "client_name": "M K Ashokkumar",
         "client_phone": "+919842112233",
         "notes": "Registered in Advocate R. Anbaiya portfolio",
@@ -626,7 +616,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Tmt K.L.Priyanga.,B.A..,B.L.",
         "case_stage": "Arguments",
         "case_status": "PENDING",
-        "days_offset": 20,
+        "next_hearing_date": "2026-09-15",
         "client_name": "P Subramaniam",
         "client_phone": "+919842112233",
         "notes": "Registered in Advocate R. Anbaiya portfolio",
@@ -643,7 +633,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Judicial Magistrate FTC ML Karur",
         "case_stage": "Evidence",
         "case_status": "PENDING",
-        "days_offset": 21,
+        "next_hearing_date": "2026-05-08",
         "client_name": "G ENIYAVAN",
         "client_phone": "+919842112233",
         "notes": "Registered in Advocate R. Anbaiya portfolio",
@@ -660,7 +650,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Tmt. S.SUMATHY, M.L.",
         "case_stage": "Written Statement",
         "case_status": "PENDING",
-        "days_offset": 22,
+        "next_hearing_date": "2026-09-08",
         "client_name": "M S Aarthi A1 Home Trends Private Limited represented by its Managing Director",
         "client_phone": "+919842112233",
         "notes": "Registered in Advocate R. Anbaiya portfolio",
@@ -677,7 +667,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Thiru. N.Nilaveshwaran",
         "case_stage": "Trial",
         "case_status": "PENDING",
-        "days_offset": 8,
+        "next_hearing_date": "2026-09-29",
         "client_name": "P Subramanian",
         "client_phone": "+919842112233",
         "notes": "Registered in Advocate R. Anbaiya portfolio",
@@ -694,7 +684,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "",
         "case_stage": "Evidence",
         "case_status": "DISPOSED",
-        "days_offset": -210,
+        "next_hearing_date": "2026-08-20",
         "client_name": "R.K SIVASUBRAMANIAN F/o. kALIYANNAN",
         "client_phone": "+919842112233",
         "notes": "Registered in Advocate R. Anbaiya portfolio",
@@ -711,7 +701,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "District Judge",
         "case_stage": "Evidence",
         "case_status": "DISPOSED",
-        "days_offset": -215,
+        "next_hearing_date": "2024-11-14",
         "client_name": "N PALANIAPPAN",
         "client_phone": "+919842112233",
         "notes": "Registered in Advocate R. Anbaiya portfolio",
@@ -728,7 +718,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Principal Sub Judge",
         "case_stage": "Evidence",
         "case_status": "PENDING",
-        "days_offset": 11,
+        "next_hearing_date": "2026-02-17",
         "client_name": "M/s Shobika Impex Private Limited",
         "client_phone": "+919842112233",
         "notes": "Registered in Advocate R. Anbaiya portfolio",
@@ -745,7 +735,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Additional Subordinate Judge",
         "case_stage": "Evidence",
         "case_status": "PENDING",
-        "days_offset": 12,
+        "next_hearing_date": "2026-01-29",
         "client_name": "P Saravanan",
         "client_phone": "+919842112233",
         "notes": "Registered in Advocate R. Anbaiya portfolio",
@@ -762,7 +752,7 @@ def import_karur_sample_data(db_path: Optional[str] = None):
         "judge_name": "Tmt. S.SUMATHY, M.L.",
         "case_stage": "Filing Counter",
         "case_status": "PENDING",
-        "days_offset": 13,
+        "next_hearing_date": "2026-09-02",
         "client_name": "M Guganathan",
         "client_phone": "+919842112233",
         "notes": "Registered in Advocate R. Anbaiya portfolio",
@@ -772,7 +762,6 @@ def import_karur_sample_data(db_path: Optional[str] = None):
     ]
 
     for item in cases_data:
-        hearing_date = get_relative_date(item["days_offset"])
         cursor.execute("""
             INSERT OR REPLACE INTO cases (
                 cnr_number, case_number_formatted, case_title, court_name, court_room,
@@ -797,41 +786,15 @@ def import_karur_sample_data(db_path: Optional[str] = None):
             item["judge_name"],
             item["case_stage"],
             item["case_status"],
-            hearing_date,
+            item["next_hearing_date"],
             item["client_name"],
             item["client_phone"],
             item["notes"],
             item["parties"] or f"{item['client_name']} | Opposing Party",
             item["advocates"] or "Advocate R. Anbaiya",
-            get_relative_date(-30)
+            "2026-07-15"
         ))
-
-    # Sample Prospective Client Leads if empty
-    cursor.execute("SELECT COUNT(*) FROM leads")
-    if cursor.fetchone()[0] == 0:
-        sample_leads = [
-            ("K. Soundararajan", "+919842177889", "Property Partition Suit", "Principal Sub Court, Karur", "NEW", "Consultation scheduled for ancestral land division dispute"),
-            ("V. Meenatchi", "+919443388776", "Cheque Dishonour NI Act 138", "Fast Track Court, Karur", "CONTACTED", "Notice statutory 15 days period expired"),
-            ("S. Loganathan", "+919789055443", "Motor Accident Claim MCOP", "Principal District Court, Karur", "SCHEDULED", "Medical disability records submitted for compensation claim")
-        ]
-        cursor.executemany("""
-            INSERT INTO leads (client_name, client_phone, matter_type, expected_court, status, notes)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, sample_leads)
-
-    # Sample History Logs for Adjournment Audit
-    cursor.execute("SELECT COUNT(*) FROM case_history_logs")
-    if cursor.fetchone()[0] == 0:
-        sample_logs = [
-            ("TNKR010010352023", "HEARING_DATE_CHANGE", get_relative_date(-14), get_relative_date(0), "Court adjourned for cross examination of PW1", 1),
-            ("TNKR040003612025", "HEARING_DATE_CHANGE", get_relative_date(-21), get_relative_date(0), "Injunction application hearing posted for orders", 1),
-            ("TNKR090001392025", "HEARING_DATE_CHANGE", get_relative_date(-7), get_relative_date(1), "Bank proof affidavit verification", 1)
-        ]
-        cursor.executemany("""
-            INSERT INTO case_history_logs (cnr_number, change_type, previous_hearing_date, new_hearing_date, details, notified)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, sample_logs)
 
     conn.commit()
     conn.close()
-    print(f"Successfully seeded {len(cases_data)} cases, leads, and history logs.")
+    print(f"Successfully imported {len(cases_data)} authentic chamber cases.")
