@@ -219,6 +219,13 @@ class AutoSyncWorker:
                             "new_stage": new_stage,
                             "status": new_status
                         })
+
+                        # Trigger automated real-time Telegram alert
+                        try:
+                            from app.services.telegram_service import send_adjournment_alert_telegram
+                            send_adjournment_alert_telegram(c, old_date, new_date)
+                        except Exception:
+                            pass
                 else:
                     if res.get("credit_guard"):
                         # In credit guard mode, vault serves data safely

@@ -358,9 +358,16 @@ def get_advocate_settings(db_path: Optional[str] = None) -> Dict[str, Any]:
     return dict(row) if row else {}
 
 def update_advocate_settings(settings: Dict[str, Any], db_path: Optional[str] = None) -> bool:
-    """Updates advocate firm settings and Meta WhatsApp credentials."""
+    """Updates advocate firm settings, Meta WhatsApp credentials, and Telegram bot settings."""
     conn = get_db_connection(db_path)
     cursor = conn.cursor()
+    
+    current = get_advocate_settings(db_path)
+    lawyer_name = settings.get("lawyer_name") or current.get("lawyer_name", "Advocate R. Anbaiya")
+    firm_name = settings.get("firm_name") or current.get("firm_name", "R. ANBAIYA & ASSOCIATES")
+    lawyer_phone = settings.get("lawyer_phone") or current.get("lawyer_phone", "+919842112233")
+    footer = settings.get("default_whatsapp_footer") or current.get("default_whatsapp_footer", "Sent on behalf of R. Anbaiya & Associates, Advocates & Legal Consultants, Karur")
+
     cursor.execute("""
         UPDATE advocate_settings SET
             lawyer_name = ?,
@@ -370,17 +377,21 @@ def update_advocate_settings(settings: Dict[str, Any], db_path: Optional[str] = 
             meta_phone_number_id = COALESCE(?, meta_phone_number_id),
             meta_access_token = COALESCE(?, meta_access_token),
             meta_waba_id = COALESCE(?, meta_waba_id),
-            auto_dispatch_meta = COALESCE(?, auto_dispatch_meta)
+            auto_dispatch_meta = COALESCE(?, auto_dispatch_meta),
+            telegram_bot_token = COALESCE(?, telegram_bot_token),
+            telegram_chat_id = COALESCE(?, telegram_chat_id)
         WHERE id = 1
     """, (
-        settings.get("lawyer_name", "Advocate R. Anbaiya"),
-        settings.get("firm_name", "R. ANBAIYA & ASSOCIATES"),
-        settings.get("lawyer_phone", "+919842112233"),
-        settings.get("default_whatsapp_footer", "Sent on behalf of R. Anbaiya & Associates, Advocates & Legal Consultants, Karur"),
+        lawyer_name,
+        firm_name,
+        lawyer_phone,
+        footer,
         settings.get("meta_phone_number_id"),
         settings.get("meta_access_token"),
         settings.get("meta_waba_id"),
-        1 if settings.get("auto_dispatch_meta") else 0
+        1 if settings.get("auto_dispatch_meta") else 0,
+        settings.get("telegram_bot_token"),
+        settings.get("telegram_chat_id")
     ))
     conn.commit()
     conn.close()

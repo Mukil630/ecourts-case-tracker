@@ -1737,6 +1737,36 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Telegram Form Listener
+  const telegramForm = document.getElementById("telegram-config-form");
+  if (telegramForm) {
+    telegramForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const tokenInput = document.getElementById("cfg-telegram-token");
+      const chatIdInput = document.getElementById("cfg-telegram-chat-id");
+
+      try {
+        const res = await fetch("/api/telegram/save-config", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            bot_token: tokenInput ? tokenInput.value.trim() : "",
+            chat_id: chatIdInput ? chatIdInput.value.trim() : ""
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert("✅ Telegram Bot Configuration Saved Successfully!");
+          loadTelegramConfig();
+        } else {
+          alert("❌ Failed: " + (data.error || "Unknown error"));
+        }
+      } catch (err) {
+        alert("Error saving Telegram config: " + err.message);
+      }
+    });
+  }
+
   // Date picker change listener
   const datePicker = document.getElementById("dashboard-date-picker");
   if (datePicker) {
@@ -1755,6 +1785,7 @@ document.addEventListener("DOMContentLoaded", () => {
     await loadSchedulerEvaluation();
     await loadHearingChangeLogs();
     await loadMetaConfig();
+    await loadTelegramConfig();
     await loadTrackedCases();
     await loadDailyCauseList(getSelectedOrTodayDate());
     await loadLeads();
@@ -2024,4 +2055,90 @@ window.dispatchSingleViaMeta = async function(cnr) {
     alert("Error: " + err.message);
   }
 };
+
+// =========================================================================
+// 8. TELEGRAM AUTONOMOUS BOT DISPATCH & CHAT ID AUTO-DETECTOR
+// =========================================================================
+async function loadTelegramConfig() {
+  try {
+    const res = await fetch("/api/telegram/status");
+    const data = await res.json();
+    const tokenInput = document.getElementById("cfg-telegram-token");
+    const chatIdInput = document.getElementById("cfg-telegram-chat-id");
+    const badge = document.getElementById("telegram-status-badge");
+
+    if (data.chat_id && chatIdInput && !chatIdInput.value) {
+      chatIdInput.value = data.chat_id;
+    }
+    if (badge) {
+      badge.innerText = data.configured ? "Connected" : (data.has_token ? "Token Active" : "Unconfigured");
+      badge.style.background = data.configured ? "#15803d" : "#0369a1";
+    }
+  } catch (e) {
+    console.error("loadTelegramConfig error:", e);
+  }
+}
+
+window.autoDetectTelegramChatId = async function() {
+  const tokenInput = document.getElementById("cfg-telegram-token");
+  const tok = tokenInput ? tokenInput.value.trim() : "";
+  try {
+    const res = await fetch("/api/telegram/sync-chat-id", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bot_token: tok })
+    });
+    const data = await res.json();
+    if (data.success) {
+      const chatIdInput = document.getElementById("cfg-telegram-chat-id");
+      if (chatIdInput) chatIdInput.value = data.chat_id;
+      alert(`🎉 Connected Successfully!\nDetected Chat ID: ${data.chat_id}`);
+      await loadTelegramConfig();
+    } else {
+      alert(`⚠️ ${data.error || "No messages found. Please open @jarvis_prime_remote_bot on Telegram, press START (or send a message), and try again."}`);
+    }
+  } catch (e) {
+    alert("Error detecting Telegram Chat ID: " + e.message);
+  }
+};
+
+window.sendTelegramTestAlert = async function() {
+  const chatIdInput = document.getElementById("cfg-telegram-chat-id");
+  const chatId = chatIdInput ? chatIdInput.value.trim() : "";
+  try {
+    const res = await fetch("/api/telegram/send-test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId })
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert("✅ Test Alert sent to your Telegram successfully! Check @jarvis_prime_remote_bot on your phone.");
+    } else {
+      alert(`❌ Telegram Dispatch Failed: ${data.error || "Ensure you have pressed /start in @jarvis_prime_remote_bot"}`);
+    }
+  } catch (e) {
+    alert("Error sending Telegram test alert: " + e.message);
+  }
+};
+
+window.dispatchTelegramDocket = async function() {
+  const targetDate = getSelectedOrTodayDate();
+  try {
+    const res = await fetch("/api/telegram/dispatch-docket", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ date: targetDate })
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert(`✈️ Hearing Board Docket for ${targetDate} dispatched to Telegram (@jarvis_prime_remote_bot)!`);
+    } else {
+      alert(`⚠️ ${data.error || "Failed to dispatch. Ensure Chat ID is configured in Settings."}`);
+    }
+  } catch (e) {
+    alert("Error dispatching Telegram docket: " + e.message);
+  }
+};
+
 

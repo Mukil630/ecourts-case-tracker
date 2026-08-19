@@ -119,20 +119,31 @@ def init_db(db_path: Optional[str] = None, auto_seed: bool = False):
             meta_phone_number_id TEXT DEFAULT '',
             meta_access_token TEXT DEFAULT '',
             meta_waba_id TEXT DEFAULT '',
-            auto_dispatch_meta BOOLEAN DEFAULT 0
+            auto_dispatch_meta BOOLEAN DEFAULT 0,
+            telegram_bot_token TEXT DEFAULT '8206363312:AAH7sjVsT4nj7YtDUceWPRoOCa9d1cM6X6U',
+            telegram_chat_id TEXT DEFAULT ''
         )
     """)
+
+    # Schema migration for existing databases
+    cursor.execute("PRAGMA table_info(advocate_settings)")
+    cols = [col[1] for col in cursor.fetchall()]
+    if "telegram_bot_token" not in cols:
+        cursor.execute("ALTER TABLE advocate_settings ADD COLUMN telegram_bot_token TEXT DEFAULT '8206363312:AAH7sjVsT4nj7YtDUceWPRoOCa9d1cM6X6U'")
+    if "telegram_chat_id" not in cols:
+        cursor.execute("ALTER TABLE advocate_settings ADD COLUMN telegram_chat_id TEXT DEFAULT ''")
 
     cursor.execute("SELECT COUNT(*) FROM advocate_settings")
     if cursor.fetchone()[0] == 0:
         cursor.execute("""
             INSERT INTO advocate_settings (
                 lawyer_name, firm_name, lawyer_phone, default_whatsapp_footer,
-                meta_phone_number_id, meta_access_token, meta_waba_id, auto_dispatch_meta
+                meta_phone_number_id, meta_access_token, meta_waba_id, auto_dispatch_meta,
+                telegram_bot_token, telegram_chat_id
             ) VALUES (
                 'Advocate R. Anbaiya', 'R. ANBAIYA & ASSOCIATES', '+919842112233',
                 'Sent on behalf of R. Anbaiya & Associates, Advocates & Legal Consultants, Karur',
-                '', '', '', 0
+                '', '', '', 0, '8206363312:AAH7sjVsT4nj7YtDUceWPRoOCa9d1cM6X6U', ''
             )
         """)
 

@@ -239,7 +239,10 @@
                 🖨️ Print Board
               </a>
               <button id="btn-generate-morning-docket" class="btn-ui btn-ui-secondary" style="font-size: 0.75rem;">
-                📋 Docket Summary
+                📋 WhatsApp Docket
+              </button>
+              <button id="btn-dispatch-telegram-header" onclick="dispatchTelegramDocket()" class="btn-ui" style="font-size: 0.75rem; font-weight: 700; background: #0284c7; color: #ffffff; box-shadow: 0 2px 4px rgba(2, 132, 199, 0.3);">
+                ✈️ Telegram Docket
               </button>
             </div>
           </div>
@@ -592,7 +595,57 @@
           </div>
         </div>
 
-        <!-- 4. Official Meta WhatsApp Business Cloud API Card -->
+        <!-- 4. Telegram Autonomous Legal Bot Automation Card -->
+        <div class="main-card" style="max-width: 650px; margin-bottom: 20px; border: 1px solid rgba(2, 132, 199, 0.4); box-shadow: 0 4px 14px rgba(2, 132, 199, 0.15);">
+          <div class="main-card-header" style="background: rgba(2, 132, 199, 0.08);">
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 1.25rem;">✈️</span>
+                <h3 class="main-card-title">Telegram Autonomous Bot Automation</h3>
+              </div>
+              <p class="main-card-sub">Instant morning dockets, court date changes, & urgent alerts directly on Telegram</p>
+            </div>
+            <span id="telegram-status-badge" style="background: #0369a1; color: #ffffff; font-size: 0.72rem; font-weight: 800; padding: 3px 10px; border-radius: 12px;">Active</span>
+          </div>
+
+          <div style="padding: 22px;">
+            <div style="background: rgba(2, 132, 199, 0.1); border: 1px solid rgba(2, 132, 199, 0.25); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 16px; font-size: 0.82rem; color: #bae6fd; line-height: 1.5;">
+              🤖 <strong>Connected Bot:</strong> <a href="https://t.me/jarvis_prime_remote_bot" target="_blank" style="color: #38bdf8; font-weight: 700; text-decoration: underline;">@jarvis_prime_remote_bot</a> (Jarvis Prime Remote)<br>
+              💡 <em>How to activate: Open the bot in Telegram, tap <strong>START</strong> (or send /start), then click "Auto-Detect My Chat ID" below!</em>
+            </div>
+
+            <form id="telegram-config-form">
+              <div class="form-group-ui">
+                <label class="form-label-ui">Telegram Bot Token</label>
+                <input type="password" id="cfg-telegram-token" class="form-input-ui" value="8206363312:AAH7sjVsT4nj7YtDUceWPRoOCa9d1cM6X6U" placeholder="Bot token from @BotFather">
+              </div>
+
+              <div class="form-group-ui">
+                <label class="form-label-ui">Advocate Telegram Chat ID</label>
+                <div style="display: flex; gap: 8px;">
+                  <input type="text" id="cfg-telegram-chat-id" class="form-input-ui" placeholder="e.g. 123456789 (or auto-detect below)" style="flex: 1;">
+                  <button type="button" onclick="autoDetectTelegramChatId()" class="btn-ui" style="background: #0284c7; color: #fff; font-size: 0.75rem; font-weight: 700; white-space: nowrap; padding: 6px 14px;">
+                    🔍 Auto-Detect Chat ID
+                  </button>
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 10px; align-items: center; margin-top: 14px; flex-wrap: wrap;">
+                <button type="submit" class="btn-ui btn-ui-primary" style="padding: 8px 18px;">
+                  💾 Save Telegram Config
+                </button>
+                <button type="button" onclick="sendTelegramTestAlert()" class="btn-ui" style="background: #0284c7; color: #fff; padding: 8px 14px; font-weight: 700;">
+                  ⚡ Send Test Alert
+                </button>
+                <button type="button" onclick="dispatchTelegramDocket()" class="btn-ui btn-ui-secondary" style="padding: 8px 14px;">
+                  📋 Send Today's Docket
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- 5. Official Meta WhatsApp Business Cloud API Card -->
         <div class="main-card" style="max-width: 650px; margin-bottom: 20px;">
           <div class="main-card-header">
             <div>
