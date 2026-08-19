@@ -1949,20 +1949,39 @@ document.addEventListener("DOMContentLoaded", () => {
   // Initial Loads & Start Live Sync Loop
   async function initApp() {
     window.dismissStartupSplash();
+    
+    // 1. Set default real today date in picker
+    const datePicker = document.getElementById("dashboard-date-picker");
+    if (datePicker) {
+      datePicker.value = getRealTodayDate();
+    }
+
+    // 2. Prioritize Core Case Data & Daily Cause List
+    try { await loadTrackedCases(); } catch (e) { console.warn("loadTrackedCases error:", e); }
+    try { await loadDailyCauseList(getSelectedOrTodayDate()); } catch (e) { console.warn("loadDailyCauseList error:", e); }
+
+    // 3. Load settings & auxiliary configurations
     try { await loadAdvocateSettings(); } catch (e) { console.warn("loadAdvocateSettings error:", e); }
     try { await loadApiKeyStatus(); } catch (e) { console.warn("loadApiKeyStatus error:", e); }
     try { await loadSchedulerEvaluation(); } catch (e) { console.warn("loadSchedulerEvaluation error:", e); }
     try { await loadHearingChangeLogs(); } catch (e) { console.warn("loadHearingChangeLogs error:", e); }
     try { await loadMetaConfig(); } catch (e) { console.warn("loadMetaConfig error:", e); }
     try { await loadTelegramConfig(); } catch (e) { console.warn("loadTelegramConfig error:", e); }
-    try { await loadTrackedCases(); } catch (e) { console.warn("loadTrackedCases error:", e); }
-    try { await loadDailyCauseList(getSelectedOrTodayDate()); } catch (e) { console.warn("loadDailyCauseList error:", e); }
     try { await loadLeads(); } catch (e) { console.warn("loadLeads error:", e); }
     try { renderCalendar(currentCalendarDate); } catch (e) { console.warn("renderCalendar error:", e); }
     try { startLiveSyncLoop(); } catch (e) { console.warn("startLiveSyncLoop error:", e); }
   }
+
+  window.initApp = initApp;
   initApp();
 });
+
+// Direct immediate boot if document is already ready
+if (document.readyState !== "loading") {
+  setTimeout(() => {
+    if (window.initApp) window.initApp();
+  }, 50);
+}
 
 // =========================================================================
 // 7. eCOURTS API KEY & CREDIT SHIELD MANAGEMENT
