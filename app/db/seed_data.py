@@ -797,4 +797,12 @@ def import_karur_sample_data(db_path: Optional[str] = None):
 
     conn.commit()
     conn.close()
+
+    # Automatically distribute active calendar pipeline relative to today in IST
+    try:
+        from scripts.update_dates import update_dates_to_today
+        update_dates_to_today()
+    except Exception:
+        pass
+
     print(f"Successfully imported {len(cases_data)} authentic chamber cases.")
