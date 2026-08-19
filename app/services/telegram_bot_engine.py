@@ -90,8 +90,9 @@ def handle_telegram_incoming_message(text: str, chat_id: str, user_name: str = "
     lawyer = settings.get("lawyer_name", "Advocate R. Anbaiya")
     firm = settings.get("firm_name", "R. ANBAIYA & ASSOCIATES")
 
-    # 1. /start or /help or greeting
-    if cmd_lower in ("/start", "/help", "hi", "hello", "hey", "vanakkam"):
+    # 1. /start or /help or greeting (hi, hii, hello, etc.)
+    greeting_triggers = ("/start", "/help", "hi", "hii", "hiii", "hai", "hello", "hey", "vanakkam", "help", "menu", "commands")
+    if any(cmd_lower == g or cmd_lower.startswith(g + " ") for g in greeting_triggers):
         return (
             f"⚡ <b>JARVIS Autonomous Legal Co-Pilot Online!</b>\n"
             f"━━━━━━━━━━━━━━━━━━━━━━\n"

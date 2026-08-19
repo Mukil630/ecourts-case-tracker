@@ -88,3 +88,19 @@ def dispatch_docket_route():
 
     result = send_morning_docket_telegram(target_date, chat_id=chat_id)
     return jsonify(result)
+
+@telegram_bp.route("/api/telegram/webhook", methods=["POST"])
+def telegram_webhook():
+    """Telegram Webhook endpoint for zero-delay instant message processing."""
+    data = request.get_json() or {}
+    msg = data.get("message")
+    if msg:
+        chat_id = str(msg.get("chat", {}).get("id", ""))
+        text = (msg.get("text") or "").strip()
+        user_first_name = msg.get("from", {}).get("first_name", "Advocate")
+        if chat_id and text:
+            from app.services.telegram_bot_engine import handle_telegram_incoming_message
+            reply = handle_telegram_incoming_message(text, chat_id, user_first_name)
+            if reply:
+                send_telegram_message(reply, chat_id=chat_id)
+    return jsonify({"ok": True})
