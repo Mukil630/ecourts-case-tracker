@@ -1417,6 +1417,29 @@ select.form-input-ui option {
   pointer-events: none;
 }
 
+.splash-video-container {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.splash-bg-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.55;
+  filter: brightness(0.85) contrast(1.15);
+}
+
+.splash-video-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(8, 14, 28, 0.45) 0%, rgba(2, 4, 10, 0.88) 100%);
+}
+
 .splash-bg-glow {
   position: absolute;
   width: 500px;
@@ -1425,6 +1448,7 @@ select.form-input-ui option {
   border-radius: 50%;
   animation: pulseGlow 3s ease-in-out infinite alternate;
   pointer-events: none;
+  z-index: 1;
 }
 
 .splash-anim-container {
