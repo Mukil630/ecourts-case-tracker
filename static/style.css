@@ -1404,104 +1404,29 @@ select.form-input-ui option {
   background: #000000;
   z-index: 99999;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
-  padding: 20px;
+  padding: 0;
+  margin: 0;
 }
 
 .startup-splash-overlay.splash-hidden {
   opacity: 0;
-  transform: translateY(-24px) scale(0.97);
+  transform: scale(1.02);
   pointer-events: none;
 }
 
-.splash-video-box {
-  position: relative;
-  width: min(600px, 94vw);
-  max-height: 50vh;
-  aspect-ratio: 16 / 9;
-  margin-bottom: 20px;
-  background: #000000;
-  border: none !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2;
-}
-
 .splash-hero-video {
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
+  max-width: 100%;
+  max-height: 100%;
   object-fit: contain;
   display: block;
   background: #000000;
   border: none !important;
   outline: none !important;
-}
-
-.splash-anim-container {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  z-index: 2;
-  max-width: 540px;
-  padding: 0 10px;
-}
-
-.splash-title-text {
-  font-size: 1.45rem;
-  font-weight: 900;
-  letter-spacing: 2px;
-  background: linear-gradient(135deg, #ffffff 30%, #f59e0b 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin-bottom: 4px;
-  text-transform: uppercase;
-}
-
-.splash-subtitle-text {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: #94a3b8;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  margin-bottom: 18px;
-}
-
-.splash-progress-track {
-  width: 320px;
-  max-width: 80vw;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 999px;
-  overflow: hidden;
-  position: relative;
-  margin-bottom: 12px;
-}
-
-.splash-progress-bar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  width: 0%;
-  background: linear-gradient(90deg, #38bdf8, #f59e0b, #eab308);
-  box-shadow: 0 0 14px #f59e0b;
-  border-radius: 999px;
-  transition: width 0.3s ease;
-}
-
-.splash-status-text {
-  font-size: 0.78rem;
-  color: #f59e0b;
-  font-family: var(--font-mono);
-  font-weight: 700;
-  letter-spacing: 0.5px;
+  mix-blend-mode: screen;
 }
