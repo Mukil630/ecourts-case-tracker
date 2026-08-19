@@ -150,9 +150,11 @@ def init_db(db_path: Optional[str] = None, auto_seed: bool = False):
         )
     """)
 
+    cursor.execute("SELECT COUNT(*) FROM cases")
+    case_count = cursor.fetchone()[0]
     conn.commit()
     conn.close()
 
-    if auto_seed:
+    if auto_seed or case_count == 0:
         from app.db.seed_data import import_karur_sample_data
         import_karur_sample_data(db_path)
