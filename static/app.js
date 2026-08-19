@@ -222,7 +222,7 @@ window.openCaseDrawer = async function(cnrNumber) {
     (item.case_number_formatted && item.case_number_formatted.toLowerCase() === String(cnrNumber).toLowerCase())
   );
 
-  // 2. Search in causeListData
+  // 2. Search in causeListData (Today's Board)
   if (!c && causeListData && causeListData.court_summaries) {
     for (const court of causeListData.court_summaries) {
       const match = (court.cases || []).find(item => 
@@ -236,12 +236,27 @@ window.openCaseDrawer = async function(cnrNumber) {
     }
   }
 
-  // 3. Fallback: Fetch directly from server API
+  // 3. Search in tomorrowCauseListData (Tomorrow's Advance Docket)
+  if (!c && window.tomorrowCauseListData && window.tomorrowCauseListData.court_summaries) {
+    for (const court of window.tomorrowCauseListData.court_summaries) {
+      const match = (court.cases || []).find(item => 
+        (item.cnr_number && item.cnr_number.toLowerCase() === String(cnrNumber).toLowerCase()) ||
+        (item.case_number_formatted && item.case_number_formatted.toLowerCase() === String(cnrNumber).toLowerCase())
+      );
+      if (match) {
+        c = match;
+        break;
+      }
+    }
+  }
+
+  // 4. Fallback: Fetch directly from server API
   if (!c) {
     try {
-      const res = await fetch(`/api/case/${encodeURIComponent(cnrNumber)}`);
+      const res = await fetch(`/api/cases/${encodeURIComponent(cnrNumber)}`);
       if (res.ok) {
-        c = await res.json();
+        const data = await res.json();
+        c = data.case || data;
       }
     } catch (err) {
       console.warn("Failed to fetch case detail:", err);
@@ -1197,6 +1212,7 @@ async function renderTomorrowEveningDocket(currentTargetDate) {
   try {
     const res = await fetch(`/api/cause-list?date=${encodeURIComponent(tomorrowStr)}`);
     const tomorrowData = await res.json();
+    window.tomorrowCauseListData = tomorrowData;
 
     if (!tomorrowData || !tomorrowData.total_hearings || tomorrowData.total_hearings === 0) {
       container.innerHTML = "";

@@ -26,11 +26,12 @@ def clear_all_endpoint():
     return jsonify({"success": True, "message": "All cases and logs cleared."})
 
 @cases_bp.route("/api/cases/<cnr>", methods=["GET"])
+@cases_bp.route("/api/case/<cnr>", methods=["GET"])
 def get_case(cnr):
     """Retrieves single case details by CNR number."""
     case = get_case_by_cnr(cnr.upper())
     if case:
-        return jsonify({"success": True, "case": case})
+        return jsonify({"success": True, "case": case, **case})
     return jsonify({"success": False, "error": "Case not found"}), 404
 
 @cases_bp.route("/api/cases/<cnr>", methods=["DELETE"])
