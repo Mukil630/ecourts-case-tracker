@@ -1952,15 +1952,19 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Initial Loads & Start Live Sync Loop (Runs Video Animation Completely)
+  // Initial Loads & Start Live Sync Loop (Runs Video Animation with Loading Template)
   async function initApp() {
     const splashVideo = document.getElementById("splash-hero-video");
+    const splashLabel = document.getElementById("splash-status-label");
+    const progressBar = document.getElementById("splash-progress-bar");
 
     // 1. Set default real today date in picker
     const datePicker = document.getElementById("dashboard-date-picker");
     if (datePicker) {
       datePicker.value = getRealTodayDate();
     }
+
+    if (splashLabel) splashLabel.innerText = "⚡ Initializing Private Chamber Vault...";
 
     // 2. Load Core Case Data & Configurations in parallel in background
     const loaders = Promise.all([
@@ -1980,11 +1984,31 @@ document.addEventListener("DOMContentLoaded", () => {
     function finishAndDismiss() {
       if (dismissed) return;
       dismissed = true;
-      window.dismissStartupSplash();
+      if (progressBar) progressBar.style.width = "100%";
+      if (splashLabel) splashLabel.innerText = "✨ Chamber System Ready!";
+      setTimeout(() => {
+        window.dismissStartupSplash();
+      }, 350);
     }
 
     if (splashVideo) {
-      // Dismiss smoothly the exact moment the video finishes
+      // Dynamic progress bar linked directly to the video live playback
+      splashVideo.addEventListener("timeupdate", () => {
+        if (splashVideo.duration && progressBar) {
+          const pct = Math.min(100, Math.round((splashVideo.currentTime / splashVideo.duration) * 100));
+          progressBar.style.width = pct + "%";
+
+          if (pct > 20 && pct < 45 && splashLabel) {
+            splashLabel.innerText = "🛡️ Securing Zero-Credit API Shield...";
+          } else if (pct >= 45 && pct < 75 && splashLabel) {
+            splashLabel.innerText = "⚖️ Synchronizing Court Hearing Board...";
+          } else if (pct >= 75 && pct < 98 && splashLabel) {
+            splashLabel.innerText = "🤖 JARVIS Legal AI Online...";
+          }
+        }
+      });
+
+      // Dismiss smoothly the exact moment the video finishes playing
       splashVideo.addEventListener("ended", () => {
         loaders.then(() => finishAndDismiss());
       });

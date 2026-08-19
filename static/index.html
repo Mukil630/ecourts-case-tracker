@@ -4,17 +4,25 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>R. Anbaiya & Associates • Legal Practice Management & eCourts Automation</title>
-  <link rel="stylesheet" href="/static/style.css?v=26.0">
+  <link rel="stylesheet" href="/static/style.css?v=27.0">
 </head>
 <body>
 
   <!-- ==========================================================================
-       0. CINEMATIC STARTUP INTRO VIDEO & ANIMATION
+       0. CINEMATIC STARTUP INTRO VIDEO & LOADING TEMPLATE
        ========================================================================== -->
   <div id="app-startup-splash" class="startup-splash-overlay">
-    <video id="splash-hero-video" class="splash-hero-video" autoplay muted playsinline>
-      <source src="/static/loading_video.mp4?v=26.0" type="video/mp4">
-    </video>
+    <div class="splash-video-box">
+      <video id="splash-hero-video" class="splash-hero-video" autoplay muted playsinline>
+        <source src="/static/loading_video.mp4?v=27.0" type="video/mp4">
+      </video>
+    </div>
+    <div class="splash-loading-template">
+      <div class="splash-progress-track">
+        <div class="splash-progress-bar" id="splash-progress-bar"></div>
+      </div>
+      <div class="splash-status-text" id="splash-status-label">⚡ Initializing Chamber Vault...</div>
+    </div>
   </div>
 
   <!-- Mobile Sidebar Backdrop -->
@@ -927,7 +935,7 @@
     </button>
   </nav>
 
-  <script src="/static/app.js?v=26.0"></script>
+  <script src="/static/app.js?v=27.0"></script>
 </body>
 </html>
 
