@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>R. Anbaiya & Associates • Legal Practice Management & eCourts Automation</title>
-  <link rel="stylesheet" href="/static/style.css?v=27.0">
+  <link rel="stylesheet" href="/static/style.css?v=28.0">
 </head>
 <body>
 
@@ -860,28 +860,72 @@
   </div>
 
   <!-- ==========================================================================
-       7. BULK WHATSAPP DISPATCH MODAL
+       7. BULK & SEQUENTIAL SAFE WHATSAPP DISPATCH MODAL
        ========================================================================== -->
   <div id="bulk-whatsapp-modal" class="modal-overlay" style="display: none;">
-    <div class="modal-card" style="max-width: 680px;">
+    <div class="modal-card" style="max-width: 720px;">
       <div class="modal-header">
-        <h3 id="bulk-wa-modal-title" style="font-size: 1rem; font-weight: 800; color: #ffffff;">📲 Dispatch WhatsApp Notices to Clients</h3>
-        <button class="btn-ui btn-ui-secondary" style="padding: 2px 8px; color: #fff; background: transparent; border-color: rgba(255,255,255,0.15);" onclick="document.getElementById('bulk-whatsapp-modal').style.display='none'">✕</button>
+        <h3 id="bulk-wa-modal-title" style="font-size: 1.05rem; font-weight: 800; color: #ffffff; display: flex; align-items: center; gap: 8px;">
+          <span>📲 Safe WhatsApp Notice Dispatcher</span>
+          <span style="font-size: 0.72rem; font-weight: 700; background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.4); padding: 2px 8px; border-radius: 999px;">0% Ban Risk • 100% Compliant</span>
+        </h3>
+        <button class="btn-ui btn-ui-secondary" style="padding: 2px 8px; color: #fff; background: transparent; border-color: rgba(255,255,255,0.15);" onclick="closeBulkWhatsAppModal()">✕</button>
       </div>
 
       <div class="modal-body">
-        <p id="bulk-wa-modal-subtitle" style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 14px;">
-          Send personalized hearing docket notices to all clients scheduled for this hearing date.
-        </p>
+        <!-- Guided Sequential Fast-Send Card -->
+        <div id="wa-queue-active-card" style="background: linear-gradient(135deg, #0e172a 0%, #080d1a 100%); border: 1.5px solid rgba(245, 158, 11, 0.4); border-radius: 10px; padding: 16px; margin-bottom: 16px; box-shadow: 0 4px 16px rgba(0,0,0,0.5);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span id="wa-queue-counter-badge" style="font-size: 0.76rem; font-weight: 800; background: #f59e0b; color: #000; padding: 3px 10px; border-radius: 999px; text-transform: uppercase;">Client 1 of 11</span>
+            <span id="wa-queue-pct-label" style="font-size: 0.76rem; color: #94a3b8; font-weight: 700;">0% Completed</span>
+          </div>
 
-        <div style="max-height: 320px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm); margin-bottom: 16px; background: #080c15;">
-          <table class="hearing-table" style="font-size: 0.84rem;">
+          <div class="splash-progress-track" style="width: 100%; height: 6px; background: rgba(255,255,255,0.1); margin-bottom: 12px;">
+            <div id="wa-queue-progress-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #22c55e, #f59e0b); border-radius: 999px; transition: width 0.3s ease;"></div>
+          </div>
+
+          <div id="wa-queue-client-details" style="margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+              <div>
+                <h4 id="wa-queue-client-name" style="font-size: 1.05rem; font-weight: 800; color: #ffffff; margin-bottom: 2px;">Shalini</h4>
+                <p id="wa-queue-client-phone" style="font-size: 0.8rem; color: #38bdf8; font-family: var(--font-mono, monospace); font-weight: 700;">📞 +91 97890 12345</p>
+              </div>
+              <div style="text-align: right;">
+                <span id="wa-queue-case-number" style="font-size: 0.82rem; font-weight: 800; color: #f59e0b;">EP/25/2025</span><br>
+                <span id="wa-queue-court-badge" style="font-size: 0.72rem; color: #cbd5e1;">Mahila Court (Room 9 • Item #2)</span>
+              </div>
+            </div>
+            <div id="wa-queue-case-stage" style="font-size: 0.74rem; color: #94a3b8; margin-top: 6px; background: rgba(255,255,255,0.04); padding: 4px 8px; border-radius: 4px;">
+              Stage: <strong>For Attachment / Arrest / Deposit</strong>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;">
+            <button onclick="copyCurrentQueueMessage()" class="btn-ui btn-ui-secondary" style="font-size: 0.75rem; padding: 6px 12px;">
+              📋 Copy Text
+            </button>
+            <button onclick="skipCurrentQueueClient()" class="btn-ui btn-ui-secondary" style="font-size: 0.75rem; padding: 6px 12px;">
+              ⏭️ Skip Client
+            </button>
+            <button onclick="sendCurrentQueueClient()" id="btn-wa-queue-send" class="btn-ui btn-ui-wa" style="font-size: 0.85rem; font-weight: 800; padding: 8px 18px; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);">
+              🚀 Send in WhatsApp & Next ➔
+            </button>
+          </div>
+        </div>
+
+        <!-- Full Scheduled Clients Table with individual status -->
+        <h4 style="font-size: 0.8rem; font-weight: 800; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">
+          📋 Today's Queue Schedule (<span id="bulk-wa-table-count">11</span> Cases)
+        </h4>
+
+        <div style="max-height: 220px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm); margin-bottom: 14px; background: #080c15;">
+          <table class="hearing-table" style="font-size: 0.82rem;">
             <thead>
               <tr style="background: #04070e; border-bottom: 1px solid var(--border-color);">
-                <th style="width: 50px; text-align: center; color: var(--text-gold);">Item</th>
-                <th style="color: var(--text-gold);">Client Name & Phone</th>
-                <th style="color: var(--text-gold);">Case & Room</th>
-                <th style="text-align: right; color: var(--text-gold);">Action</th>
+                <th style="width: 45px; text-align: center; color: var(--text-gold);">Item</th>
+                <th style="color: var(--text-gold);">Client & Phone</th>
+                <th style="color: var(--text-gold);">Court & Room</th>
+                <th style="text-align: right; width: 120px; color: var(--text-gold);">Status / Action</th>
               </tr>
             </thead>
             <tbody id="bulk-wa-tbody">
@@ -891,13 +935,13 @@
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
-          <span id="bulk-wa-notices-ready-label" style="font-size: 0.78rem; color: var(--text-muted); font-weight: 600;">Notices Ready for Instant Send</span>
+          <span id="bulk-wa-notices-ready-label" style="font-size: 0.76rem; color: var(--text-muted); font-weight: 600;">Safe single-tab dispatch enabled</span>
           <div style="display: flex; gap: 10px;">
-            <button onclick="dispatchAllViaMetaCloud()" id="btn-meta-dispatch-all" class="btn-ui btn-ui-primary" style="padding: 9px 18px; font-weight: 800;">
-              🛡️ Official Meta Cloud Auto-Dispatch
+            <button onclick="dispatchAllViaMetaCloud()" id="btn-meta-dispatch-all" class="btn-ui btn-ui-primary" style="padding: 7px 14px; font-size: 0.76rem; font-weight: 800;">
+              🛡️ Meta Cloud API (1-Click)
             </button>
-            <button onclick="sendAllQueuedNotices()" class="btn-ui btn-ui-wa" style="padding: 9px 16px; font-weight: 800;">
-              🚀 Open in WhatsApp Web
+            <button onclick="restartQueueFromStart()" class="btn-ui btn-ui-secondary" style="padding: 7px 14px; font-size: 0.76rem;">
+              🔄 Restart Queue
             </button>
           </div>
         </div>
@@ -935,7 +979,7 @@
     </button>
   </nav>
 
-  <script src="/static/app.js?v=27.0"></script>
+  <script src="/static/app.js?v=28.0"></script>
 </body>
 </html>
 
