@@ -44,9 +44,7 @@ window.dismissStartupSplash = function() {
   const splash = document.getElementById("app-startup-splash");
   if (splash) {
     splash.classList.add("splash-dismissed");
-    setTimeout(() => {
-      splash.style.display = "none";
-    }, 650);
+    splash.style.display = "none";
   }
 };
 
@@ -1985,18 +1983,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Initial Loads & Start Live Sync Loop
   async function initApp() {
-    runStartupSequence();
-    await loadAdvocateSettings();
-    await loadApiKeyStatus();
-    await loadSchedulerEvaluation();
-    await loadHearingChangeLogs();
-    await loadMetaConfig();
-    await loadTelegramConfig();
-    await loadTrackedCases();
-    await loadDailyCauseList(getSelectedOrTodayDate());
-    await loadLeads();
-    renderCalendar(currentCalendarDate);
-    startLiveSyncLoop();
+    window.dismissStartupSplash();
+    try { await loadAdvocateSettings(); } catch (e) { console.warn("loadAdvocateSettings error:", e); }
+    try { await loadApiKeyStatus(); } catch (e) { console.warn("loadApiKeyStatus error:", e); }
+    try { await loadSchedulerEvaluation(); } catch (e) { console.warn("loadSchedulerEvaluation error:", e); }
+    try { await loadHearingChangeLogs(); } catch (e) { console.warn("loadHearingChangeLogs error:", e); }
+    try { await loadMetaConfig(); } catch (e) { console.warn("loadMetaConfig error:", e); }
+    try { await loadTelegramConfig(); } catch (e) { console.warn("loadTelegramConfig error:", e); }
+    try { await loadTrackedCases(); } catch (e) { console.warn("loadTrackedCases error:", e); }
+    try { await loadDailyCauseList(getSelectedOrTodayDate()); } catch (e) { console.warn("loadDailyCauseList error:", e); }
+    try { await loadLeads(); } catch (e) { console.warn("loadLeads error:", e); }
+    try { renderCalendar(currentCalendarDate); } catch (e) { console.warn("renderCalendar error:", e); }
+    try { startLiveSyncLoop(); } catch (e) { console.warn("startLiveSyncLoop error:", e); }
   }
   initApp();
 });
