@@ -9,6 +9,10 @@ An enterprise-grade, autonomous legal practice management and case tracking syst
 
 ---
 
+![eCourts Case Tracker Live Dashboard Preview](assets/dashboard_preview.png)
+
+---
+
 ## 🌐 Live Demonstrations
 
 * 🚀 **Live Cloud Web App:** [https://ecourts-case-tracker.onrender.com](https://ecourts-case-tracker.onrender.com)
